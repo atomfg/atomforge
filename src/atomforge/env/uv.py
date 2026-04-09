@@ -17,7 +17,7 @@ class UVEnvironmentProvider(EnvironmentProvider):
 
     def ensure_environment(self, spec: EnvironmentSpec) -> EnvironmentHandle:
         # Make the environment
-        env_path = (self.root_path / Path(spec.name)).resolve()
+        env_path = (self.root_path / Path(spec.name_with_hash())).resolve()
 
         if not env_path.exists():
             command = ["uv", "-q", "venv", env_path.as_posix()]
@@ -65,7 +65,7 @@ class UVEnvironmentProvider(EnvironmentProvider):
 
 if __name__ == "__main__":
     from rich import print
-    
+
     provider = UVEnvironmentProvider()
 
     spec = EnvironmentSpec(
@@ -74,6 +74,7 @@ if __name__ == "__main__":
     handle = provider.ensure_environment(spec)
 
     info = provider.inspect_environment(handle)
+    print(info)
     provider.remove_environment(handle)
 
 

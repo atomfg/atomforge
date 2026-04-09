@@ -14,6 +14,25 @@ class EnvironmentSpec(BaseModel):
     channels: tuple[str, ...] = ()
     extras: Mapping[str, str] = Field(default_factory=dict)
 
+    def hash(self) -> str:
+        import hashlib
+        import json
+
+        # Create a hash of the environment specification for caching purposes
+        env_dict = {
+            "name": self.name,
+            "python": self.python,
+            "requirements": self.requirements,
+            "channels": self.channels,
+            "extras": self.extras,
+        }
+        env_json = json.dumps(env_dict, sort_keys=True)
+        return hashlib.sha256(env_json.encode()).hexdigest()
+    
+    def name_with_hash(self) -> str:
+        return f"{self.name}-{self.hash()[:8]}"
+
+
 
 class EnvironmentHandle(BaseModel):
     model_config = ConfigDict(frozen=True)
