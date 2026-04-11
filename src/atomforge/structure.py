@@ -9,6 +9,7 @@ class Structure:
     positions: np.ndarray
     cell: np.ndarray
     species: list[str]
+    pbc: list[bool, bool, bool]
 
     @classmethod
     def from_ase(cls, atoms):
@@ -17,8 +18,9 @@ class Structure:
         """
         return cls(
             positions=atoms.get_positions(),
-            cell=atoms.get_cell(),
+            cell=atoms.get_cell().array,
             species=atoms.get_chemical_symbols(),
+            pbc=atoms.get_pbc(),
         )
     
     def to_ase(self):
@@ -30,5 +32,5 @@ class Structure:
             symbols=self.species,
             positions=self.positions,
             cell=self.cell,
-            pbc=True,
+            pbc=self.pbc,
         )

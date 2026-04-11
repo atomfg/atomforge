@@ -1,2 +1,3 @@
-def main() -> None:
-    print("Hello from atomforge!")
+from .structure import Structure
+
+__all__ = ["Structure"]

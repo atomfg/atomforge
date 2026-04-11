@@ -1,6 +1,7 @@
 from atomforge.model import Model
 from atomforge.env import EnvironmentSpec
 from atomforge.structure import Structure
+from atomforge.model.base import ModelResult
 
 class ASELennardJones(Model):
     
@@ -17,13 +18,33 @@ class ASELennardJones(Model):
     def supported_properties(self):
         return frozenset({"energy", "forces"})
     
-    def compute(self, structure: Structure, properties):
+    def compute(self, structure: Structure, properties) -> ModelResult:
         from ase.calculators.lj import LennardJones
 
-        calc = LennardJones()
+        calc = LennardJones(sigma=1, epsilon=1)
         atoms = structure.to_ase()
-        atoms.set_calculator(calc)
-        energy = atoms.get_potential_energy() if "energy" in properties else None
-        forces = atoms.get_forces() if "forces" in properties else None
-        return {"energy": energy, "forces": forces}
-    
+
+        atoms.calc = calc
+
+        if "forces" in properties:
+            forces = atoms.get_forces()
+        else:            
+            forces = None
+
+        if "energy" in properties:
+            energy = atoms.get_potential_energy()
+        else:
+            energy = None
+
+        return ModelResult(energy=energy, forces=forces)
+
+
+if __name__ == "__main__":
+    from atomforge.structure import Structure
+    from ase.build import molecule
+    from rich import print
+
+    model = ASELennardJones()
+    structure = Structure.from_ase(molecule("H2O"))
+    result = model.compute(structure, {"energy", "forces"})
+    print(result)
