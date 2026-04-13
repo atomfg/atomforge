@@ -32,13 +32,20 @@ class UVEnvironmentProvider(EnvironmentProvider):
                 "-q",
                 "pip",
                 "install",
+                "-n",
                 "-p",
                 env_path.as_posix(),
                 "-r",
                 "-",
             ]
+
+            requirements = "\n".join(spec.requirements)
+
+            # Append atomforge itself as a requirement, so that the worker can import it
+            requirements += "\n" + f"atomforge @ {Path(__file__).parent.parent.parent.parent.as_posix()}"
+
             subprocess.run(
-                command, input="\n".join(spec.requirements).encode(), check=True
+                command, input=requirements.encode(), check=True
             )
 
         # Return a handle to the environment

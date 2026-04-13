@@ -1,23 +1,22 @@
 from typing import Literal
 from pydantic import BaseModel, ConfigDict
-from atomforge.structure import StructureMessage
-from atomforge.model.base import Property, ModelResult
 
-from typing import TextIO
+from typing import TextIO, Any
 
 class ComputeRequest(BaseModel):
     model_config = ConfigDict(frozen=True)
     operation: Literal['task', 'shutdown']
     request_id: str
     model_name: str
-    structure: StructureMessage
-    properties: frozenset[Property]
+    task_kind: str
+    task_payload: dict[str, Any]
 
 class ComputeResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
     request_id: str
     ok: bool
-    result: float | None = None
+    task_kind: str | None = None
+    result_payload: dict[str, Any] | None = None
     error: str | None = None
     message: str | None = None
 
