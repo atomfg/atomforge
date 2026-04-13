@@ -1,22 +1,22 @@
 from atomforge.model import Model
 from atomforge.env import EnvironmentSpec
 from atomforge.structure import Structure
-from atomforge.model.base import ModelResult
+from atomforge.model.base import ModelResult, Property
 
 class CHGNet(Model):
     
     @property
-    def model_name(self) -> str:
-        return "CHGNet"
+    def model_kind(self) -> str:
+        return "chgnet"
 
     def default_environment(self) -> EnvironmentSpec:
         return EnvironmentSpec(
-            name=self.model_name, python="python3.12", requirements=["chgnet"]
+            name=self.model_kind, python="python3.12", requirements=["chgnet"]
         )
     
     @property
     def supported_properties(self):
-        return frozenset({"energy", "forces"})
+        return frozenset({Property.ENERGY, Property.FORCES})
     
     def compute(self, structure: Structure, properties) -> ModelResult:
         from chgnet.model.dynamics import CHGNetCalculator
@@ -26,12 +26,12 @@ class CHGNet(Model):
 
         atoms.calc = calc
 
-        if "forces" in properties:
+        if Property.FORCES in properties:
             forces = atoms.get_forces()
         else:            
             forces = None
 
-        if "energy" in properties:
+        if Property.ENERGY in properties:
             energy = atoms.get_potential_energy()
         else:
             energy = None
@@ -47,5 +47,5 @@ if __name__ == "__main__":
     atoms = molecule("H2O")
     atoms.cell = [10, 10, 10]
     structure = Structure.from_ase(atoms)
-    result = model.compute(structure, {"energy", "forces"})
+    result = model.compute(structure, {Property.ENERGY, Property.FORCES})
     print(result)

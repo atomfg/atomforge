@@ -3,16 +3,16 @@ from pathlib import Path
 
 from atomforge.env import EnvironmentProvider, EnvironmentSpec, UVEnvironmentProvider
 from atomforge.model import Model
-from atomforge.task.base import Task, TaskResult, get_default_registry
+from atomforge.task.base import Task, TaskResult, get_default_task_registry
 
 from .core import ComputeRequest, ComputeResponse, read_response, write_request
 
 
 class EnvSubprocess:
-    def __init__(self, executeable: Path):
+    def __init__(self, executeable: Path, name: str) -> None:
         self._request_counter = 0
         self._process = subprocess.Popen(
-            [executeable.as_posix(), "-m", "atomforge.backend.subprocess.worker"],
+            [executeable.as_posix(), "-m", "atomforge.backend.subprocess.worker", name],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=None,
@@ -33,10 +33,9 @@ class EnvSubprocess:
 class SubprocessBackend:
     def __init__(self, environment_provider: EnvironmentProvider | None = None) -> None:
         self._environment_provider = environment_provider or UVEnvironmentProvider()
-
         self.env_subprocesses: dict[str, EnvSubprocess] = {}
 
-        self._registry = get_default_registry()
+        self._registry = get_default_task_registry()
 
     def get_subprocess(self, env_spec: EnvironmentSpec) -> EnvSubprocess:
         name_with_hash = env_spec.name_with_hash()
@@ -45,7 +44,7 @@ class SubprocessBackend:
             handle = self._environment_provider.ensure_environment(env_spec)
             info = self._environment_provider.inspect_environment(handle)
             self.env_subprocesses[name_with_hash] = EnvSubprocess(
-                info.python_executable
+                info.python_executable, name=name_with_hash
             )
 
         return self.env_subprocesses[name_with_hash]
@@ -66,20 +65,12 @@ class SubprocessBackend:
         # Get the subprocess for the environment
         env_subprocess = self.get_subprocess(env_spec)
 
-        # For now only support SinglePoint-task
-        if task.task_name != "single_point":
-            raise NotImplementedError(
-                f"Task {task.task_name} is not supported by the subprocess backend"
-            )
-
         # Convert to a ComputeRequest
-
         task_spec = task.to_spec()
-
         request = ComputeRequest(
             operation="task",
             request_id=str(env_subprocess.get_request_counter()),
-            model_name=model.model_name,
+            model_kind=model.model_kind,
             task_kind=task_spec.kind,
             task_payload=task_spec.model_dump(),
         )
@@ -97,3 +88,31 @@ class SubprocessBackend:
         result = registration.result_model.model_validate(response.result_payload)
 
         return result
+
+    def send_shutdown(self, env_key: str) -> None:
+        if env_key in self.env_subprocesses:
+            env_subprocess = self.env_subprocesses[env_key]
+        else:
+            env_subprocess = None
+
+        if env_subprocess is not None:            
+            request = ComputeRequest(
+                operation="shutdown",
+                request_id=str(env_subprocess.get_request_counter()),
+                task_payload={},
+            )
+            write_request(env_subprocess._stdin, request)
+            env_subprocess._process.wait()
+            del self.env_subprocesses[env_key]
+        else:
+            print(f"No subprocess found for environment {env_key}, skipping shutdown.")
+
+    def shutdown(self) -> None:
+        for env_key in list(self.env_subprocesses.keys()):
+            self.send_shutdown(env_key)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.shutdown()

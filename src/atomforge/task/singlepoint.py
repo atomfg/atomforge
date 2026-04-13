@@ -13,7 +13,7 @@ class SinglePointSpec(TaskSpec):
 
 class SinglePointResult(TaskResult):
     kind: Literal["single_point"] = KIND
-    energy: float
+    energy: float | None
     forces: list[list[float]] | None
 
 class SinglePointExecutor(TaskExecutor):
@@ -29,9 +29,15 @@ class SinglePointExecutor(TaskExecutor):
 
 class SinglePoint(Task):
 
-    def __init__(self, structure: Structure, properties: frozenset[Property]):
+    def __init__(self, structure: Structure, properties: list[Property] | list[str]):
         super().__init__()
         self.structure = structure
+
+        if all(isinstance(p, str) for p in properties):
+            properties = [Property(p) for p in properties]
+        elif not all(isinstance(p, Property) for p in properties):
+            raise ValueError("Properties must be either all strings or all Property instances.")
+
         self.properties = properties
 
     @property
@@ -40,7 +46,12 @@ class SinglePoint(Task):
 
     @property
     def required_properties(self) -> frozenset[str]:
-        return frozenset({"energy", "forces"})
+        """
+        This is eventually meant to specify what a model needs to expose to be able to execute this task.
+
+        It is however, currently ignored.
+        """
+        return frozenset({Property.ENERGY, Property.FORCES})
     
     def to_spec(self) -> SinglePointSpec:
         return SinglePointSpec(

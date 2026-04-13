@@ -14,14 +14,17 @@ from .core import (
     write_response,
 )
 
-from atomforge.task.base import get_default_registry
+from atomforge.task.base import get_default_task_registry
+from atomforge.model import get_default_model_registry
 
 class SubprocessWorker:
-    def __init__(self, stdin: TextIO, stdout: TextIO, stderr: TextIO) -> None:
+    def __init__(self, stdin: TextIO, stdout: TextIO, stderr: TextIO, name: str) -> None:
         self._stdin = stdin
         self._stdout = stdout
         self._stderr = stderr
-        self._task_registry = get_default_registry()
+        self._name = name
+        self._task_registry = get_default_task_registry()
+        self._model_registry = get_default_model_registry()
 
     def run(self) -> int:
         loop_count = 0
@@ -43,7 +46,7 @@ class SubprocessWorker:
             write_response(self._stdout, response)
 
             if should_exit:
-                print(f"worker processed {loop_count} request(s)", file=self._stderr, flush=True)
+                self._log(f"worker processed {loop_count} request(s)")
                 self._log("shutdown requested")
                 return 0
             
@@ -78,16 +81,14 @@ class SubprocessWorker:
             False,
         )
 
-    def _execute_task(self, request: ComputeRequest) -> Any:        
-        from atomforge.model import models
-
+    def _execute_task(self, request: ComputeRequest) -> Any:
         registration = self._task_registry.get(request.task_kind)
         spec = registration.spec_model.model_validate(request.task_payload)
 
         # Context manager that ensures nothing is written to stdout during model execution
         with contextlib.redirect_stdout(None) as _:
             with contextlib.redirect_stderr(None) as _:
-                model = models[request.model_name]()
+                model = self._model_registry.get(request.model_kind).model_class()
                 executor = registration.executor
                 task_result = executor.execute(spec, model)
 
@@ -99,13 +100,15 @@ class SubprocessWorker:
         )
 
     def _log(self, message: str) -> None:
-        print(f"worker[pydantic]: {message}", file=self._stderr, flush=True)
+        print(f"worker[{self._name}]: {message}", file=self._stderr, flush=True)
 
 
-def main() -> int:
-    worker = SubprocessWorker(stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
+def main(name: str) -> int:
+    worker = SubprocessWorker(stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, name=name)
     return worker.run()
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import sys
+    name = sys.argv[1]
+    raise SystemExit(main(name))

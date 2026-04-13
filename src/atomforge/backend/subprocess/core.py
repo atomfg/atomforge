@@ -7,8 +7,8 @@ class ComputeRequest(BaseModel):
     model_config = ConfigDict(frozen=True)
     operation: Literal['task', 'shutdown']
     request_id: str
-    model_name: str
-    task_kind: str
+    model_kind: str | None = None
+    task_kind: str | None = None
     task_payload: dict[str, Any]
 
 class ComputeResponse(BaseModel):

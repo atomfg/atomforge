@@ -18,7 +18,7 @@ def _register_single_point_task(registry: TaskRegistry) -> None:
 def register_builtin_tasks(registry: TaskRegistry) -> None:
     _register_single_point_task(registry)
 
-def get_default_registry() -> TaskRegistry:
+def get_default_task_registry() -> TaskRegistry:
     registry = TaskRegistry()
     register_builtin_tasks(registry)
     return registry

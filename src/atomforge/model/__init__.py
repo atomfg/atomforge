@@ -1,9 +1,5 @@
 from .base import Model, ModelResult, Property
-from .ase_lennard_jones import ASELennardJones
-from .chgnet_model import CHGNet
+from .registry import ModelRegistry
+from .builtin import get_default_model_registry
 
-models = {
-    "ase_lennard_jones": ASELennardJones,
-    "CHGNet": CHGNet,}
-
-__all__ = ["Model", "ModelResult", "Property"]
+__all__ = ["Model", "ModelResult", "Property", "ModelRegistry", "get_default_model_registry"]

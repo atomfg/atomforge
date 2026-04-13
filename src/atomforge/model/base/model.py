@@ -13,7 +13,7 @@ class Model(ABC):
 
     @property
     @abstractmethod
-    def model_name(self) -> str:
+    def model_kind(self) -> str:
         raise NotImplementedError
 
     @abstractmethod

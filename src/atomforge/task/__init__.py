@@ -1,7 +1,8 @@
 from .base import Task
 
-from .singlepoint import SinglePoint, SinglePointExecutor, SinglePointSpec, SinglePointResult
+from .singlepoint import SinglePoint    
 
-executors = {
-    "single_point": SinglePointExecutor()
-}
+__all__ = [
+    "Task",
+    "SinglePoint"
+]
