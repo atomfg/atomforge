@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from atomforge.env import EnvironmentSpec
 from atomforge.model.base import Property
 from atomforge.task.base.spec import TaskSpec
 
@@ -51,3 +52,10 @@ class Task(ABC):
     @property
     def required_model_properties(self) -> frozenset[Property]:
         return self._required_model_properties()
+
+    @abstractmethod
+    def executor_environment(self) -> EnvironmentSpec:
+        """
+        Return an EnvironmentSpec describing the environment necessary to execute this task.
+        """
+        raise NotImplementedError

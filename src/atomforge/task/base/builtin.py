@@ -15,6 +15,7 @@ def _register_single_point_task(registry: TaskRegistry) -> None:
         executor=SinglePointExecutor(),
     )
 
+
 def _register_bfgs_task(registry: TaskRegistry) -> None:
     from atomforge.task.bfgs import (
         BFGSExecutor,

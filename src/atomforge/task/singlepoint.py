@@ -1,3 +1,5 @@
+from atomforge.env.base.env import EnvironmentSpec
+
 from .base import Task, TaskExecutor, TaskSpec, TaskResult, TaskCapabilitySpec
 from atomforge.model.base import Property, Model
 from atomforge.structure import Structure, StructureMessage
@@ -79,3 +81,6 @@ class SinglePoint(Task):
         return SinglePointSpec(
             structure=self.structure.to_message(), properties=self.requested_properties
         )
+
+    def executor_environment(self) -> EnvironmentSpec:
+        return EnvironmentSpec(name=self.task_name)

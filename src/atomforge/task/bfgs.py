@@ -1,6 +1,7 @@
 from .base import Task, TaskExecutor, TaskSpec, TaskResult, TaskCapabilitySpec
 from atomforge.model.base import Property, Model
 from atomforge.structure import Structure, StructureMessage
+from atomforge.env.base.env import EnvironmentSpec
 
 from typing import Literal
 
@@ -12,6 +13,7 @@ class BFGSSpec(TaskSpec):
     structure: StructureMessage
     fmax: float = 0.05
 
+
 class BFGSResult(TaskResult):
     kind: Literal["bfgs"] = KIND
     structure: StructureMessage
@@ -20,13 +22,11 @@ class BFGSResult(TaskResult):
 
 
 class BFGSExecutor(TaskExecutor):
-
     def execute(self, spec: BFGSSpec, model: Model) -> BFGSResult:
         from ase.optimize import BFGS as BFGSOptimizer
         from ase.calculators.calculator import Calculator
 
         class ModelCalculatorAdapter(Calculator):
-
             implemented_properties = ["energy", "forces"]
 
             def __init__(self, model: Model):
@@ -35,10 +35,12 @@ class BFGSExecutor(TaskExecutor):
 
             def calculate(self, atoms, properties=None, system_changes=None):
                 structure = Structure.from_ase(atoms)
-                model_result = self.model.compute(structure, {Property.ENERGY, Property.FORCES})
+                model_result = self.model.compute(
+                    structure, {Property.ENERGY, Property.FORCES}
+                )
                 self.results["energy"] = model_result.energy
                 self.results["forces"] = model_result.forces
-    
+
         # Setup
         atoms = spec.structure.to_structure().to_ase()
         atoms.set_calculator(ModelCalculatorAdapter(model))
@@ -54,7 +56,9 @@ class BFGSExecutor(TaskExecutor):
         return BFGSResult(
             structure=final_structure.to_message(),
             energy=energy,
-            forces=forces.tolist())
+            forces=forces.tolist(),
+        )
+
 
 class BFGS(Task):
     capability_spec = TaskCapabilitySpec(
@@ -62,8 +66,7 @@ class BFGS(Task):
     )
     task_name = KIND
 
-    def __init__(
-        self, structure: Structure, fmax: float = 0.05) -> None:
+    def __init__(self, structure: Structure, fmax: float = 0.05) -> None:
         super().__init__()
         self.structure = structure
         self.fmax = fmax
@@ -72,7 +75,7 @@ class BFGS(Task):
         return self.capability_spec.required
 
     def to_spec(self) -> BFGSSpec:
-        return BFGSSpec(
-            structure=self.structure.to_message(),
-            fmax=self.fmax
-        )
+        return BFGSSpec(structure=self.structure.to_message(), fmax=self.fmax)
+
+    def executor_environment(self) -> EnvironmentSpec:
+        return EnvironmentSpec(name=self.task_name, requirements=["ase"])

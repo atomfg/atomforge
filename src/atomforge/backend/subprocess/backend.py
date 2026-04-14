@@ -39,6 +39,18 @@ class SubprocessBackend:
 
         self._registry = get_default_task_registry()
 
+    def setup_environment(self, task: Task, model: Model) -> EnvironmentSpec:
+        # For now, we just use the default environment spec from the model,
+        # but in the future we could allow tasks to specify their own environment requirements
+        model_env_spec = model.default_environment()
+
+        # Get the environment spec from the task, which may extend the model's default environment spec
+        task_env_spec = task.executor_environment()
+
+        # Get the subprocess for the environment
+        env_spec = model_env_spec + task_env_spec
+        return env_spec
+
     def get_subprocess(self, env_spec: EnvironmentSpec) -> EnvSubprocess:
         name_with_hash = env_spec.name_with_hash()
 
@@ -65,11 +77,8 @@ class SubprocessBackend:
                 f"Model {model.model_kind} does not support required properties for task {task.task_name}: {task.required_model_properties}"
             )
 
-        # For now, we just use the default environment spec from the model,
-        # but in the future we could allow tasks to specify their own environment requirements
-        env_spec = model.default_environment()
-
-        # Get the subprocess for the environment
+        # Set up the environment and subprocess for this task
+        env_spec = self.setup_environment(task, model)
         env_subprocess = self.get_subprocess(env_spec)
 
         # Convert to a TaskRequest
