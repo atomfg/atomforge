@@ -1,13 +1,30 @@
 from atomforge.model import Model
 from atomforge.env import EnvironmentSpec
 from atomforge.structure import Structure
-from atomforge.model.base import ModelResult, Property
+from atomforge.model.base import ModelResult, Property, ModelMetadata, Reference
 
 
 class CHGNet(Model):
     model_kind: str = "chgnet"
     supported_properties: frozenset[Property] = frozenset(
         {Property.ENERGY, Property.FORCES}
+    )
+    metadata: ModelMetadata = ModelMetadata(
+        id="chgnet",
+        name="CHGNet",
+        method_family="mlip",
+        references=(
+            Reference(
+                label="GitHub Repository",
+                url="https://github.com/CederGroupHub/chgnet",
+                kind="repo",
+            ),
+            Reference(
+                label="Paper",
+                url="https://www.nature.com/articles/s42256-023-00716-3",
+                kind="paper",
+            ),
+        ),
     )
 
     def default_environment(self) -> EnvironmentSpec:

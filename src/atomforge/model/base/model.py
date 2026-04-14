@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from atomforge.env import EnvironmentSpec
-from atomforge.model.base import Property, ModelResult
+from atomforge.model.base import Property, ModelResult, ModelMetadata
 from atomforge.structure import Structure
 
 
@@ -12,6 +12,7 @@ class Model(ABC):
     A model is a wrapper to a machine learning interatomic potential.
     """
 
+    metadata: ModelMetadata
     supported_properties: frozenset[Property]
     model_kind: str
 
@@ -23,6 +24,8 @@ class Model(ABC):
             raise TypeError(f"{cls.__name__} must define supported_properties")
         if "model_kind" not in cls.__dict__:
             raise TypeError(f"{cls.__name__} must define model_kind")
+        if "metadata" not in cls.__dict__:
+            raise TypeError(f"{cls.__name__} must define metadata")
 
     @abstractmethod
     def default_environment(self) -> EnvironmentSpec:

@@ -1,13 +1,23 @@
 from atomforge.model.base import Model
 from atomforge.env import EnvironmentSpec
 from atomforge.structure import Structure
-from atomforge.model.base import ModelResult, Property
+from atomforge.model.base import ModelResult, Property, ModelMetadata, Reference
 
 
 class ASELennardJones(Model):
     model_kind: str = "ase_lennard_jones"
     supported_properties: frozenset[Property] = frozenset(
         {Property.ENERGY, Property.FORCES}
+    )
+    metadata: ModelMetadata = ModelMetadata(
+        id="ase_lennard_jones",
+        name="ASE Lennard-Jones",
+        method_family="empirical",
+        references=(
+            Reference(
+                label="ASE Documentation", url="https://ase-lib.org/", kind="docs"
+            ),
+        ),
     )
 
     def default_environment(self) -> EnvironmentSpec:

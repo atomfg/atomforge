@@ -89,7 +89,7 @@ if __name__ == "__main__":
     spec2 = EnvironmentSpec(
         name="test-env", python="python3.12", requirements=["requests", "numpy"]
     )
-    
+
     spec = spec2 + spec1
 
     handle = provider.ensure_environment(spec)
