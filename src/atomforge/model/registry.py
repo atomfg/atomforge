@@ -29,6 +29,6 @@ class ModelRegistry:
             return self._registrations[model_kind]
         except KeyError as exc:
             raise KeyError(f"Unknown model kind: {model_kind}") from exc
-        
+
     def __iter__(self):
         return iter(self._registrations.items())

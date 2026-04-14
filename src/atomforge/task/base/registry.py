@@ -2,11 +2,13 @@ from dataclasses import dataclass
 
 from atomforge.task.base import TaskExecutor, TaskResult, TaskSpec
 
+
 @dataclass(frozen=True)
 class TaskRegistration:
     spec_model: type[TaskSpec]
     result_model: type[TaskResult]
     executor: TaskExecutor
+
 
 class TaskRegistry:
     def __init__(self) -> None:

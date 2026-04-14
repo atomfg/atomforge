@@ -5,7 +5,9 @@ from atomforge.env import EnvironmentProvider, EnvironmentSpec, UVEnvironmentPro
 from atomforge.model import Model
 from atomforge.task.base import Task, TaskResult, get_default_task_registry
 
-from .core import ComputeRequest, ComputeResponse, read_response, write_request
+from .core import read_response, write_request
+from .request import TaskRequest, ShutdownRequest, RequestMessage
+from .response import ResponseMessage
 
 
 class EnvSubprocess:
@@ -50,7 +52,7 @@ class SubprocessBackend:
         return self.env_subprocesses[name_with_hash]
 
     def _ensure_matching_response(
-        self, request: ComputeRequest, response: ComputeResponse
+        self, request: RequestMessage, response: ResponseMessage
     ) -> None:
         if response.request_id != request.request_id:
             raise RuntimeError(
@@ -65,9 +67,9 @@ class SubprocessBackend:
         # Get the subprocess for the environment
         env_subprocess = self.get_subprocess(env_spec)
 
-        # Convert to a ComputeRequest
+        # Convert to a TaskRequest
         task_spec = task.to_spec()
-        request = ComputeRequest(
+        request = TaskRequest(
             operation="task",
             request_id=str(env_subprocess.get_request_counter()),
             model_kind=model.model_kind,
@@ -80,10 +82,10 @@ class SubprocessBackend:
         response = read_response(env_subprocess._stdout)
         self._ensure_matching_response(request, response)
 
-        if not response.ok:
+        if response.operation == "error":
             print(f"Worker error: {response.error}", flush=True)
             raise RuntimeError(response.error or "Worker returned an unknown error")
-        
+
         registration = self._registry.get(response.task_kind)
         result = registration.result_model.model_validate(response.result_payload)
 
@@ -95,13 +97,28 @@ class SubprocessBackend:
         else:
             env_subprocess = None
 
-        if env_subprocess is not None:            
-            request = ComputeRequest(
+        if env_subprocess is not None:
+            request = ShutdownRequest(
                 operation="shutdown",
                 request_id=str(env_subprocess.get_request_counter()),
-                task_payload={},
             )
             write_request(env_subprocess._stdin, request)
+            response = read_response(env_subprocess._stdout)
+            if response is not None:
+                self._ensure_matching_response(request, response)
+                if response.operation == "error":
+                    print(f"Worker error during shutdown: {response.error}", flush=True)
+                elif response.operation == "shutdown":
+                    pass
+                else:
+                    print(
+                        f"Unexpected response during shutdown: {response}", flush=True
+                    )
+            else:
+                print(
+                    f"No response received during shutdown of worker {env_key}",
+                    flush=True,
+                )
             env_subprocess._process.wait()
             del self.env_subprocesses[env_key]
         else:

@@ -4,11 +4,12 @@ from atomforge.env import EnvironmentSpec
 from atomforge.model.base import Property, ModelResult
 from atomforge.structure import Structure
 
+
 class Model(ABC):
     """
-    Abstract base class for all models. 
+    Abstract base class for all models.
 
-    A model is a wrapper to a machine learning interatomic potential. 
+    A model is a wrapper to a machine learning interatomic potential.
     """
 
     @property
@@ -25,8 +26,7 @@ class Model(ABC):
 
     @property
     @abstractmethod
-    def supported_properties(self) -> frozenset[Property]:
-        ...
+    def supported_properties(self) -> frozenset[Property]: ...
 
     def supports(self, *properties: Property) -> bool:
         return all(prop in self.supported_properties for prop in properties)
@@ -36,5 +36,4 @@ class Model(ABC):
         self,
         structure: Structure,
         properties: set[Property],
-    ) -> ModelResult:
-        ...
+    ) -> ModelResult: ...

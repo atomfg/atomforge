@@ -28,10 +28,9 @@ class EnvironmentSpec(BaseModel):
         }
         env_json = json.dumps(env_dict, sort_keys=True)
         return hashlib.sha256(env_json.encode()).hexdigest()
-    
+
     def name_with_hash(self) -> str:
         return f"{self.name}-{self.hash()[:8]}"
-
 
 
 class EnvironmentHandle(BaseModel):

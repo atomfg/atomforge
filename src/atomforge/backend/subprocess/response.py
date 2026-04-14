@@ -1,0 +1,34 @@
+from pydantic import BaseModel, ConfigDict
+from typing import Any, Annotated, Literal
+from pydantic import Field, TypeAdapter
+
+
+class ShutdownResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    operation: Literal["shutdown"] = "shutdown"
+    request_id: str
+    message: str | None = None
+
+
+class ErrorResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    operation: Literal["error"] = "error"
+    request_id: str
+    error: str
+    message: str | None = None
+    traceback: str | None = None
+
+
+class TaskResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    operation: Literal["task"] = "task"
+    request_id: str
+    task_kind: str
+    result_payload: dict[str, Any]
+
+
+ResponseMessage = Annotated[
+    TaskResponse | ShutdownResponse | ErrorResponse, Field(discriminator="operation")
+]
+
+_RESPONSE_ADAPTER = TypeAdapter(ResponseMessage)

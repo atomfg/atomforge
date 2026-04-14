@@ -1,8 +1,5 @@
 from .base import Task
 
-from .singlepoint import SinglePoint    
+from .singlepoint import SinglePoint
 
-__all__ = [
-    "Task",
-    "SinglePoint"
-]
+__all__ = ["Task", "SinglePoint"]

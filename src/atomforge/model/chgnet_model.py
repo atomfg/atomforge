@@ -3,8 +3,8 @@ from atomforge.env import EnvironmentSpec
 from atomforge.structure import Structure
 from atomforge.model.base import ModelResult, Property
 
+
 class CHGNet(Model):
-    
     @property
     def model_kind(self) -> str:
         return "chgnet"
@@ -13,11 +13,11 @@ class CHGNet(Model):
         return EnvironmentSpec(
             name=self.model_kind, python="python3.12", requirements=["chgnet"]
         )
-    
+
     @property
     def supported_properties(self):
         return frozenset({Property.ENERGY, Property.FORCES})
-    
+
     def compute(self, structure: Structure, properties) -> ModelResult:
         from chgnet.model.dynamics import CHGNetCalculator
 
@@ -28,7 +28,7 @@ class CHGNet(Model):
 
         if Property.FORCES in properties:
             forces = atoms.get_forces()
-        else:            
+        else:
             forces = None
 
         if Property.ENERGY in properties:
@@ -37,7 +37,8 @@ class CHGNet(Model):
             energy = None
 
         return ModelResult(energy=energy, forces=forces)
-    
+
+
 if __name__ == "__main__":
     from atomforge.structure import Structure
     from ase.build import molecule

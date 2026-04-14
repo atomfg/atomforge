@@ -3,10 +3,12 @@ from .env import EnvironmentSpec, EnvironmentHandle, EnvironmentInfo
 
 from pathlib import Path
 
-class EnvironmentProvider(ABC):
 
+class EnvironmentProvider(ABC):
     def __init__(self, root_path: Path | str | None = None):
-        self.root_path = Path(root_path) if root_path else Path.home() / ".atomforge" / "envs"
+        self.root_path = (
+            Path(root_path) if root_path else Path.home() / ".atomforge" / "envs"
+        )
         self.root_path.mkdir(parents=True, exist_ok=True)
 
     @property

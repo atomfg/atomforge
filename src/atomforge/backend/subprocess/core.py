@@ -1,24 +1,9 @@
-from typing import Literal
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
+from typing import TextIO
 
-from typing import TextIO, Any
+from .request import RequestMessage, _REQUEST_ADAPTER
+from .response import ResponseMessage, _RESPONSE_ADAPTER
 
-class ComputeRequest(BaseModel):
-    model_config = ConfigDict(frozen=True)
-    operation: Literal['task', 'shutdown']
-    request_id: str
-    model_kind: str | None = None
-    task_kind: str | None = None
-    task_payload: dict[str, Any]
-
-class ComputeResponse(BaseModel):
-    model_config = ConfigDict(frozen=True)
-    request_id: str
-    ok: bool
-    task_kind: str | None = None
-    result_payload: dict[str, Any] | None = None
-    error: str | None = None
-    message: str | None = None
 
 def _write_message(stream: TextIO, message: BaseModel) -> None:
     stream.write(message.model_dump_json())
@@ -26,25 +11,25 @@ def _write_message(stream: TextIO, message: BaseModel) -> None:
     stream.flush()
 
 
-def write_request(stream: TextIO, request: ComputeRequest) -> None:
+def write_request(stream: TextIO, request: RequestMessage) -> None:
     _write_message(stream, request)
 
 
-def write_response(stream: TextIO, response: ComputeResponse) -> None:
+def write_response(stream: TextIO, response: ResponseMessage) -> None:
     _write_message(stream, response)
 
 
-def read_request(stream: TextIO) -> ComputeRequest | None:
+def read_request(stream: TextIO) -> RequestMessage | None:
     line = stream.readline()
     if line == "":
         return None
 
-    return ComputeRequest.model_validate_json(line)
+    return _REQUEST_ADAPTER.validate_json(line)
 
 
-def read_response(stream: TextIO) -> ComputeResponse | None:
+def read_response(stream: TextIO) -> ResponseMessage | None:
     line = stream.readline()
     if line == "":
         return None
 
-    return ComputeResponse.model_validate_json(line)
+    return _RESPONSE_ADAPTER.validate_json(line)
