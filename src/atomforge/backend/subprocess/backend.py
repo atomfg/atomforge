@@ -60,6 +60,11 @@ class SubprocessBackend:
             )
 
     def execute(self, task: Task, model: Model) -> TaskResult:
+        if not model.supports(*task.required_model_properties):
+            raise ValueError(
+                f"Model {model.model_kind} does not support required properties for task {task.task_name}: {task.required_model_properties}"
+            )
+
         # For now, we just use the default environment spec from the model,
         # but in the future we could allow tasks to specify their own environment requirements
         env_spec = model.default_environment()

@@ -1,6 +1,6 @@
 from .registry import ModelRegistry
 
-from .ase_lennard_jones import ASELennardJones
+from .ase_lj import ASELennardJones
 from .chgnet_model import CHGNet
 
 

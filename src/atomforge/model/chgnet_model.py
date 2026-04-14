@@ -5,18 +5,15 @@ from atomforge.model.base import ModelResult, Property
 
 
 class CHGNet(Model):
-    @property
-    def model_kind(self) -> str:
-        return "chgnet"
+    model_kind: str = "chgnet"
+    supported_properties: frozenset[Property] = frozenset(
+        {Property.ENERGY, Property.FORCES}
+    )
 
     def default_environment(self) -> EnvironmentSpec:
         return EnvironmentSpec(
             name=self.model_kind, python="python3.12", requirements=["chgnet"]
         )
-
-    @property
-    def supported_properties(self):
-        return frozenset({Property.ENERGY, Property.FORCES})
 
     def compute(self, structure: Structure, properties) -> ModelResult:
         from chgnet.model.dynamics import CHGNetCalculator

@@ -1,7 +1,7 @@
 from .spec import TaskSpec
 from .result import TaskResult
 from .executor import TaskExecutor
-from .base import Task
+from .base import Task, TaskCapabilitySpec
 from .registry import TaskRegistry
 from .builtin import register_builtin_tasks, get_default_task_registry
 
@@ -13,4 +13,5 @@ __all__ = [
     "TaskRegistry",
     "register_builtin_tasks",
     "get_default_task_registry",
+    "TaskCapabilitySpec",
 ]

@@ -12,10 +12,17 @@ class Model(ABC):
     A model is a wrapper to a machine learning interatomic potential.
     """
 
-    @property
-    @abstractmethod
-    def model_kind(self) -> str:
-        raise NotImplementedError
+    supported_properties: frozenset[Property]
+    model_kind: str
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if cls is Model:
+            return
+        if "supported_properties" not in cls.__dict__:
+            raise TypeError(f"{cls.__name__} must define supported_properties")
+        if "model_kind" not in cls.__dict__:
+            raise TypeError(f"{cls.__name__} must define model_kind")
 
     @abstractmethod
     def default_environment(self) -> EnvironmentSpec:
@@ -24,12 +31,9 @@ class Model(ABC):
         """
         raise NotImplementedError
 
-    @property
-    @abstractmethod
-    def supported_properties(self) -> frozenset[Property]: ...
-
-    def supports(self, *properties: Property) -> bool:
-        return all(prop in self.supported_properties for prop in properties)
+    @classmethod
+    def supports(cls, *properties: Property) -> bool:
+        return all(prop in cls.supported_properties for prop in properties)
 
     @abstractmethod
     def compute(

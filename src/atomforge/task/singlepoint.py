@@ -1,4 +1,4 @@
-from .base import Task, TaskExecutor, TaskSpec, TaskResult
+from .base import Task, TaskExecutor, TaskSpec, TaskResult, TaskCapabilitySpec
 from atomforge.model.base import Property, Model
 from atomforge.structure import Structure, StructureMessage
 
@@ -33,34 +33,47 @@ class SinglePointExecutor(TaskExecutor):
 
 
 class SinglePoint(Task):
-    required_model_properties: frozenset[Property] = frozenset(
-        {Property.ENERGY, Property.FORCES}
+    capability_spec = TaskCapabilitySpec(
+        required=frozenset(), optional=frozenset({Property.ENERGY, Property.FORCES})
     )
+    task_name = KIND
 
-    def __init__(self, structure: Structure, properties: list[Property] | list[str]):
+    def __init__(
+        self, structure: Structure, properties: list[Property] | list[str] | None = None
+    ) -> None:
         super().__init__()
         self.structure = structure
 
+        if properties is None:  # Not given, default to energy and forces
+            properties = [Property.ENERGY, Property.FORCES]
+        elif len(properties) == 0:  # Given but empty, not valid.
+            raise ValueError("At least one property must be requested.")
+
+        # Convert list of strings to frozenset of Properties.
         if all(isinstance(p, str) for p in properties):
             properties = frozenset([Property(p) for p in properties])
 
-            # Check that all requested properties are in the set of valid properties
-            # Which is `required_model_properties` for this task
-            if not properties.issubset(self.required_model_properties):
-                raise ValueError(
-                    f"Invalid properties: {properties - self.required_model_properties}. Valid properties are: {self.required_model_properties}"
-                )
+        # Convert list of Properties to frozenset of Properties.
+        elif all(isinstance(p, Property) for p in properties):
+            properties = frozenset(properties)
 
+        # Mixed types are not valid.
         elif not all(isinstance(p, Property) for p in properties):
             raise ValueError(
                 "Properties must be either all strings or all Property instances."
             )
 
+        # Check that all requested properties are in the declared capability spec for this task
+        if not properties.issubset(
+            self.capability_spec.optional.union(self.capability_spec.required)
+        ):
+            raise ValueError(
+                f"Invalid properties: {properties - self.capability_spec.optional.union(self.capability_spec.required)}. Valid properties are: {self.capability_spec.optional.union(self.capability_spec.required)}"
+            )
         self.requested_properties: frozenset[Property] = properties
 
-    @property
-    def task_name(self) -> str:
-        return KIND
+    def _required_model_properties(self):
+        return self.requested_properties
 
     def to_spec(self) -> SinglePointSpec:
         return SinglePointSpec(

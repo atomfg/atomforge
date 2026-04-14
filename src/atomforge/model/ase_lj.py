@@ -5,18 +5,15 @@ from atomforge.model.base import ModelResult, Property
 
 
 class ASELennardJones(Model):
-    @property
-    def model_kind(self) -> str:
-        return "ase_lennard_jones"
+    model_kind: str = "ase_lennard_jones"
+    supported_properties: frozenset[Property] = frozenset(
+        {Property.ENERGY, Property.FORCES}
+    )
 
     def default_environment(self) -> EnvironmentSpec:
         return EnvironmentSpec(
             name=self.model_kind, python="python3.12", requirements=["ase"]
         )
-
-    @property
-    def supported_properties(self):
-        return frozenset({Property.ENERGY, Property.FORCES})
 
     def compute(self, structure: Structure, properties) -> ModelResult:
         from ase.calculators.lj import LennardJones
