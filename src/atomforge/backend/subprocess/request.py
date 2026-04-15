@@ -16,6 +16,7 @@ class TaskRequest(BaseModel):
     operation: Literal["task"] = "task"
     request_id: str
     model_kind: str
+    model_payload: dict[str, Any]
     task_kind: str
     task_payload: dict[str, Any]
 

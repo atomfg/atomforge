@@ -2,7 +2,7 @@ import subprocess
 from pathlib import Path
 
 from atomforge.env import EnvironmentProvider, EnvironmentSpec, UVEnvironmentProvider
-from atomforge.model import Model
+from atomforge.model import ModelSpec, get_default_model_registry
 from atomforge.task.base import Task, TaskResult, get_default_task_registry
 
 from .core import read_response, write_request
@@ -37,12 +37,14 @@ class SubprocessBackend:
         self._environment_provider = environment_provider or UVEnvironmentProvider()
         self.env_subprocesses: dict[str, EnvSubprocess] = {}
 
-        self._registry = get_default_task_registry()
+        self._task_registry = get_default_task_registry()
+        self._model_registry = get_default_model_registry()
 
-    def setup_environment(self, task: Task, model: Model) -> EnvironmentSpec:
+    def setup_environment(self, task: Task, model_spec: ModelSpec) -> EnvironmentSpec:
+
         # For now, we just use the default environment spec from the model,
         # but in the future we could allow tasks to specify their own environment requirements
-        model_env_spec = model.default_environment()
+        model_env_spec = self._model_registry.get(model_spec.kind).environment_factory(model_spec)
 
         # Get the environment spec from the task, which may extend the model's default environment spec
         task_env_spec = task.executor_environment()
@@ -71,14 +73,18 @@ class SubprocessBackend:
                 f"Response id mismatch: expected {request.request_id}, got {response.request_id}"
             )
 
-    def execute(self, task: Task, model: Model) -> TaskResult:
-        if not model.supports(*task.required_model_properties):
+    def execute(self, task: Task, model_spec: ModelSpec) -> TaskResult:
+
+        # Check that the model can support the task before starting the subprocess
+        model_registration = self._model_registry.get(model_spec.kind)
+        if not task.required_model_properties.issubset(model_registration.supported_properties):
             raise ValueError(
-                f"Model {model.model_kind} does not support required properties for task {task.task_name}: {task.required_model_properties}"
+                f"Model of kind {model_spec.kind} does not support task of kind {task.task_name}"
             )
 
+
         # Set up the environment and subprocess for this task
-        env_spec = self.setup_environment(task, model)
+        env_spec = self.setup_environment(task, model_spec)
         env_subprocess = self.get_subprocess(env_spec)
 
         # Convert to a TaskRequest
@@ -86,7 +92,8 @@ class SubprocessBackend:
         request = TaskRequest(
             operation="task",
             request_id=str(env_subprocess.get_request_counter()),
-            model_kind=model.model_kind,
+            model_kind=model_spec.kind,
+            model_payload=model_spec.model_dump(),
             task_kind=task_spec.kind,
             task_payload=task_spec.model_dump(),
         )
@@ -100,7 +107,7 @@ class SubprocessBackend:
             print(f"Worker error: {response.error}", flush=True)
             raise RuntimeError(response.error or "Worker returned an unknown error")
 
-        registration = self._registry.get(response.task_kind)
+        registration = self._task_registry.get(response.task_kind)
         result = registration.result_model.model_validate(response.result_payload)
 
         return result

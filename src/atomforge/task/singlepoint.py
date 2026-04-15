@@ -1,7 +1,8 @@
 from atomforge.env.base.env import EnvironmentSpec
+from atomforge.model.base.executor import ModelExecutor
 
 from .base import Task, TaskExecutor, TaskSpec, TaskResult, TaskCapabilitySpec
-from atomforge.model.base import Property, Model
+from atomforge.model.base import Property
 from atomforge.structure import Structure, StructureMessage
 
 from typing import Literal
@@ -22,10 +23,10 @@ class SinglePointResult(TaskResult):
 
 
 class SinglePointExecutor(TaskExecutor):
-    def execute(self, spec: SinglePointSpec, model: Model) -> SinglePointResult:
+    def execute(self, spec: SinglePointSpec, model_executor: ModelExecutor) -> SinglePointResult:
         structure = spec.structure.to_structure()
         properties = spec.properties
-        model_result = model.compute(structure, properties)
+        model_result = model_executor.compute(structure, properties)
         return SinglePointResult(
             energy=model_result.energy,
             forces=model_result.forces.tolist()

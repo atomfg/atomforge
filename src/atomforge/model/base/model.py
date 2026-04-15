@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 
 from atomforge.env import EnvironmentSpec
-from atomforge.model.base import Property, ModelResult, ModelMetadata
+from atomforge.model.base.property import Property
+from atomforge.model.base.result import ModelResult
+from atomforge.model.base.metadata import ModelMetadata
 from atomforge.structure import Structure
 
 

@@ -1,57 +1,84 @@
-from atomforge.model.base import Model
-from atomforge.env import EnvironmentSpec
+from atomforge.model.base import (
+    ModelSpec,
+    ModelExecutor,
+    Property,
+    ModelResult,
+    ModelMetadata,
+    Reference,
+)
+
 from atomforge.structure import Structure
-from atomforge.model.base import ModelResult, Property, ModelMetadata, Reference
+from atomforge.env import EnvironmentSpec
+from typing import Literal
+
+model_kind = "ase-lj"
+LennardJonesSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
+
+class LennardJones(ModelSpec):
+    kind: Literal["ase-lj"] = model_kind
+    sigma: float = 1.0
+    epsilon: float = 1.0
+    rc: float | None = None
+    ro: float | None = None
+    smooth: bool = False
 
 
-class ASELennardJones(Model):
-    model_kind: str = "ase_lennard_jones"
-    supported_properties: frozenset[Property] = frozenset(
-        {Property.ENERGY, Property.FORCES}
+LennardJonesMetadata = ModelMetadata(
+    id=model_kind,
+    name="ASE Lennard-Jones",
+    method_family="empirical",
+    references=(
+        Reference(label="ASE Documentation", url="https://ase-lib.org/", kind="docs"),
+    ),
+)
+
+def lj_environment(spec: LennardJones) -> EnvironmentSpec:
+    return EnvironmentSpec(
+            name=spec.kind, python="python3.12", requirements=["ase"]
     )
-    metadata: ModelMetadata = ModelMetadata(
-        id="ase_lennard_jones",
-        name="ASE Lennard-Jones",
-        method_family="empirical",
-        references=(
-            Reference(
-                label="ASE Documentation", url="https://ase-lib.org/", kind="docs"
-            ),
-        ),
-    )
 
-    def default_environment(self) -> EnvironmentSpec:
-        return EnvironmentSpec(
-            name=self.model_kind, python="python3.12", requirements=["ase"]
-        )
 
-    def compute(self, structure: Structure, properties) -> ModelResult:
+class LennardJonesExecutor(ModelExecutor[LennardJones]):
+    def __init__(self, spec: LennardJones) -> None:
+        super().__init__(spec)
         from ase.calculators.lj import LennardJones
 
-        calc = LennardJones(sigma=1, epsilon=1)
+        self._calc = LennardJones(
+            sigma=spec.sigma,
+            epsilon=spec.epsilon,
+            rc=spec.rc,
+            ro=spec.ro,
+            smooth=spec.smooth,
+        )
+
+    def compute(self, structure: Structure, properties: frozenset[Property]):
         atoms = structure.to_ase()
+        atoms.calc = self._calc
 
-        atoms.calc = calc
-
+        # Calculate forces if requested, otherwise set to None to avoid unnecessary computation
         if Property.FORCES in properties:
             forces = atoms.get_forces()
         else:
             forces = None
 
+        # Calculate energy if requested, otherwise set to None to avoid unnecessary computation
+        # If forces were requested ASE will have already calculated the energy, so this won't trigger an additional calculation
         if Property.ENERGY in properties:
             energy = atoms.get_potential_energy()
         else:
             energy = None
 
-        return ModelResult(energy=energy, forces=forces)
-
+        return ModelResult(
+            energy=energy,
+            forces=forces,
+        )
 
 if __name__ == "__main__":
-    from atomforge.structure import Structure
     from ase.build import molecule
     from rich import print
 
-    model = ASELennardJones()
+    spec = LennardJones()
+    executor = LennardJonesExecutor(spec)
     structure = Structure.from_ase(molecule("H2O"))
-    result = model.compute(structure, {Property.ENERGY, Property.FORCES})
+    result = executor.compute(structure, {Property.ENERGY, Property.FORCES})
     print(result)

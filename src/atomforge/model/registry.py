@@ -1,12 +1,23 @@
 from dataclasses import dataclass
 
-from atomforge.model.base import Model, ModelMetadata
+from atomforge.model.base import (
+    ModelMetadata,
+    ModelExecutor,
+    Property,
+    ModelSpecT,
+    EnvironmentFactory
+)
+
+from typing import Generic
 
 
 @dataclass(frozen=True)
-class ModelRegistration:
-    model_class: type[Model]
+class ModelRegistration(Generic[ModelSpecT]):
+    model_spec: type[ModelSpecT]
     metadata: ModelMetadata
+    executor_class: type[ModelExecutor[ModelSpecT]]
+    supported_properties: frozenset[Property]
+    environment_factory: EnvironmentFactory[ModelSpecT]
 
 
 class ModelRegistry:
@@ -16,14 +27,21 @@ class ModelRegistry:
     def register(
         self,
         model_kind: str,
-        model_class: type[Model],
+        model_spec: type[ModelSpecT],
+        executor_class: type[ModelExecutor[ModelSpecT]],
+        supported_properties: frozenset[Property],
+        environment_factory: EnvironmentFactory[ModelSpecT],
+        metadata: ModelMetadata,
     ) -> None:
         if model_kind in self._registrations:
             raise ValueError(f"Model kind already registered: {model_kind}")
 
         self._registrations[model_kind] = ModelRegistration(
-            model_class=model_class,
-            metadata=model_class.metadata,
+            model_spec=model_spec,
+            metadata=metadata,
+            executor_class=executor_class,
+            supported_properties=supported_properties,
+            environment_factory=environment_factory,
         )
 
     def get(self, model_kind: str) -> ModelRegistration:

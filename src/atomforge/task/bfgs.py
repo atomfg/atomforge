@@ -1,3 +1,5 @@
+from atomforge.model.base.executor import ModelExecutor
+
 from .base import Task, TaskExecutor, TaskSpec, TaskResult, TaskCapabilitySpec
 from atomforge.model.base import Property, Model
 from atomforge.structure import Structure, StructureMessage
@@ -22,20 +24,20 @@ class BFGSResult(TaskResult):
 
 
 class BFGSExecutor(TaskExecutor):
-    def execute(self, spec: BFGSSpec, model: Model) -> BFGSResult:
+    def execute(self, spec: BFGSSpec, model_executor: ModelExecutor) -> BFGSResult:
         from ase.optimize import BFGS as BFGSOptimizer
         from ase.calculators.calculator import Calculator
 
         class ModelCalculatorAdapter(Calculator):
             implemented_properties = ["energy", "forces"]
 
-            def __init__(self, model: Model):
+            def __init__(self, model_executor: ModelExecutor):
                 super().__init__()
-                self.model = model
+                self.model_executor = model_executor
 
             def calculate(self, atoms, properties=None, system_changes=None):
                 structure = Structure.from_ase(atoms)
-                model_result = self.model.compute(
+                model_result = self.model_executor.compute(
                     structure, {Property.ENERGY, Property.FORCES}
                 )
                 self.results["energy"] = model_result.energy
@@ -43,7 +45,7 @@ class BFGSExecutor(TaskExecutor):
 
         # Setup
         atoms = spec.structure.to_structure().to_ase()
-        atoms.set_calculator(ModelCalculatorAdapter(model))
+        atoms.set_calculator(ModelCalculatorAdapter(model_executor))
         optimizer = BFGSOptimizer(atoms)
 
         # Run optimization

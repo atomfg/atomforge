@@ -1,44 +1,59 @@
-from atomforge.model import Model
+from typing import Literal
+
 from atomforge.env import EnvironmentSpec
+from atomforge.model.base import (
+    ModelExecutor,
+    ModelMetadata,
+    ModelResult,
+    ModelSpec,
+    Property,
+    Reference,
+)
 from atomforge.structure import Structure
-from atomforge.model.base import ModelResult, Property, ModelMetadata, Reference
+
+model_kind = "chgnet"
+CHGNetSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
 
 
-class CHGNet(Model):
-    model_kind: str = "chgnet"
-    supported_properties: frozenset[Property] = frozenset(
-        {Property.ENERGY, Property.FORCES}
-    )
-    metadata: ModelMetadata = ModelMetadata(
-        id="chgnet",
-        name="CHGNet",
-        method_family="mlip",
-        references=(
-            Reference(
-                label="GitHub Repository",
-                url="https://github.com/CederGroupHub/chgnet",
-                kind="repo",
-            ),
-            Reference(
-                label="Paper",
-                url="https://www.nature.com/articles/s42256-023-00716-3",
-                kind="paper",
-            ),
+class CHGNet(ModelSpec):
+    kind: Literal["chgnet"] = model_kind
+
+
+CHGNetMetadata = ModelMetadata(
+    id=model_kind,
+    name="CHGNet",
+    method_family="mlip",
+    references=(
+        Reference(
+            label="GitHub Repository",
+            url="https://github.com/CederGroupHub/chgnet",
+            kind="repo",
         ),
-    )
+        Reference(
+            label="Paper",
+            url="https://www.nature.com/articles/s42256-023-00716-3",
+            kind="paper",
+        ),
+    ),
+)
 
-    def default_environment(self) -> EnvironmentSpec:
-        return EnvironmentSpec(
-            name=self.model_kind, python="python3.12", requirements=["chgnet"]
-        )
 
-    def compute(self, structure: Structure, properties) -> ModelResult:
+def chgnet_environment(spec: CHGNet) -> EnvironmentSpec:
+    return EnvironmentSpec(name=spec.kind, python="python3.12", requirements=["chgnet"])
+
+
+class CHGNetExecutor(ModelExecutor[CHGNet]):
+    def __init__(self, spec: CHGNet) -> None:
+        super().__init__(spec)
         from chgnet.model.dynamics import CHGNetCalculator
 
-        calc = CHGNetCalculator()
-        atoms = structure.to_ase()
+        self._calc = CHGNetCalculator()
 
-        atoms.calc = calc
+    def compute(
+        self, structure: Structure, properties: frozenset[Property]
+    ) -> ModelResult:
+        atoms = structure.to_ase()
+        atoms.calc = self._calc
 
         if Property.FORCES in properties:
             forces = atoms.get_forces()
@@ -54,13 +69,13 @@ class CHGNet(Model):
 
 
 if __name__ == "__main__":
-    from atomforge.structure import Structure
     from ase.build import molecule
     from rich import print
 
-    model = CHGNet()
+    spec = CHGNet()
+    executor = CHGNetExecutor(spec)
     atoms = molecule("H2O")
     atoms.cell = [10, 10, 10]
     structure = Structure.from_ase(atoms)
-    result = model.compute(structure, {Property.ENERGY, Property.FORCES})
+    result = executor.compute(structure, {Property.ENERGY, Property.FORCES})
     print(result)

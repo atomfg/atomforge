@@ -1,48 +1,70 @@
-from atomforge.model import Model
+from typing import Literal
+
 from atomforge.env import EnvironmentSpec
+from atomforge.model.base import (
+    ModelExecutor,
+    ModelMetadata,
+    ModelResult,
+    ModelSpec,
+    Property,
+    Reference,
+)
 from atomforge.structure import Structure
-from atomforge.model.base import ModelResult, Property, ModelMetadata, Reference
+
+model_kind = "mace"
+MACESupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
 
 
-class MACE(Model):
-    model_kind: str = "mace"
-    supported_properties: frozenset[Property] = frozenset(
-        {Property.ENERGY, Property.FORCES}
-    )
-    metadata: ModelMetadata = ModelMetadata(
-        id="mace",
-        name="MACE",
-        method_family="mlip",
-        references=(
-            Reference(
-                label="GitHub Repository",
-                url="https://github.com/CederGroupHub/chgnet",
-                kind="repo",
-            ),
-            Reference(
-                label="Paper",
-                url="https://www.nature.com/articles/s42256-023-00716-3",
-                kind="paper",
-            ),
+class MACE(ModelSpec):
+    kind: Literal["mace"] = model_kind
+    model: str = "medium"
+    dispersion: bool = False
+    default_dtype: str = "float32"
+
+
+MACEMetadata = ModelMetadata(
+    id=model_kind,
+    name="MACE",
+    method_family="mlip",
+    references=(
+        Reference(
+            label="GitHub Repository",
+            url="https://github.com/ACEsuit/mace",
+            kind="repo",
         ),
+        Reference(
+            label="Paper",
+            url="https://openreview.net/forum?id=YPpSngE-ZU",
+            kind="paper",
+        ),
+    ),
+)
+
+
+def mace_environment(spec: MACE) -> EnvironmentSpec:
+    return EnvironmentSpec(
+        name=spec.kind,
+        python="python3.12",
+        requirements=["mace-torch", "torch"],
     )
 
-    def default_environment(self) -> EnvironmentSpec:
-        return EnvironmentSpec(
-            name=self.model_kind, python="python3.12", requirements=["mace-torch", "torch"]
-        )
-    
-    def instantiate_model(self):
+
+class MACEExecutor(ModelExecutor[MACE]):
+    def __init__(self, spec: MACE) -> None:
+        super().__init__(spec)
         from mace.calculators import mace_mp
-        calc = mace_mp(model="medium", dispersion=False, default_dtype="float32")
-        return calc
 
+        self._calc = mace_mp(
+            model=spec.model,
+            dispersion=spec.dispersion,
+            default_dtype=spec.default_dtype,
+        )
 
-    def compute(self, structure: Structure, properties) -> ModelResult:
-        calc = self.instantiate_model()
+    def compute(
+        self, structure: Structure, properties: frozenset[Property]
+    ) -> ModelResult:
         atoms = structure.to_ase()
-
-        atoms.calc = calc
+        atoms.calc = self._calc
 
         if Property.FORCES in properties:
             forces = atoms.get_forces()
@@ -55,3 +77,14 @@ class MACE(Model):
             energy = None
 
         return ModelResult(energy=energy, forces=forces)
+
+
+if __name__ == "__main__":
+    from ase.build import molecule
+    from rich import print
+
+    spec = MACE()
+    executor = MACEExecutor(spec)
+    structure = Structure.from_ase(molecule("H2O"))
+    result = executor.compute(structure, {Property.ENERGY, Property.FORCES})
+    print(result)

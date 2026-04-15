@@ -18,6 +18,7 @@ from .response import TaskResponse, ShutdownResponse, ErrorResponse
 
 from atomforge.task.base import get_default_task_registry
 from atomforge.model import get_default_model_registry
+from atomforge.model.base import ModelExecutor
 
 
 class SubprocessWorker:
@@ -91,17 +92,32 @@ class SubprocessWorker:
                     request_id=request.request_id,
                     error=f"unknown operation: {request.operation}",
                 ), False
+            
+
+    def _get_model_executor(self, request: TaskRequest) -> ModelExecutor:
+        with contextlib.redirect_stdout(None) as _:
+            with contextlib.redirect_stderr(None) as _:     
+                model_registration = self._model_registry.get(request.model_kind)
+                model_spec = model_registration.model_spec.model_validate(
+                    request.model_payload
+                )
+                model_executor = model_registration.executor_class(model_spec)
+
+        return model_executor
 
     def _execute_task(self, request: TaskRequest) -> Any:
-        registration = self._task_registry.get(request.task_kind)
-        spec = registration.spec_model.model_validate(request.task_payload)
+
+        # Validate the model and task payloads and construct the executors
+        task_registration = self._task_registry.get(request.task_kind)
+        task_spec = task_registration.spec_model.model_validate(request.task_payload)
+        task_executor = task_registration.executor
+
+        model_executor = self._get_model_executor(request)
 
         # Context manager that ensures nothing is written to stdout during model execution
         with contextlib.redirect_stdout(None) as _:
             with contextlib.redirect_stderr(None) as _:
-                model = self._model_registry.get(request.model_kind).model_class()
-                executor = registration.executor
-                task_result = executor.execute(spec, model)
+                task_result = task_executor.execute(task_spec, model_executor)
 
         return TaskResponse(
             request_id=request.request_id,
