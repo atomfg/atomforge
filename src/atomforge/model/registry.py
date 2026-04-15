@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 
-from atomforge.model.base import Model
+from atomforge.model.base import Model, ModelMetadata
 
 
 @dataclass(frozen=True)
 class ModelRegistration:
     model_class: type[Model]
+    metadata: ModelMetadata
 
 
 class ModelRegistry:
@@ -22,6 +23,7 @@ class ModelRegistry:
 
         self._registrations[model_kind] = ModelRegistration(
             model_class=model_class,
+            metadata=model_class.metadata,
         )
 
     def get(self, model_kind: str) -> ModelRegistration:
