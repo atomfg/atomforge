@@ -1,7 +1,7 @@
 from atomforge.model.base.executor import ModelExecutor
 
 from .base import Task, TaskExecutor, TaskSpec, TaskResult, TaskCapabilitySpec
-from atomforge.model.base import Property, Model
+from atomforge.model.base import Property
 from atomforge.structure import Structure, StructureMessage
 from atomforge.env.base.env import EnvironmentSpec
 
