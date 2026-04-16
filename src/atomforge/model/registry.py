@@ -5,8 +5,11 @@ from atomforge.model.base import (
     ModelExecutor,
     Property,
     ModelSpecT,
-    EnvironmentFactory
+    EnvironmentFactory,
+    ResourceCapabilities,
 )
+
+from atomforge.model.probes import ResourceProbe
 
 from typing import Generic
 
@@ -18,6 +21,8 @@ class ModelRegistration(Generic[ModelSpecT]):
     executor_class: type[ModelExecutor[ModelSpecT]]
     supported_properties: frozenset[Property]
     environment_factory: EnvironmentFactory[ModelSpecT]
+    resource_capabilities: ResourceCapabilities
+    probe: ResourceProbe | None = None
 
 
 class ModelRegistry:
@@ -32,6 +37,8 @@ class ModelRegistry:
         supported_properties: frozenset[Property],
         environment_factory: EnvironmentFactory[ModelSpecT],
         metadata: ModelMetadata,
+        resource_capabilities: ResourceCapabilities,
+        probe: ResourceProbe | None = None,
     ) -> None:
         if model_kind in self._registrations:
             raise ValueError(f"Model kind already registered: {model_kind}")
@@ -42,6 +49,8 @@ class ModelRegistry:
             executor_class=executor_class,
             supported_properties=supported_properties,
             environment_factory=environment_factory,
+            resource_capabilities=resource_capabilities,
+            probe=probe,
         )
 
     def get(self, model_kind: str) -> ModelRegistration:

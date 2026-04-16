@@ -1,7 +1,17 @@
 from .registry import ModelRegistry
+from .probes import torch_probe
+
 
 def register_lennard_jones(registry: ModelRegistry):
-    from .ase_lj import LennardJonesExecutor, LennardJones, LennardJonesMetadata, lj_environment, LennardJonesSupportedProperties, model_kind
+    from .ase_lj import (
+        LennardJonesExecutor,
+        LennardJones,
+        LennardJonesMetadata,
+        lj_environment,
+        LennardJonesSupportedProperties,
+        model_kind,
+        LennardJonesResourceCapabilities,
+    )
 
     registry.register(
         model_kind=model_kind,
@@ -10,6 +20,8 @@ def register_lennard_jones(registry: ModelRegistry):
         supported_properties=LennardJonesSupportedProperties,
         environment_factory=lj_environment,
         metadata=LennardJonesMetadata,
+        resource_capabilities=LennardJonesResourceCapabilities,
+        probe=None,
     )
 
 
@@ -20,6 +32,7 @@ def register_chgnet(registry: ModelRegistry):
         CHGNetMetadata,
         CHGNetSupportedProperties,
         chgnet_environment,
+        CHGNetResourceCapabilities,
         model_kind,
     )
 
@@ -30,6 +43,8 @@ def register_chgnet(registry: ModelRegistry):
         supported_properties=CHGNetSupportedProperties,
         environment_factory=chgnet_environment,
         metadata=CHGNetMetadata,
+        resource_capabilities=CHGNetResourceCapabilities,
+        probe=torch_probe,
     )
 
 
@@ -40,6 +55,7 @@ def register_mace(registry: ModelRegistry):
         MACEMetadata,
         MACESupportedProperties,
         mace_environment,
+        MACEResourceCapabilities,
         model_kind,
     )
 
@@ -50,6 +66,8 @@ def register_mace(registry: ModelRegistry):
         supported_properties=MACESupportedProperties,
         environment_factory=mace_environment,
         metadata=MACEMetadata,
+        resource_capabilities=MACEResourceCapabilities,
+        probe=torch_probe,
     )
 
 

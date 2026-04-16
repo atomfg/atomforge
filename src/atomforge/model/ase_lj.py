@@ -5,14 +5,18 @@ from atomforge.model.base import (
     ModelResult,
     ModelMetadata,
     Reference,
+    ResourceCapabilities,
 )
 
 from atomforge.structure import Structure
 from atomforge.env import EnvironmentSpec
 from typing import Literal
 
+from atomforge.task.base.resources import ResolvedResources
+
 model_kind = "ase-lj"
 LennardJonesSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
+
 
 class LennardJones(ModelSpec):
     kind: Literal["ase-lj"] = model_kind
@@ -32,15 +36,20 @@ LennardJonesMetadata = ModelMetadata(
     ),
 )
 
+LennardJonesResourceCapabilities = ResourceCapabilities(
+    accelerator=["cpu"], precision=None
+)
+
+
 def lj_environment(spec: LennardJones) -> EnvironmentSpec:
-    return EnvironmentSpec(
-            name=spec.kind, python="python3.12", requirements=["ase"]
-    )
+    return EnvironmentSpec(name=spec.kind, python="python3.12", requirements=["ase"])
 
 
 class LennardJonesExecutor(ModelExecutor[LennardJones]):
-    def __init__(self, spec: LennardJones) -> None:
-        super().__init__(spec)
+    def __init__(
+        self, spec: LennardJones, resolved_resources: ResolvedResources
+    ) -> None:
+        super().__init__(spec, resolved_resources)
         from ase.calculators.lj import LennardJones
 
         self._calc = LennardJones(
@@ -72,13 +81,3 @@ class LennardJonesExecutor(ModelExecutor[LennardJones]):
             energy=energy,
             forces=forces,
         )
-
-if __name__ == "__main__":
-    from ase.build import molecule
-    from rich import print
-
-    spec = LennardJones()
-    executor = LennardJonesExecutor(spec)
-    structure = Structure.from_ase(molecule("H2O"))
-    result = executor.compute(structure, {Property.ENERGY, Property.FORCES})
-    print(result)

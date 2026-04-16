@@ -7,18 +7,27 @@ from typing import Any, TextIO
 
 from pydantic import ValidationError
 
+from atomforge.task.base.resources import ResolvedResources
+
 from .core import (
     read_request,
     write_response,
 )
 
-from .request import RequestMessage, ShutdownRequest, TaskRequest
-from .response import TaskResponse, ShutdownResponse, ErrorResponse
+from .request import ShutdownRequest, TaskRequest, InitModelRequest
+from .response import InitModelResponse, TaskResponse, ShutdownResponse, ErrorResponse
 
 
 from atomforge.task.base import get_default_task_registry
 from atomforge.model import get_default_model_registry
-from atomforge.model.base import ModelExecutor
+from atomforge.model.base import ModelExecutor, ModelSpec
+
+from atomforge.backend.base.session import model_session_key
+
+from atomforge.backend.base.resources import (
+    discover_system_resources,
+    resolve_resources,
+)
 
 
 class SubprocessWorker:
@@ -31,6 +40,9 @@ class SubprocessWorker:
         self._name = name
         self._task_registry = get_default_task_registry()
         self._model_registry = get_default_model_registry()
+        self._system_resources = discover_system_resources()
+
+        self._model_sessions: dict[str, ModelExecutor] = {}
 
     def run(self) -> int:
         loop_count = 0
@@ -85,6 +97,8 @@ class SubprocessWorker:
         match request.operation:
             case "shutdown":
                 return self._shutdown_case(request)
+            case "init_model":
+                return self._init_model_case(request)
             case "task":
                 return self._task_execution_case(request)
             case _:
@@ -94,25 +108,77 @@ class SubprocessWorker:
                 ), False
             
 
-    def _get_model_executor(self, request: TaskRequest) -> ModelExecutor:
+    def _init_model_case(self, request: InitModelRequest) -> tuple[TaskResponse, bool]:
+        try:
+            model_executor, resolved_resources = self._create_model_executor(request)
+        except Exception as exc:
+            traceback.print_exc(file=self._stderr)
+            return self._failed_execution_case(request.request_id, exc)
+
+        model_session_id = self._get_model_session_id(request)
+        self._model_sessions[model_session_id] = model_executor        
+
+        return InitModelResponse(
+            request_id=request.request_id,
+            model_session_id=model_session_id,
+            resolved_resources=resolved_resources,
+        ), False
+    
+    def _get_model_spec(self, request: InitModelRequest | TaskRequest) -> ModelSpec:
+        model_registration = self._model_registry.get(request.model_kind)
+        model_spec = model_registration.model_spec.model_validate(
+            request.model_payload
+        )
+        return model_spec
+    
+    def _get_model_session_id(self, request: InitModelRequest | TaskRequest) -> str:
+        model_spec = self._get_model_spec(request)
+        model_session_id = model_session_key(model_spec, request.exec_resources)
+        return model_session_id
+    
+    def _get_model_executor(self, model_session_id: str) -> ModelExecutor:
+        model_executor = self._model_sessions.get(model_session_id)
+        if model_executor is None:
+            raise ValueError(f"unknown model session id: {model_session_id}")
+        return model_executor
+
+    def _create_model_executor(self, request: InitModelRequest) -> tuple[ModelExecutor, ResolvedResources]:
+        # Get the ExecResources from the request
         with contextlib.redirect_stdout(None) as _:
-            with contextlib.redirect_stderr(None) as _:     
+            with contextlib.redirect_stderr(None) as _:
                 model_registration = self._model_registry.get(request.model_kind)
                 model_spec = model_registration.model_spec.model_validate(
                     request.model_payload
                 )
-                model_executor = model_registration.executor_class(model_spec)
 
-        return model_executor
+                if model_registration.probe is not None:
+                    probe_result = model_registration.probe(model_spec)
+                else:
+                    probe_result = None
+
+                resource_capabilities = model_registration.resource_capabilities
+                resolved_resources = resolve_resources(
+                    exec_resources=request.exec_resources,
+                    system_resources=self._system_resources,
+                    resource_caps=resource_capabilities,
+                    probe_result=probe_result,
+                )
+
+                model_executor = model_registration.executor_class(
+                    model_spec, resolved_resources
+                )
+
+        return model_executor, resolved_resources
 
     def _execute_task(self, request: TaskRequest) -> Any:
-
         # Validate the model and task payloads and construct the executors
         task_registration = self._task_registry.get(request.task_kind)
         task_spec = task_registration.spec_model.model_validate(request.task_payload)
         task_executor = task_registration.executor
 
-        model_executor = self._get_model_executor(request)
+        # Get the model executor for the task
+        model_session_id = self._get_model_session_id(request)
+        model_executor = self._get_model_executor(model_session_id)
 
         # Context manager that ensures nothing is written to stdout during model execution
         with contextlib.redirect_stdout(None) as _:

@@ -3,6 +3,7 @@ from pydantic import BaseModel, ConfigDict
 
 from typing import Any, Annotated
 from pydantic import Field, TypeAdapter
+from atomforge.task.base.resources import ExecutionResources
 
 
 class ShutdownRequest(BaseModel):
@@ -10,6 +11,13 @@ class ShutdownRequest(BaseModel):
     operation: Literal["shutdown"] = "shutdown"
     request_id: str
 
+class InitModelRequest(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    operation: Literal["init_model"] = "init_model"
+    request_id: str
+    model_kind: str
+    model_payload: dict[str, Any]
+    exec_resources: ExecutionResources
 
 class TaskRequest(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -19,10 +27,11 @@ class TaskRequest(BaseModel):
     model_payload: dict[str, Any]
     task_kind: str
     task_payload: dict[str, Any]
+    exec_resources: ExecutionResources
 
 
 RequestMessage = Annotated[
-    TaskRequest | ShutdownRequest, Field(discriminator="operation")
+    TaskRequest | ShutdownRequest | InitModelRequest, Field(discriminator="operation")
 ]
 
 _REQUEST_ADAPTER = TypeAdapter(RequestMessage)

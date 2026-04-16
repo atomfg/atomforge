@@ -8,8 +8,10 @@ from atomforge.model.base import (
     ModelSpec,
     Property,
     Reference,
+    ResourceCapabilities,
 )
 from atomforge.structure import Structure
+from atomforge.backend.base.resources import ResolvedResources
 
 model_kind = "chgnet"
 CHGNetSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
@@ -18,6 +20,10 @@ CHGNetSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
 class CHGNet(ModelSpec):
     kind: Literal["chgnet"] = model_kind
 
+
+CHGNetResourceCapabilities = ResourceCapabilities(
+    accelerator=["cpu", "gpu", "mps"],
+)
 
 CHGNetMetadata = ModelMetadata(
     id=model_kind,
@@ -43,11 +49,19 @@ def chgnet_environment(spec: CHGNet) -> EnvironmentSpec:
 
 
 class CHGNetExecutor(ModelExecutor[CHGNet]):
-    def __init__(self, spec: CHGNet) -> None:
-        super().__init__(spec)
+    def __init__(self, spec: CHGNet, resolved_resources: ResolvedResources) -> None:
+        super().__init__(spec, resolved_resources)
         from chgnet.model.dynamics import CHGNetCalculator
 
-        self._calc = CHGNetCalculator()
+        use_device = None
+        if resolved_resources.accelerator == "gpu":
+            use_device = "cuda"
+        elif resolved_resources.accelerator == "mps":
+            use_device = "mps"
+        elif resolved_resources.accelerator == "cpu":
+            use_device = "cpu"
+
+        self._calc = CHGNetCalculator(use_device=use_device)
 
     def compute(
         self, structure: Structure, properties: frozenset[Property]
@@ -66,16 +80,3 @@ class CHGNetExecutor(ModelExecutor[CHGNet]):
             energy = None
 
         return ModelResult(energy=energy, forces=forces)
-
-
-if __name__ == "__main__":
-    from ase.build import molecule
-    from rich import print
-
-    spec = CHGNet()
-    executor = CHGNetExecutor(spec)
-    atoms = molecule("H2O")
-    atoms.cell = [10, 10, 10]
-    structure = Structure.from_ase(atoms)
-    result = executor.compute(structure, {Property.ENERGY, Property.FORCES})
-    print(result)

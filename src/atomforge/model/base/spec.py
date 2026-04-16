@@ -10,4 +10,4 @@ class ModelSpec(BaseModel):
 
 ModelSpecT = TypeVar("SpecT", bound=ModelSpec)
 
-EnvironmentFactory= Callable[[ModelSpecT], EnvironmentSpec]
+EnvironmentFactory = Callable[[ModelSpecT], EnvironmentSpec]

@@ -23,7 +23,9 @@ class SinglePointResult(TaskResult):
 
 
 class SinglePointExecutor(TaskExecutor):
-    def execute(self, spec: SinglePointSpec, model_executor: ModelExecutor) -> SinglePointResult:
+    def execute(
+        self, spec: SinglePointSpec, model_executor: ModelExecutor
+    ) -> SinglePointResult:
         structure = spec.structure.to_structure()
         properties = spec.properties
         model_result = model_executor.compute(structure, properties)

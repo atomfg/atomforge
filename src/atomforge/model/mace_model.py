@@ -9,17 +9,23 @@ from atomforge.model.base import (
     Property,
     Reference,
 )
+from atomforge.model.base.resource_caps import ResourceCapabilities
 from atomforge.structure import Structure
+from atomforge.task.base.resources import ResolvedResources
 
 model_kind = "mace"
 MACESupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
+
+MACEResourceCapabilities = ResourceCapabilities(
+    accelerator=["cpu", "gpu"],
+    precision=["f32", "f64"],
+)
 
 
 class MACE(ModelSpec):
     kind: Literal["mace"] = model_kind
     model: str = "medium"
     dispersion: bool = False
-    default_dtype: str = "float32"
 
 
 MACEMetadata = ModelMetadata(
@@ -50,15 +56,39 @@ def mace_environment(spec: MACE) -> EnvironmentSpec:
 
 
 class MACEExecutor(ModelExecutor[MACE]):
-    def __init__(self, spec: MACE) -> None:
-        super().__init__(spec)
+    def __init__(self, spec: MACE, resolved_resources: ResolvedResources) -> None:
+        super().__init__(spec, resolved_resources)
         from mace.calculators import mace_mp
 
         self._calc = mace_mp(
             model=spec.model,
             dispersion=spec.dispersion,
-            default_dtype=spec.default_dtype,
+            **self.resource_conversion(resolved_resources),
         )
+
+    def resource_conversion(
+        self, resolved_resources: ResolvedResources
+    ) -> ResolvedResources:
+        # Set the precision based on the ResolvedResources
+        if resolved_resources.precision is not None:
+            if resolved_resources.precision == "f64":
+                default_dtype = "float64"
+            elif resolved_resources.precision == "f32":
+                default_dtype = "float32"
+        else:
+            default_dtype = "float32"
+
+        # Set device based on the ResolvedResources
+        if resolved_resources.accelerator == "gpu":
+            device = "cuda"
+        elif resolved_resources.accelerator == "mps":
+            device = "mps"
+        elif resolved_resources.accelerator == "cpu":
+            device = "cpu"
+        else:
+            device = None
+
+        return {"default_dtype": default_dtype, "device": device}
 
     def compute(
         self, structure: Structure, properties: frozenset[Property]
@@ -77,14 +107,3 @@ class MACEExecutor(ModelExecutor[MACE]):
             energy = None
 
         return ModelResult(energy=energy, forces=forces)
-
-
-if __name__ == "__main__":
-    from ase.build import molecule
-    from rich import print
-
-    spec = MACE()
-    executor = MACEExecutor(spec)
-    structure = Structure.from_ase(molecule("H2O"))
-    result = executor.compute(structure, {Property.ENERGY, Property.FORCES})
-    print(result)

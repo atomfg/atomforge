@@ -2,6 +2,8 @@ from pydantic import BaseModel, ConfigDict
 from typing import Any, Annotated, Literal
 from pydantic import Field, TypeAdapter
 
+from atomforge.task.base.resources import ResolvedResources
+
 
 class ShutdownResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -9,6 +11,12 @@ class ShutdownResponse(BaseModel):
     request_id: str
     message: str | None = None
 
+class InitModelResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    operation: Literal["init_model"] = "init_model"
+    request_id: str
+    model_session_id: str
+    resolved_resources: ResolvedResources
 
 class ErrorResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -28,7 +36,7 @@ class TaskResponse(BaseModel):
 
 
 ResponseMessage = Annotated[
-    TaskResponse | ShutdownResponse | ErrorResponse, Field(discriminator="operation")
+    TaskResponse | ShutdownResponse | ErrorResponse | InitModelResponse, Field(discriminator="operation")
 ]
 
 _RESPONSE_ADAPTER = TypeAdapter(ResponseMessage)

@@ -1,10 +1,3 @@
-from .spec import TaskSpec
-from .result import TaskResult
-from .executor import TaskExecutor
-from .base import Task, TaskCapabilitySpec
-from .registry import TaskRegistry
-from .builtin import register_builtin_tasks, get_default_task_registry
-
 __all__ = [
     "TaskSpec",
     "TaskResult",
@@ -15,3 +8,39 @@ __all__ = [
     "get_default_task_registry",
     "TaskCapabilitySpec",
 ]
+
+
+def __getattr__(name: str):
+    if name == "TaskSpec":
+        from .spec import TaskSpec
+
+        return TaskSpec
+    if name == "TaskResult":
+        from .result import TaskResult
+
+        return TaskResult
+    if name == "TaskExecutor":
+        from .executor import TaskExecutor
+
+        return TaskExecutor
+    if name == "Task":
+        from .base import Task
+
+        return Task
+    if name == "TaskCapabilitySpec":
+        from .base import TaskCapabilitySpec
+
+        return TaskCapabilitySpec
+    if name == "TaskRegistry":
+        from .registry import TaskRegistry
+
+        return TaskRegistry
+    if name == "register_builtin_tasks":
+        from .builtin import register_builtin_tasks
+
+        return register_builtin_tasks
+    if name == "get_default_task_registry":
+        from .builtin import get_default_task_registry
+
+        return get_default_task_registry
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
