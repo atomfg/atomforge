@@ -6,20 +6,20 @@ from atomforge.task.base.resources import ResolvedResources
 
 
 class ShutdownResponse(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
     operation: Literal["shutdown"] = "shutdown"
     request_id: str
     message: str | None = None
 
 class InitModelResponse(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
     operation: Literal["init_model"] = "init_model"
     request_id: str
     model_session_id: str
     resolved_resources: ResolvedResources
 
 class ErrorResponse(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
     operation: Literal["error"] = "error"
     request_id: str
     error: str
@@ -28,7 +28,7 @@ class ErrorResponse(BaseModel):
 
 
 class TaskResponse(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
     operation: Literal["task"] = "task"
     request_id: str
     task_kind: str

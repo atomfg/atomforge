@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Any
 
 from atomforge.env import EnvironmentSpec
 from atomforge.model.base import (
@@ -12,6 +12,7 @@ from atomforge.model.base import (
 from atomforge.model.base.resource_caps import ResourceCapabilities
 from atomforge.structure import Structure
 from atomforge.task.base.resources import ResolvedResources
+
 
 model_kind = "mace"
 MACESupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
@@ -68,7 +69,7 @@ class MACEExecutor(ModelExecutor[MACE]):
 
     def resource_conversion(
         self, resolved_resources: ResolvedResources
-    ) -> ResolvedResources:
+    ) -> dict[str, Any]:
         # Set the precision based on the ResolvedResources
         if resolved_resources.precision is not None:
             if resolved_resources.precision == "f64":

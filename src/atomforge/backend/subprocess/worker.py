@@ -124,14 +124,14 @@ class SubprocessWorker:
             resolved_resources=resolved_resources,
         ), False
     
-    def _get_model_spec(self, request: InitModelRequest | TaskRequest) -> ModelSpec:
+    def _get_model_spec(self, request: InitModelRequest) -> ModelSpec:
         model_registration = self._model_registry.get(request.model_kind)
         model_spec = model_registration.model_spec.model_validate(
             request.model_payload
         )
         return model_spec
     
-    def _get_model_session_id(self, request: InitModelRequest | TaskRequest) -> str:
+    def _get_model_session_id(self, request: InitModelRequest) -> str:
         model_spec = self._get_model_spec(request)
         model_session_id = model_session_key(model_spec, request.exec_resources)
         return model_session_id
@@ -177,8 +177,7 @@ class SubprocessWorker:
         task_executor = task_registration.executor
 
         # Get the model executor for the task
-        model_session_id = self._get_model_session_id(request)
-        model_executor = self._get_model_executor(model_session_id)
+        model_executor = self._get_model_executor(request.model_session_id)
 
         # Context manager that ensures nothing is written to stdout during model execution
         with contextlib.redirect_stdout(None) as _:

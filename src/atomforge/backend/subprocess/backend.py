@@ -162,11 +162,9 @@ class SubprocessBackend:
         request = TaskRequest(
             operation="task",
             request_id=str(env_subprocess.get_request_counter()),
-            model_kind=model_spec.kind,
-            model_payload=model_spec.model_dump(),
+            model_session_id=prepared.model_session_id,
             task_kind=task_spec.kind,
             task_payload=task_spec.model_dump(),
-            exec_resources=exec_resources,
         )
 
         # Send the request to the subprocess
