@@ -11,6 +11,7 @@ class ShutdownRequest(BaseModel):
     operation: Literal["shutdown"] = "shutdown"
     request_id: str
 
+
 class InitModelRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     operation: Literal["init_model"] = "init_model"
@@ -18,6 +19,7 @@ class InitModelRequest(BaseModel):
     model_kind: str
     model_payload: dict[str, Any]
     exec_resources: ExecutionResources
+
 
 class TaskRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")

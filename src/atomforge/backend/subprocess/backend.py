@@ -28,6 +28,7 @@ class PreparedModelSession:
     resolved_resources: ResolvedResources
     process_uuid: str
 
+
 class EnvSubprocess:
     def __init__(self, executeable: Path, name: str) -> None:
         self.process_uuid = str(uuid4())
@@ -60,7 +61,9 @@ class SubprocessBackend:
         self._task_registry = get_default_task_registry()
         self._model_registry = get_default_model_registry()
 
-    def setup_environment(self, model_spec: ModelSpec, task_env_spec: EnvironmentSpec | None) -> EnvironmentSpec:
+    def setup_environment(
+        self, model_spec: ModelSpec, task_env_spec: EnvironmentSpec | None
+    ) -> EnvironmentSpec:
 
         # For now, we just use the default environment spec from the model,
         # but in the future we could allow tasks to specify their own environment requirements
@@ -93,8 +96,13 @@ class SubprocessBackend:
             raise RuntimeError(
                 f"Response id mismatch: expected {request.request_id}, got {response.request_id}"
             )
-        
-    def prepare_model(self, model_spec: ModelSpec, exec_resources: ExecutionResources, task_env_spec: EnvironmentSpec | None) -> None:
+
+    def prepare_model(
+        self,
+        model_spec: ModelSpec,
+        exec_resources: ExecutionResources,
+        task_env_spec: EnvironmentSpec | None,
+    ) -> None:
         env_spec = self.setup_environment(model_spec, task_env_spec)
         env_subprocess = self.get_subprocess(env_spec)
 
@@ -111,13 +119,16 @@ class SubprocessBackend:
         self._ensure_matching_response(request, response)
 
         if response.operation == "error":
-            print(f"Worker error during model initialization: {response.error}", flush=True)
+            print(
+                f"Worker error during model initialization: {response.error}",
+                flush=True,
+            )
             raise RuntimeError(response.error or "Worker returned an unknown error")
-        
+
         model_session_id = response.model_session_id
         model_cache_key = model_session_key(model_spec, exec_resources)
         env_cache_key = env_spec.short_hash()
-        
+
         self.prepared_models[(model_cache_key, env_cache_key)] = PreparedModelSession(
             model_spec=model_spec,
             model_session_id=model_session_id,
@@ -156,7 +167,7 @@ class SubprocessBackend:
         model_cache_key = model_session_key(model_spec, exec_resources)
         env_cache_key = env_spec.short_hash()
         prepared = self.prepared_models.get((model_cache_key, env_cache_key))
-        
+
         if prepared is None or prepared.process_uuid != env_subprocess.process_uuid:
             self.prepared_models.pop((model_cache_key, env_cache_key), None)
             self.prepare_model(model_spec, exec_resources, task_env_spec)
@@ -219,7 +230,10 @@ class SubprocessBackend:
 
             # Delete any prepared model sessions associated with this subprocess
             to_delete = []
-            for (model_cache_key, cache_env_key), session in self.prepared_models.items():
+            for (
+                model_cache_key,
+                cache_env_key,
+            ), session in self.prepared_models.items():
                 if session.process_uuid == env_subprocess.process_uuid:
                     to_delete.append((model_cache_key, cache_env_key))
             for key in to_delete:

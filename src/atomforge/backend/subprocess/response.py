@@ -11,12 +11,14 @@ class ShutdownResponse(BaseModel):
     request_id: str
     message: str | None = None
 
+
 class InitModelResponse(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     operation: Literal["init_model"] = "init_model"
     request_id: str
     model_session_id: str
     resolved_resources: ResolvedResources
+
 
 class ErrorResponse(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -36,7 +38,8 @@ class TaskResponse(BaseModel):
 
 
 ResponseMessage = Annotated[
-    TaskResponse | ShutdownResponse | ErrorResponse | InitModelResponse, Field(discriminator="operation")
+    TaskResponse | ShutdownResponse | ErrorResponse | InitModelResponse,
+    Field(discriminator="operation"),
 ]
 
 _RESPONSE_ADAPTER = TypeAdapter(ResponseMessage)

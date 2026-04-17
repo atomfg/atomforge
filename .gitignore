@@ -10,4 +10,6 @@ wheels/
 .venv
 
 # Development playground
-dev
+dev# pixi environments
+.pixi/*
+!.pixi/config.toml

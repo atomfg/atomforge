@@ -7,7 +7,8 @@ from atomforge.backend.base.resources import (
 from atomforge.model.base.resource_caps import ResourceCapabilities
 from atomforge.model.probes import ProbeResult
 
-import pytest 
+import pytest
+
 
 @pytest.fixture()
 def default_exec_resources() -> ExecutionResources:
@@ -15,12 +16,14 @@ def default_exec_resources() -> ExecutionResources:
         strict=False,
     )
 
+
 @pytest.fixture()
 def gpu_exec_resources() -> ExecutionResources:
     return ExecutionResources(
         accelerator="gpu",
         strict=False,
     )
+
 
 @pytest.fixture()
 def gpu_exec_resources_strict() -> ExecutionResources:
@@ -34,11 +37,15 @@ def gpu_exec_resources_strict() -> ExecutionResources:
 def gpu_cpu_probe() -> ProbeResult:
     return ProbeResult(available_accelerators=["gpu", "cpu"])
 
+
 @pytest.fixture()
 def gpu_unavailable_probe() -> ProbeResult:
     return ProbeResult(available_accelerators=["cpu"])
 
-@pytest.fixture(params=[Availability.UNAVAILABLE, Availability.UNKNOWN, Availability.AVAILABLE])
+
+@pytest.fixture(
+    params=[Availability.UNAVAILABLE, Availability.UNKNOWN, Availability.AVAILABLE]
+)
 def system_resources(request) -> SystemResources:
     return SystemResources(
         cpu_count=8,
@@ -81,9 +88,11 @@ def test_gpu_downgrade_model_incapable(gpu_exec_resources, system_resources):
     assert resolved == "cpu"
 
 
-def test_resource_resolution_gpu_exec_probe(gpu_exec_resources, gpu_cpu_probe, system_resources):
+def test_resource_resolution_gpu_exec_probe(
+    gpu_exec_resources, gpu_cpu_probe, system_resources
+):
     """
-    Test that a probe result always overrides system GPU availability, even if it is unknown or unavailable. 
+    Test that a probe result always overrides system GPU availability, even if it is unknown or unavailable.
     With probe result that GPU is available, it should be chosen.
     """
     resource_caps = ResourceCapabilities(accelerator=["gpu", "cpu"])
@@ -96,6 +105,7 @@ def test_resource_resolution_gpu_exec_probe(gpu_exec_resources, gpu_cpu_probe, s
     )
 
     assert resolved == "gpu"
+
 
 def test_default_resources(default_exec_resources, system_resources):
     """
@@ -115,7 +125,10 @@ def test_default_resources(default_exec_resources, system_resources):
     else:
         assert resolved == "cpu"
 
-def test_default_resources_system_unknown_probe(default_exec_resources, system_resources, gpu_cpu_probe):
+
+def test_default_resources_system_unknown_probe(
+    default_exec_resources, system_resources, gpu_cpu_probe
+):
     """
     Test that if no accelerator is requested, the best available accelerator is chosen.
     With probe result that GPU is available, it should be chosen even if system GPU availability is unknown.
@@ -131,12 +144,18 @@ def test_default_resources_system_unknown_probe(default_exec_resources, system_r
 
     assert resolved == "gpu"
 
-def test_strict_gpu_unavailable(gpu_exec_resources_strict, gpu_unavailable_probe, system_resources):
+
+def test_strict_gpu_unavailable(
+    gpu_exec_resources_strict, gpu_unavailable_probe, system_resources
+):
     """
     Test that if GPU is requested in strict mode but is unavailable according to the probe, an error is raised.
     """
     resource_caps = ResourceCapabilities(accelerator=["gpu", "cpu"])
-    with pytest.raises(ValueError, match="Requested accelerator 'gpu' is unavailable or unsupported; falling back."):
+    with pytest.raises(
+        ValueError,
+        match="Requested accelerator 'gpu' is unavailable or unsupported; falling back.",
+    ):
         resolve_accelerator(
             exec_resources=gpu_exec_resources_strict,
             resource_caps=resource_caps,

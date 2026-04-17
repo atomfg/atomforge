@@ -30,7 +30,11 @@ def torch_probe(model_spec: ModelSpecT) -> ProbeResult:
             reasons["gpu"] = "PyTorch CUDA backend is unavailable."
 
         mps_backend = getattr(torch.backends, "mps", None)
-        if mps_backend is not None and mps_backend.is_built() and mps_backend.is_available():
+        if (
+            mps_backend is not None
+            and mps_backend.is_built()
+            and mps_backend.is_available()
+        ):
             available_accelerators.add("mps")
         else:
             reasons["mps"] = "PyTorch MPS backend is unavailable."

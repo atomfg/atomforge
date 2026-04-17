@@ -102,7 +102,6 @@ class SubprocessWorker:
                     request_id=request.request_id,
                     error=f"unknown operation: {request.operation}",
                 ), False
-            
 
     def _init_model_case(self, request: InitModelRequest) -> tuple[TaskResponse, bool]:
         try:
@@ -112,33 +111,33 @@ class SubprocessWorker:
             return self._failed_execution_case(request.request_id, exc)
 
         model_session_id = self._get_model_session_id(request)
-        self._model_sessions[model_session_id] = model_executor        
+        self._model_sessions[model_session_id] = model_executor
 
         return InitModelResponse(
             request_id=request.request_id,
             model_session_id=model_session_id,
             resolved_resources=resolved_resources,
         ), False
-    
+
     def _get_model_spec(self, request: InitModelRequest) -> ModelSpec:
         model_registration = self._model_registry.get(request.model_kind)
-        model_spec = model_registration.model_spec.model_validate(
-            request.model_payload
-        )
+        model_spec = model_registration.model_spec.model_validate(request.model_payload)
         return model_spec
-    
+
     def _get_model_session_id(self, request: InitModelRequest) -> str:
         model_spec = self._get_model_spec(request)
         model_session_id = model_session_key(model_spec, request.exec_resources)
         return model_session_id
-    
+
     def _get_model_executor(self, model_session_id: str) -> ModelExecutor:
         model_executor = self._model_sessions.get(model_session_id)
         if model_executor is None:
             raise ValueError(f"unknown model session id: {model_session_id}")
         return model_executor
 
-    def _create_model_executor(self, request: InitModelRequest) -> tuple[ModelExecutor, ResolvedResources]:
+    def _create_model_executor(
+        self, request: InitModelRequest
+    ) -> tuple[ModelExecutor, ResolvedResources]:
         # Get the ExecResources from the request
         with contextlib.redirect_stdout(None) as _:
             with contextlib.redirect_stderr(None) as _:
