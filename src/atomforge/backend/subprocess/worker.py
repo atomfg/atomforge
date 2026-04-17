@@ -10,11 +10,15 @@ from pydantic import ValidationError
 from atomforge.backend.base.resources import (
     discover_system_resources,
     resolve_resources,
+    SystemResources,
 )
 from atomforge.backend.base.session import model_session_key
 from atomforge.model.base.executor import ModelExecutor
 from atomforge.model.base.spec import ModelSpec
+from atomforge.model.registry import ModelRegistry
 from atomforge.model.builtin import get_default_model_registry
+
+from atomforge.task.base.registry import TaskRegistry
 from atomforge.task.base.builtin import get_default_task_registry
 from atomforge.task.base.resources import ResolvedResources
 
@@ -28,15 +32,22 @@ from .response import InitModelResponse, TaskResponse, ShutdownResponse, ErrorRe
 
 class SubprocessWorker:
     def __init__(
-        self, stdin: TextIO, stdout: TextIO, stderr: TextIO, name: str
+        self,
+        stdin: TextIO,
+        stdout: TextIO,
+        stderr: TextIO,
+        name: str,
+        task_registry: TaskRegistry,
+        model_registry: ModelRegistry,
+        system_resources: SystemResources,
     ) -> None:
         self._stdin = stdin
         self._stdout = stdout
         self._stderr = stderr
         self._name = name
-        self._task_registry = get_default_task_registry()
-        self._model_registry = get_default_model_registry()
-        self._system_resources = discover_system_resources()
+        self._task_registry = task_registry
+        self._model_registry = model_registry
+        self._system_resources = system_resources
 
         self._model_sessions: dict[str, ModelExecutor] = {}
 
@@ -190,8 +201,18 @@ class SubprocessWorker:
 
 
 def main(name: str) -> int:
+    task_registry = get_default_task_registry()
+    model_registry = get_default_model_registry()
+    system_resources = discover_system_resources()
+
     worker = SubprocessWorker(
-        stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, name=name
+        stdin=sys.stdin,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        name=name,
+        task_registry=task_registry,
+        model_registry=model_registry,
+        system_resources=system_resources,
     )
     return worker.run()
 
