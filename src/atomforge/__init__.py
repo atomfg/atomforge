@@ -1,10 +1,13 @@
-from atomforge.structure import Structure
-
-from atomforge.task.base.resources import ExecutionResources, ResolvedResources
-from atomforge.task import SinglePoint, BFGS, Task
+__all__ = ["Structure"]
 
 
-from atomforge.model.base import ModelResult, ModelMetadata, Property
+def __getattr__(name: str):
+    if name == "Structure":
+        from .structure import Structure
 
-__all__ = ["Structure", "ModelResult", "ModelMetadata", "Property", 
-           "ExecutionResources", "ResolvedResources", "SinglePoint", "BFGS", "Task"]
+        return Structure
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(__all__)

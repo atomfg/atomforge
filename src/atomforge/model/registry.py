@@ -1,17 +1,13 @@
 from dataclasses import dataclass
 
-from atomforge.model.base import (
-    ModelMetadata,
-    ModelExecutor,
-    Property,
-    ModelSpecT,
-    EnvironmentFactory,
-    ResourceCapabilities,
-)
-
 from atomforge.model.probes import ResourceProbe
-
 from typing import Generic
+
+from .base.executor import ModelExecutor
+from .base.metadata import ModelMetadata
+from .base.property import Property
+from .base.resource_caps import ResourceCapabilities
+from .base.spec import EnvironmentFactory, ModelSpecT
 
 
 @dataclass(frozen=True)

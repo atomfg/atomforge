@@ -1,7 +1,7 @@
 import hashlib
 import json
 
-from atomforge.model import ModelSpec
+from atomforge.model.base.spec import ModelSpec
 from atomforge.task.base.resources import ExecutionResources
 
 

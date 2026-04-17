@@ -1,17 +1,14 @@
 from typing import Literal
 
-from atomforge.env import EnvironmentSpec
-from atomforge.model.base import (
-    ModelExecutor,
-    ModelMetadata,
-    ModelResult,
-    ModelSpec,
-    Property,
-    Reference,
-    ResourceCapabilities,
-)
-from atomforge.structure import Structure
 from atomforge.backend.base.resources import ResolvedResources
+from atomforge.env.base.env import EnvironmentSpec
+from atomforge.model.base.executor import ModelExecutor
+from atomforge.model.base.metadata import ModelMetadata, Reference
+from atomforge.model.base.property import Property
+from atomforge.model.base.resource_caps import ResourceCapabilities
+from atomforge.model.base.result import ModelResult
+from atomforge.model.base.spec import ModelSpec
+from atomforge.structure import Structure
 
 model_kind = "chgnet"
 CHGNetSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})

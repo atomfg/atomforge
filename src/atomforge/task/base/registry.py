@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
-from atomforge.task.base import TaskExecutor, TaskResult, TaskSpec
+from .executor import TaskExecutor
+from .result import TaskResult
+from .spec import TaskSpec
 
 
 @dataclass(frozen=True)

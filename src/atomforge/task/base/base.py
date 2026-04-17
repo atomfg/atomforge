@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 
-from atomforge.env import EnvironmentSpec
-from atomforge.model.base import Property
-from atomforge.task.base.spec import TaskSpec
+from atomforge.env.base.env import EnvironmentSpec
+from atomforge.model.base.property import Property
+
+from .spec import TaskSpec
 
 from dataclasses import dataclass
 

@@ -1,11 +1,14 @@
 from atomforge.env.base.env import EnvironmentSpec
 from atomforge.model.base.executor import ModelExecutor
-
-from .base import Task, TaskExecutor, TaskSpec, TaskResult, TaskCapabilitySpec
-from atomforge.model.base import Property
+from atomforge.model.base.property import Property
 from atomforge.structure import Structure, StructureMessage
 
 from typing import Literal
+
+from .base.base import Task, TaskCapabilitySpec
+from .base.executor import TaskExecutor
+from .base.result import TaskResult
+from .base.spec import TaskSpec
 
 KIND = "single_point"
 

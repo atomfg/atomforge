@@ -1,12 +1,8 @@
 import subprocess
 from pathlib import Path
 
-from atomforge.env import (
-    EnvironmentHandle,
-    EnvironmentInfo,
-    EnvironmentProvider,
-    EnvironmentSpec,
-)
+from atomforge.env.base.env import EnvironmentHandle, EnvironmentInfo, EnvironmentSpec
+from atomforge.env.base.provider import EnvironmentProvider
 
 
 class UVEnvironmentProvider(EnvironmentProvider):

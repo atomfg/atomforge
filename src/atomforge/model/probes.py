@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Callable, Literal
-from atomforge.model.base import ModelSpecT
+
+from atomforge.model.base.spec import ModelSpecT
 
 Accelerator = Literal["cpu", "gpu", "mps"]
 

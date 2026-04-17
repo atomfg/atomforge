@@ -1,17 +1,13 @@
-from atomforge.model.base import (
-    ModelSpec,
-    ModelExecutor,
-    Property,
-    ModelResult,
-    ModelMetadata,
-    Reference,
-    ResourceCapabilities,
-)
-
-from atomforge.structure import Structure
-from atomforge.env import EnvironmentSpec
 from typing import Literal
 
+from atomforge.env.base.env import EnvironmentSpec
+from atomforge.model.base.executor import ModelExecutor
+from atomforge.model.base.metadata import ModelMetadata, Reference
+from atomforge.model.base.property import Property
+from atomforge.model.base.resource_caps import ResourceCapabilities
+from atomforge.model.base.result import ModelResult
+from atomforge.model.base.spec import ModelSpec
+from atomforge.structure import Structure
 from atomforge.task.base.resources import ResolvedResources
 
 model_kind = "ase-lj"

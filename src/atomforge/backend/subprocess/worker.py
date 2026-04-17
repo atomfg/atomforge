@@ -7,27 +7,23 @@ from typing import Any, TextIO
 
 from pydantic import ValidationError
 
+from atomforge.backend.base.resources import (
+    discover_system_resources,
+    resolve_resources,
+)
+from atomforge.backend.base.session import model_session_key
+from atomforge.model.base.executor import ModelExecutor
+from atomforge.model.base.spec import ModelSpec
+from atomforge.model.builtin import get_default_model_registry
+from atomforge.task.base.builtin import get_default_task_registry
 from atomforge.task.base.resources import ResolvedResources
 
 from .core import (
     read_request,
     write_response,
 )
-
 from .request import ShutdownRequest, TaskRequest, InitModelRequest
 from .response import InitModelResponse, TaskResponse, ShutdownResponse, ErrorResponse
-
-
-from atomforge.task.base import get_default_task_registry
-from atomforge.model import get_default_model_registry
-from atomforge.model.base import ModelExecutor, ModelSpec
-
-from atomforge.backend.base.session import model_session_key
-
-from atomforge.backend.base.resources import (
-    discover_system_resources,
-    resolve_resources,
-)
 
 
 class SubprocessWorker:

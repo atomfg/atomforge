@@ -1,11 +1,16 @@
 import subprocess
 from pathlib import Path
 
-from atomforge.env import EnvironmentProvider, EnvironmentSpec, UVEnvironmentProvider
-from atomforge.model import ModelSpec, get_default_model_registry
-from atomforge.task.base import Task, TaskResult, get_default_task_registry, TaskSpec
-from atomforge.task.base.resources import ExecutionResources, ResolvedResources
 from atomforge.backend.base.session import model_session_key
+from atomforge.env.base.env import EnvironmentSpec
+from atomforge.env.base.provider import EnvironmentProvider
+from atomforge.env.uv import UVEnvironmentProvider
+from atomforge.model.base.spec import ModelSpec
+from atomforge.model.builtin import get_default_model_registry
+from atomforge.task.base.base import Task
+from atomforge.task.base.builtin import get_default_task_registry
+from atomforge.task.base.resources import ExecutionResources, ResolvedResources
+from atomforge.task.base.result import TaskResult
 
 from .core import read_response, write_request
 from .request import TaskRequest, ShutdownRequest, RequestMessage, InitModelRequest

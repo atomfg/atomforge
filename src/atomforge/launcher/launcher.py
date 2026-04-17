@@ -1,5 +1,7 @@
-from atomforge.env import EnvironmentHandle, EnvironmentSpec, UVEnvironmentProvider
 import subprocess
+
+from atomforge.env.base.env import EnvironmentHandle, EnvironmentSpec
+from atomforge.env.uv import UVEnvironmentProvider
 
 
 class Launcher:
