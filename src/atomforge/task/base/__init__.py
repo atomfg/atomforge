@@ -7,6 +7,8 @@ __all__ = [
     "register_builtin_tasks",
     "get_default_task_registry",
     "TaskCapabilitySpec",
+    "ExecutionResources",
+    "ResolvedResources",
 ]
 
 
@@ -43,6 +45,15 @@ def __getattr__(name: str):
         from .builtin import get_default_task_registry
 
         return get_default_task_registry
+    
+    if name == "ExecutionResources":
+        from .resources import ExecutionResources
+        return ExecutionResources
+    
+    if name == "ResolvedResources":
+        from .resources import ResolvedResources
+        return ResolvedResources
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
