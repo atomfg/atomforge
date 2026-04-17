@@ -435,13 +435,13 @@ packages:
 - pypi: ./
   name: atomforge
   version: 0.1.0
-  sha256: 25a16e19f2ef5487e91aad6437b8d2e11c94ce8dc89bd36de34ddbfe4f064fc8
+  sha256: 1beee9162afc8e2109934a25a13edc3c504ac562e6f057c700cce6b7482c0773
   requires_dist:
   - ase>=3.28.0
   - numpy>=2.4.4
   - pydantic>=2.12.5
   - rich>=14.3.3
-  - uv
+  - uv>=0.11.7,<0.12
   requires_python: '>=3.12'
 - conda: https://conda.anaconda.org/conda-forge/linux-64/bzip2-1.0.8-hda65f42_9.conda
   sha256: 0b75d45f0bba3e95dc693336fa51f40ea28c980131fec438afb7ce6118ed05f6
