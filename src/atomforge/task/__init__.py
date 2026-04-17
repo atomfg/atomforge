@@ -1,13 +1,7 @@
-__all__ = ["Task", "SinglePoint"]
+from .base import Task
+from .singlepoint import SinglePoint
+from .bfgs import BFGS
+
+__all__ = ["Task", "SinglePoint", "BFGS"]
 
 
-def __getattr__(name: str):
-    if name == "Task":
-        from .base import Task
-
-        return Task
-    if name == "SinglePoint":
-        from .singlepoint import SinglePoint
-
-        return SinglePoint
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

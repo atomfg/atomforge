@@ -26,5 +26,21 @@ line-length = 88
 
 [dependency-groups]
 dev = [
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
     "ruff>=0.15.10",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/"]
+addopts = [
+  "--cov-report", "term",
+#   "--cov-report", "html:.coverage-html",
+#   "--cov-report", "xml:.coverage.xml",
+#   "--junitxml", ".report.xml",
+  "--cov", "src/atomforge"
+]
+
+[tool.coverage.run]
+omit = []
+

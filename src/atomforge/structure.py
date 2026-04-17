@@ -15,6 +15,13 @@ class Structure:
     species: list[str]
     pbc: list[bool, bool, bool]
 
+    def __post_init__(self):
+        # Ensure that positions and cell are numpy arrays
+        self.positions = np.asarray(self.positions)
+        self.cell = np.asarray(self.cell)
+        self.species = list(self.species)
+        self.pbc = list(self.pbc)
+
     @classmethod
     def from_ase(cls, atoms):
         """
