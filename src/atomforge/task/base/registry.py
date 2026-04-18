@@ -1,15 +1,25 @@
 from dataclasses import dataclass
+from typing import Callable, Generic, TypeVar
 
+from atomforge.env.base.env import EnvironmentSpec
+
+from .capability import TaskCapabilitySpec
 from .executor import TaskExecutor
 from .result import TaskResult
 from .spec import TaskSpec
 
 
+TaskSpecT = TypeVar("TaskSpecT", bound=TaskSpec)
+TaskResultT = TypeVar("TaskResultT", bound=TaskResult)
+
+
 @dataclass(frozen=True)
-class TaskRegistration:
-    spec_model: type[TaskSpec]
-    result_model: type[TaskResult]
-    executor: TaskExecutor
+class TaskRegistration(Generic[TaskSpecT, TaskResultT]):
+    spec_model: type[TaskSpecT]
+    result_model: type[TaskResultT]
+    executor_class: type[TaskExecutor[TaskSpecT, TaskResultT]]
+    capability_spec: TaskCapabilitySpec
+    environment_factory: Callable[[TaskSpecT], EnvironmentSpec]
 
 
 class TaskRegistry:
@@ -19,9 +29,11 @@ class TaskRegistry:
     def register(
         self,
         task_kind: str,
-        spec_model: type[TaskSpec],
-        result_model: type[TaskResult],
-        executor: TaskExecutor,
+        spec_model: type[TaskSpecT],
+        result_model: type[TaskResultT],
+        executor_class: type[TaskExecutor[TaskSpecT, TaskResultT]],
+        capability_spec: TaskCapabilitySpec,
+        environment_factory: Callable[[TaskSpecT], EnvironmentSpec],
     ) -> None:
         if task_kind in self._registrations:
             raise ValueError(f"Task kind already registered: {task_kind}")
@@ -29,7 +41,9 @@ class TaskRegistry:
         self._registrations[task_kind] = TaskRegistration(
             spec_model=spec_model,
             result_model=result_model,
-            executor=executor,
+            executor_class=executor_class,
+            capability_spec=capability_spec,
+            environment_factory=environment_factory,
         )
 
     def get(self, task_kind: str) -> TaskRegistration:

@@ -50,7 +50,6 @@ def test_root_package_exports_only_structure():
 def test_public_facades_expose_expected_symbols():
     assert atomforge.env.EnvironmentSpec.__name__ == "EnvironmentSpec"
     assert atomforge.env.UVEnvironmentProvider.__name__ == "UVEnvironmentProvider"
-    assert atomforge.task.Task.__name__ == "Task"
     assert atomforge.task.SinglePoint.__name__ == "SinglePoint"
     assert atomforge.task.BFGS.__name__ == "BFGS"
     assert atomforge.task.base.TaskSpec.__name__ == "TaskSpec"

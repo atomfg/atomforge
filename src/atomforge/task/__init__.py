@@ -1,11 +1,7 @@
-__all__ = ["Task", "SinglePoint", "BFGS"]
+__all__ = ["SinglePoint", "BFGS"]
 
 
 def __getattr__(name: str):
-    if name == "Task":
-        from .base.base import Task
-
-        return Task
     if name == "SinglePoint":
         from .singlepoint import SinglePoint
 

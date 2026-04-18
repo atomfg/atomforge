@@ -59,6 +59,7 @@ dev = { features = ["dev"], solve-group = "default" }
 
 [tool.pixi.tasks]
 test-cov = { cmd = "pytest --cov-report term --cov-report html:.coverage-html --cov src/atomforge", default-environment = "dev" }
+test-cov-sandbox = { cmd = "pytest --cov-report term --cov-report html:.coverage-html --cov src/atomforge", env = { UV_CACHE_DIR = "/tmp/uv-cache" }, default-environment = "dev" }
 
 ruff-check = { cmd = "ruff check .", default-environment = "dev" }
 ruff-fmt = { cmd = "ruff format .", default-environment = "dev" }

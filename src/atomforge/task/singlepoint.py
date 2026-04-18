@@ -1,22 +1,55 @@
-from atomforge.env.base.env import EnvironmentSpec
 from atomforge.model.base.executor import ModelExecutor
 from atomforge.model.base.property import Property
-from atomforge.structure import Structure, StructureMessage
 
 from typing import Literal
 
-from .base.base import Task, TaskCapabilitySpec
+from pydantic import Field, field_validator
+
 from .base.executor import TaskExecutor
 from .base.result import TaskResult
 from .base.spec import TaskSpec
+from atomforge.structure import StructureLike
 
 KIND = "single_point"
 
 
-class SinglePointSpec(TaskSpec):
+class SinglePoint(TaskSpec):
     kind: Literal["single_point"] = KIND
-    structure: StructureMessage
-    properties: frozenset[Property]
+    structure: StructureLike
+    properties: frozenset[Property] = Field(
+        default_factory=lambda: frozenset({Property.ENERGY, Property.FORCES})
+    )
+
+    def required_model_properties(self) -> frozenset[Property]:
+        return self.properties
+
+    @staticmethod
+    def _normalize_properties(
+        properties: list[Property] | list[str] | frozenset[Property] | None,
+    ) -> frozenset[Property]:
+        if properties is None:
+            return frozenset({Property.ENERGY, Property.FORCES})
+        elif len(properties) == 0:
+            raise ValueError("At least one property must be requested.")
+
+        if any(isinstance(p, str) for p in properties):
+            properties = [
+                Property(p.lower()) if isinstance(p, str) else p for p in properties
+            ]
+
+        properties = frozenset(properties)
+        allowed = frozenset({Property.ENERGY, Property.FORCES})
+        if not properties.issubset(allowed):
+            raise ValueError(
+                f"Invalid properties: {properties - allowed}. Valid properties are: {allowed}"
+            )
+
+        return properties
+
+    @field_validator("properties", mode="before")
+    @classmethod
+    def validate_properties(cls, value):
+        return cls._normalize_properties(value)
 
 
 class SinglePointResult(TaskResult):
@@ -25,11 +58,11 @@ class SinglePointResult(TaskResult):
     forces: list[list[float]] | None
 
 
-class SinglePointExecutor(TaskExecutor):
+class SinglePointExecutor(TaskExecutor[SinglePoint, SinglePointResult]):
     def execute(
-        self, spec: SinglePointSpec, model_executor: ModelExecutor
+        self, spec: SinglePoint, model_executor: ModelExecutor
     ) -> SinglePointResult:
-        structure = spec.structure.to_structure()
+        structure = spec.get_structure()
         properties = spec.properties
         model_result = model_executor.compute(structure, properties)
         return SinglePointResult(
@@ -38,48 +71,3 @@ class SinglePointExecutor(TaskExecutor):
             if model_result.forces is not None
             else None,
         )
-
-
-class SinglePoint(Task):
-    capability_spec = TaskCapabilitySpec(
-        required=frozenset(), optional=frozenset({Property.ENERGY, Property.FORCES})
-    )
-    task_name = KIND
-
-    def __init__(
-        self, structure: Structure, properties: list[Property] | list[str] | None = None
-    ) -> None:
-        super().__init__()
-        self.structure = structure
-
-        if properties is None:  # Not given, default to energy and forces
-            properties = [Property.ENERGY, Property.FORCES]
-        elif len(properties) == 0:  # Given but empty, not valid.
-            raise ValueError("At least one property must be requested.")
-
-        # Convert list of strings to frozenset of Properties.
-        if any(isinstance(p, str) for p in properties):
-            properties = [Property(p.lower()) if isinstance(p, str) else p for p in properties]
-
-        # Convert list of Properties to frozenset of Properties.
-        properties = frozenset(properties)
-
-        # Check that all requested properties are in the declared capability spec for this task
-        if not properties.issubset(
-            self.capability_spec.optional.union(self.capability_spec.required)
-        ):
-            raise ValueError(
-                f"Invalid properties: {properties - self.capability_spec.optional.union(self.capability_spec.required)}. Valid properties are: {self.capability_spec.optional.union(self.capability_spec.required)}"
-            )
-        self.requested_properties: frozenset[Property] = properties
-
-    def _required_model_properties(self):
-        return self.requested_properties
-
-    def to_spec(self) -> SinglePointSpec:
-        return SinglePointSpec(
-            structure=self.structure.to_message(), properties=self.requested_properties
-        )
-
-    def executor_environment(self) -> EnvironmentSpec:
-        return EnvironmentSpec(name=self.task_name)

@@ -7,10 +7,10 @@ from atomforge.env.base.provider import EnvironmentProvider
 from atomforge.env.uv import UVEnvironmentProvider
 from atomforge.model.base.spec import ModelSpec
 from atomforge.model.builtin import get_default_model_registry
-from atomforge.task.base.base import Task
 from atomforge.task.base.builtin import get_default_task_registry
 from atomforge.task.base.resources import ExecutionResources, ResolvedResources
 from atomforge.task.base.result import TaskResult
+from atomforge.task.base.spec import TaskSpec
 
 from .core import read_response, write_request
 from .request import TaskRequest, ShutdownRequest, RequestMessage, InitModelRequest
@@ -139,7 +139,7 @@ class SubprocessBackend:
 
     def execute(
         self,
-        task: Task,
+        task: TaskSpec,
         model_spec: ModelSpec,
         exec_resources: ExecutionResources | None = None,
     ) -> TaskResult:
@@ -149,15 +149,15 @@ class SubprocessBackend:
 
         # Check that the model can support the task before starting the subprocess
         model_registration = self._model_registry.get(model_spec.kind)
-        if not task.required_model_properties.issubset(
-            model_registration.supported_properties
-        ):
+        task_registration = self._task_registry.get(task.kind)
+        required_properties = task.required_model_properties()
+        if not required_properties.issubset(model_registration.supported_properties):
             raise ValueError(
-                f"Model of kind {model_spec.kind} does not support task of kind {task.task_name}"
+                f"Model of kind {model_spec.kind} does not support task of kind {task.kind}"
             )
 
         # Setup / Retrieve the environment and subprocess for this task
-        task_env_spec = task.executor_environment()
+        task_env_spec = task_registration.environment_factory(task)
         env_spec = self.setup_environment(model_spec, task_env_spec)
         env_subprocess = self.get_subprocess(env_spec)
 
@@ -174,13 +174,12 @@ class SubprocessBackend:
             prepared = self.prepared_models[(model_cache_key, env_cache_key)]
 
         # Convert to a TaskRequest
-        task_spec = task.to_spec()
         request = TaskRequest(
             operation="task",
             request_id=str(env_subprocess.get_request_counter()),
             model_session_id=prepared.model_session_id,
-            task_kind=task_spec.kind,
-            task_payload=task_spec.model_dump(),
+            task_kind=task.kind,
+            task_payload=task.model_dump(),
         )
 
         # Send the request to the subprocess

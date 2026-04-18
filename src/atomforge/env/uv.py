@@ -72,24 +72,3 @@ class UVEnvironmentProvider(EnvironmentProvider):
         env_path = handle.path
         if env_path.exists():
             subprocess.run(["rm", "-rf", env_path.as_posix()], check=True)
-
-
-if __name__ == "__main__":
-    from rich import print
-
-    provider = UVEnvironmentProvider()
-
-    spec1 = EnvironmentSpec(
-        name="test-env", python="python3.12", requirements=["requests"]
-    )
-    spec2 = EnvironmentSpec(
-        name="test-env", python="python3.12", requirements=["requests", "numpy"]
-    )
-
-    spec = spec2 + spec1
-
-    handle = provider.ensure_environment(spec)
-
-    info = provider.inspect_environment(handle)
-    print(info)
-    provider.remove_environment(handle)

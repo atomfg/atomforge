@@ -26,3 +26,6 @@ def test_single_point():
 
     with SubprocessBackend() as backend:
         result = backend.execute(task, model, resources)
+
+    assert result.kind == "single_point"
+    assert result.forces is not None

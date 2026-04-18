@@ -1,5 +1,4 @@
 import pytest
-from atomforge.backend.subprocess import request
 from atomforge.structure import Structure
 from atomforge.model.ase_lj import LennardJones
 from atomforge.task.singlepoint import SinglePoint
@@ -48,11 +47,12 @@ def task_request_response(worker, init_model_response):
         request_id="test_request_2",
         model_session_id=init_model_response[0].model_session_id,
         task_kind="single_point",
-        task_payload=task.to_spec().model_dump(),
+        task_payload=task.model_dump(),
     )
 
     response, should_exit = worker._handle_request(task_request)
     return response, should_exit
+
 
 @pytest.fixture(scope="module")
 def malformed_task_request_response(worker, init_model_response):

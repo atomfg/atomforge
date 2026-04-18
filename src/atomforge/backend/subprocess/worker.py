@@ -180,7 +180,7 @@ class SubprocessWorker:
         # Validate the model and task payloads and construct the executors
         task_registration = self._task_registry.get(request.task_kind)
         task_spec = task_registration.spec_model.model_validate(request.task_payload)
-        task_executor = task_registration.executor
+        task_executor = task_registration.executor_class()
 
         # Get the model executor for the task
         model_executor = self._get_model_executor(request.model_session_id)

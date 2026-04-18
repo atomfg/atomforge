@@ -435,7 +435,7 @@ packages:
 - pypi: ./
   name: atomforge
   version: 0.1.0
-  sha256: cab10ad12877b34e5c6fd781da60b37208a3f25262eda2d1d975cef3499633f1
+  sha256: 62050481ebcb35cfae5d55074bb3e1146e27fe94ad21d770e309a88403a780f3
   requires_dist:
   - ase>=3.28.0
   - numpy>=2.4.4

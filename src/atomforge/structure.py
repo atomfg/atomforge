@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from typing import Self
-from pydantic import BaseModel
+from typing import Annotated, Any, Self
+from pydantic import BaseModel, BeforeValidator
 import numpy as np
 
 
@@ -80,3 +80,18 @@ class StructureMessage(BaseModel):
             species=self.species,
             pbc=self.pbc,
         )
+
+
+def normalize_structure_like(value: Any) -> StructureMessage:
+    from ase import Atoms
+
+    if isinstance(value, StructureMessage):
+        return value
+    if isinstance(value, Structure):
+        return value.to_message()
+    if isinstance(value, Atoms):
+        return Structure.from_ase(value).to_message()
+    return value
+
+
+StructureLike = Annotated[StructureMessage, BeforeValidator(normalize_structure_like)]

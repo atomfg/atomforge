@@ -1,22 +1,24 @@
 from atomforge.model.base.executor import ModelExecutor
-from atomforge.env.base.env import EnvironmentSpec
 from atomforge.model.base.property import Property
-from atomforge.structure import Structure, StructureMessage
+from atomforge.structure import StructureMessage
 
 from typing import Literal
 
-from .base.base import Task, TaskCapabilitySpec
 from .base.executor import TaskExecutor
 from .base.result import TaskResult
 from .base.spec import TaskSpec
+from atomforge.structure import StructureLike
 
 KIND = "bfgs"
 
 
-class BFGSSpec(TaskSpec):
+class BFGS(TaskSpec):
     kind: Literal["bfgs"] = KIND
-    structure: StructureMessage
+    structure: StructureLike
     fmax: float = 0.05
+
+    def required_model_properties(self) -> frozenset[Property]:
+        return frozenset({Property.ENERGY, Property.FORCES})
 
 
 class BFGSResult(TaskResult):
@@ -26,10 +28,11 @@ class BFGSResult(TaskResult):
     forces: list[list[float]]
 
 
-class BFGSExecutor(TaskExecutor):
-    def execute(self, spec: BFGSSpec, model_executor: ModelExecutor) -> BFGSResult:
+class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
+    def execute(self, spec: BFGS, model_executor: ModelExecutor) -> BFGSResult:
         from ase.optimize import BFGS as BFGSOptimizer
         from ase.calculators.calculator import Calculator
+        from atomforge.structure import Structure
 
         class ModelCalculatorAdapter(Calculator):
             implemented_properties = ["energy", "forces"]
@@ -47,7 +50,7 @@ class BFGSExecutor(TaskExecutor):
                 self.results["forces"] = model_result.forces
 
         # Setup
-        atoms = spec.structure.to_structure().to_ase()
+        atoms = spec.get_structure().to_ase()
         atoms.set_calculator(ModelCalculatorAdapter(model_executor))
         optimizer = BFGSOptimizer(atoms)
 
@@ -63,24 +66,3 @@ class BFGSExecutor(TaskExecutor):
             energy=energy,
             forces=forces.tolist(),
         )
-
-
-class BFGS(Task):
-    capability_spec = TaskCapabilitySpec(
-        required=frozenset({Property.ENERGY, Property.FORCES}), optional=frozenset()
-    )
-    task_name = KIND
-
-    def __init__(self, structure: Structure, fmax: float = 0.05) -> None:
-        super().__init__()
-        self.structure = structure
-        self.fmax = fmax
-
-    def _required_model_properties(self):
-        return self.capability_spec.required
-
-    def to_spec(self) -> BFGSSpec:
-        return BFGSSpec(structure=self.structure.to_message(), fmax=self.fmax)
-
-    def executor_environment(self) -> EnvironmentSpec:
-        return EnvironmentSpec(name=self.task_name, requirements=["ase"])

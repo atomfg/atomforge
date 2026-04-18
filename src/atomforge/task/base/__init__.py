@@ -2,7 +2,6 @@ __all__ = [
     "TaskSpec",
     "TaskResult",
     "TaskExecutor",
-    "Task",
     "TaskRegistry",
     "register_builtin_tasks",
     "get_default_task_registry",
@@ -25,12 +24,8 @@ def __getattr__(name: str):
         from .executor import TaskExecutor
 
         return TaskExecutor
-    if name == "Task":
-        from .base import Task
-
-        return Task
     if name == "TaskCapabilitySpec":
-        from .base import TaskCapabilitySpec
+        from .capability import TaskCapabilitySpec
 
         return TaskCapabilitySpec
     if name == "TaskRegistry":
