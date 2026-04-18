@@ -35,11 +35,11 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests/"]
 addopts = [
-  "--cov-report", "term",
+#   "--cov-report", "term",
 #   "--cov-report", "html:.coverage-html",
 #   "--cov-report", "xml:.coverage.xml",
 #   "--junitxml", ".report.xml",
-  "--cov", "src/atomforge"
+#   "--cov", "src/atomforge"
 ]
 
 [tool.coverage.run]
@@ -58,7 +58,7 @@ default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 
 [tool.pixi.tasks]
-test = { cmd = "pytest", default-environment = "dev" }
+test-cov = { cmd = "pytest --cov-report term --cov-report html:.coverage-html --cov src/atomforge", default-environment = "dev" }
 
 ruff-check = { cmd = "ruff check .", default-environment = "dev" }
 ruff-fmt = { cmd = "ruff format .", default-environment = "dev" }

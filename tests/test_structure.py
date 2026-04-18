@@ -1,16 +1,4 @@
-import pytest
 from atomforge.structure import Structure
-
-
-@pytest.fixture
-def example_structure():
-    return Structure(
-        positions=[[0, 0, 0], [1, 1, 1]],
-        cell=[[2, 0, 0], [0, 2, 0], [0, 0, 2]],
-        species=["H", "O"],
-        pbc=[True, True, True],
-    )
-
 
 def compare_structures(struct1, struct2):
     assert struct1.positions.tolist() == struct2.positions.tolist()

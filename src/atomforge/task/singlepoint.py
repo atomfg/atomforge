@@ -58,18 +58,11 @@ class SinglePoint(Task):
             raise ValueError("At least one property must be requested.")
 
         # Convert list of strings to frozenset of Properties.
-        if all(isinstance(p, str) for p in properties):
-            properties = frozenset([Property(p) for p in properties])
+        if any(isinstance(p, str) for p in properties):
+            properties = [Property(p.lower()) if isinstance(p, str) else p for p in properties]
 
         # Convert list of Properties to frozenset of Properties.
-        elif all(isinstance(p, Property) for p in properties):
-            properties = frozenset(properties)
-
-        # Mixed types are not valid.
-        elif not all(isinstance(p, Property) for p in properties):
-            raise ValueError(
-                "Properties must be either all strings or all Property instances."
-            )
+        properties = frozenset(properties)
 
         # Check that all requested properties are in the declared capability spec for this task
         if not properties.issubset(
