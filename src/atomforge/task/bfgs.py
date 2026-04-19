@@ -1,16 +1,20 @@
-from atomforge.model.core.executor import ModelExecutor
-from atomforge.model.core.property import Property
-from atomforge.structure import StructureMessage
-
 from typing import Literal
 
-from .core.executor import TaskExecutor
-from .core.result import TaskResult
-from .core.spec import TaskSpec
-from atomforge.structure import StructureLike
+from atomforge.env.base.env import EnvironmentSpec
+from atomforge.model.core.executor import ModelExecutor
+from atomforge.model.core.property import Property
+from atomforge.structure import StructureLike, StructureMessage
+from atomforge.task.core.capability import TaskCapabilitySpec
+from atomforge.task.core.executor import TaskExecutor
+from atomforge.task.core.result import TaskResult
+from atomforge.task.core.spec import TaskSpec
 
 KIND = "bfgs"
 
+BFGSCapabilitySpec = TaskCapabilitySpec(
+    required=frozenset({Property.ENERGY, Property.FORCES}),
+    optional=frozenset(),
+)
 
 class BFGS(TaskSpec):
     kind: Literal["bfgs"] = KIND
@@ -27,11 +31,15 @@ class BFGSResult(TaskResult):
     energy: float
     forces: list[list[float]]
 
+def bfgs_environment_factory(spec: BFGS) -> EnvironmentSpec:
+    return EnvironmentSpec(name="bfgs", requirements=["ase"])
+
 
 class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
     def execute(self, spec: BFGS, model_executor: ModelExecutor) -> BFGSResult:
-        from ase.optimize import BFGS as BFGSOptimizer
         from ase.calculators.calculator import Calculator
+        from ase.optimize import BFGS as BFGSOptimizer
+
         from atomforge.structure import Structure
 
         class ModelCalculatorAdapter(Calculator):
@@ -66,3 +74,5 @@ class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
             energy=energy,
             forces=forces.tolist(),
         )
+
+

@@ -5,7 +5,7 @@ from atomforge.env.base.env import EnvironmentSpec
 from atomforge.model.ase_lj import LennardJones
 from atomforge.model.core.property import Property
 from atomforge.task.core.capability import TaskCapabilitySpec
-from atomforge.task.registry import TaskRegistry
+from atomforge.registry.task.registry import TaskRegistry
 from atomforge.task.bfgs import BFGS, BFGSExecutor, BFGSResult
 from atomforge.task.singlepoint import SinglePoint
 

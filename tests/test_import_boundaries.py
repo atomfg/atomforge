@@ -9,7 +9,7 @@ import atomforge.env
 import atomforge.model
 import atomforge.task
 import atomforge.task.core
-import atomforge.task.registry
+import atomforge.registry
 import atomforge.model.core
 import atomforge.model.registry
 
@@ -22,7 +22,6 @@ FORBIDDEN_IMPORTS = {
     "atomforge.task",
     "atomforge.model",
     "atomforge.task.core",
-    "atomforge.task.registry",
     "atomforge.model.core",
     "atomforge.model.registry",
 }
@@ -34,7 +33,6 @@ ALLOWED_FACADE_FILES = {
     SRC_ROOT / "task" / "registry" / "__init__.py",
     SRC_ROOT / "model" / "__init__.py",
     SRC_ROOT / "model" / "core" / "__init__.py",
-    SRC_ROOT / "model" / "registry" / "__init__.py",
 }
 
 
@@ -61,9 +59,6 @@ def test_public_facades_expose_expected_symbols():
     assert atomforge.task.BFGS.__name__ == "BFGS"
     assert atomforge.task.core.TaskSpec.__name__ == "TaskSpec"
     assert atomforge.task.core.TaskCapabilitySpec.__name__ == "TaskCapabilitySpec"
-    assert atomforge.task.registry.get_default_task_registry.__name__ == (
-        "get_default_task_registry"
-    )
     assert atomforge.model.core.ModelSpec.__name__ == "ModelSpec"
     assert atomforge.model.core.Property.__name__ == "Property"
     assert atomforge.model.registry.ModelRegistry.__name__ == "ModelRegistry"

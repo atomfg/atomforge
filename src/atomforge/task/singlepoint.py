@@ -1,17 +1,22 @@
-from atomforge.model.core.executor import ModelExecutor
-from atomforge.model.core.property import Property
-
 from typing import Literal
 
 from pydantic import Field, field_validator
 
-from .core.executor import TaskExecutor
-from .core.result import TaskResult
-from .core.spec import TaskSpec
+from atomforge.env.base.env import EnvironmentSpec
+from atomforge.model.core.executor import ModelExecutor
+from atomforge.model.core.property import Property
 from atomforge.structure import StructureLike
+from atomforge.task.core.capability import TaskCapabilitySpec
+from atomforge.task.core.executor import TaskExecutor
+from atomforge.task.core.result import TaskResult
+from atomforge.task.core.spec import TaskSpec
 
 KIND = "single_point"
 
+SinglePointCapabilitySpec = TaskCapabilitySpec(
+    required=frozenset(),
+    optional=frozenset({Property.ENERGY, Property.FORCES}),
+)
 
 class SinglePoint(TaskSpec):
     kind: Literal["single_point"] = KIND
@@ -51,6 +56,8 @@ class SinglePoint(TaskSpec):
     def validate_properties(cls, value):
         return cls._normalize_properties(value)
 
+def single_point_environment_factory(spec: SinglePoint) -> None:
+    return EnvironmentSpec(name="single_point")
 
 class SinglePointResult(TaskResult):
     kind: Literal["single_point"] = KIND

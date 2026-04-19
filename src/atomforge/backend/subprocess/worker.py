@@ -18,16 +18,15 @@ from atomforge.model.core.spec import ModelSpec
 from atomforge.model.registry.registry import ModelRegistry
 from atomforge.model.registry.builtin import get_default_model_registry
 
-from atomforge.task.registry.registry import TaskRegistry
-from atomforge.task.registry.builtin import get_default_task_registry
+from atomforge.registry.task.registry import TaskRegistry
 from atomforge.task.core.resources import ResolvedResources
 
-from .core import (
+from atomforge.backend.subprocess.core import (
     read_request,
     write_response,
 )
-from .request import ShutdownRequest, TaskRequest, InitModelRequest
-from .response import InitModelResponse, TaskResponse, ShutdownResponse, ErrorResponse
+from atomforge.backend.subprocess.request import ShutdownRequest, TaskRequest, InitModelRequest
+from atomforge.backend.subprocess.response import InitModelResponse, TaskResponse, ShutdownResponse, ErrorResponse
 
 
 class SubprocessWorker:
@@ -201,7 +200,7 @@ class SubprocessWorker:
 
 
 def main(name: str) -> int:
-    task_registry = get_default_task_registry()
+    task_registry = TaskRegistry.default()
     model_registry = get_default_model_registry()
     system_resources = discover_system_resources()
 
