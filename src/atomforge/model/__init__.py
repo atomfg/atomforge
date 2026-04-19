@@ -9,15 +9,15 @@ __all__ = [
 
 def __getattr__(name: str):
     if name == "ModelSpec":
-        from .base.spec import ModelSpec
+        from .core.spec import ModelSpec
 
         return ModelSpec
     if name == "ModelResult":
-        from .base.result import ModelResult
+        from .core.result import ModelResult
 
         return ModelResult
     if name == "Property":
-        from .base.property import Property
+        from .core.property import Property
 
         return Property
     if name == "ModelRegistry":
@@ -25,7 +25,7 @@ def __getattr__(name: str):
 
         return ModelRegistry
     if name == "get_default_model_registry":
-        from .builtin import get_default_model_registry
+        from .registry import get_default_model_registry
 
         return get_default_model_registry
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

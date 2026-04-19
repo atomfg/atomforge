@@ -1,10 +1,10 @@
-from atomforge.task.base.resources import ExecutionResources, ResolvedResources
+from atomforge.task.core.resources import ExecutionResources, ResolvedResources
 from atomforge.backend.base.resources import (
     Availability,
     resolve_accelerator,
     SystemResources,
 )
-from atomforge.model.base.resource_caps import ResourceCapabilities
+from atomforge.model.core.resource_caps import ResourceCapabilities
 from atomforge.model.probes import ProbeResult
 
 import pytest

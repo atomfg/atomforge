@@ -1,7 +1,7 @@
 from atomforge.env.base.env import EnvironmentSpec
-from atomforge.model.base.property import Property
-from atomforge.task.base.capability import TaskCapabilitySpec
-from atomforge.task.base.registry import TaskRegistry
+from atomforge.model.core.property import Property
+from atomforge.task.core.capability import TaskCapabilitySpec
+from atomforge.task.registry.registry import TaskRegistry
 
 
 def _register_single_point_task(registry: TaskRegistry) -> None:

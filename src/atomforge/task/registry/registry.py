@@ -3,10 +3,10 @@ from typing import Callable, Generic, TypeVar
 
 from atomforge.env.base.env import EnvironmentSpec
 
-from .capability import TaskCapabilitySpec
-from .executor import TaskExecutor
-from .result import TaskResult
-from .spec import TaskSpec
+from atomforge.task.core.capability import TaskCapabilitySpec
+from atomforge.task.core.executor import TaskExecutor
+from atomforge.task.core.result import TaskResult
+from atomforge.task.core.spec import TaskSpec
 
 
 TaskSpecT = TypeVar("TaskSpecT", bound=TaskSpec)

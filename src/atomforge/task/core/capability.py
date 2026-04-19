@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from atomforge.model.base.property import Property
+from atomforge.model.core.property import Property
 
 
 @dataclass(slots=True)

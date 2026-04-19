@@ -8,7 +8,10 @@ import atomforge
 import atomforge.env
 import atomforge.model
 import atomforge.task
-import atomforge.task.base
+import atomforge.task.core
+import atomforge.task.registry
+import atomforge.model.core
+import atomforge.model.registry
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,16 +21,20 @@ FORBIDDEN_IMPORTS = {
     "atomforge.env",
     "atomforge.task",
     "atomforge.model",
-    "atomforge.task.base",
-    "atomforge.model.base",
+    "atomforge.task.core",
+    "atomforge.task.registry",
+    "atomforge.model.core",
+    "atomforge.model.registry",
 }
 ALLOWED_FACADE_FILES = {
     SRC_ROOT / "__init__.py",
     SRC_ROOT / "env" / "__init__.py",
     SRC_ROOT / "task" / "__init__.py",
-    SRC_ROOT / "task" / "base" / "__init__.py",
+    SRC_ROOT / "task" / "core" / "__init__.py",
+    SRC_ROOT / "task" / "registry" / "__init__.py",
     SRC_ROOT / "model" / "__init__.py",
-    SRC_ROOT / "model" / "base" / "__init__.py",
+    SRC_ROOT / "model" / "core" / "__init__.py",
+    SRC_ROOT / "model" / "registry" / "__init__.py",
 }
 
 
@@ -52,13 +59,15 @@ def test_public_facades_expose_expected_symbols():
     assert atomforge.env.UVEnvironmentProvider.__name__ == "UVEnvironmentProvider"
     assert atomforge.task.SinglePoint.__name__ == "SinglePoint"
     assert atomforge.task.BFGS.__name__ == "BFGS"
-    assert atomforge.task.base.TaskSpec.__name__ == "TaskSpec"
-    assert atomforge.task.base.get_default_task_registry.__name__ == (
+    assert atomforge.task.core.TaskSpec.__name__ == "TaskSpec"
+    assert atomforge.task.core.TaskCapabilitySpec.__name__ == "TaskCapabilitySpec"
+    assert atomforge.task.registry.get_default_task_registry.__name__ == (
         "get_default_task_registry"
     )
-    assert atomforge.model.ModelSpec.__name__ == "ModelSpec"
-    assert atomforge.model.ModelRegistry.__name__ == "ModelRegistry"
-    assert atomforge.model.get_default_model_registry.__name__ == (
+    assert atomforge.model.core.ModelSpec.__name__ == "ModelSpec"
+    assert atomforge.model.core.Property.__name__ == "Property"
+    assert atomforge.model.registry.ModelRegistry.__name__ == "ModelRegistry"
+    assert atomforge.model.registry.get_default_model_registry.__name__ == (
         "get_default_model_registry"
     )
 

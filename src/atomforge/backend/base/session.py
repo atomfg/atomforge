@@ -1,8 +1,8 @@
 import hashlib
 import json
 
-from atomforge.model.base.spec import ModelSpec
-from atomforge.task.base.resources import ExecutionResources
+from atomforge.model.core.spec import ModelSpec
+from atomforge.task.core.resources import ExecutionResources
 
 
 def model_session_key(

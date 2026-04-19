@@ -1,4 +1,4 @@
-from atomforge.task.base.resources import ResolvedResources, ExecutionResources
+from atomforge.task.core.resources import ResolvedResources, ExecutionResources
 
 
 def test_resolved_resources_init():

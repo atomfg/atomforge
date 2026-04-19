@@ -1,5 +1,5 @@
-from atomforge.model.base.resource_caps import ResourceCapabilities
-from atomforge.task.base.resources import ExecutionResources
+from atomforge.model.core.resource_caps import ResourceCapabilities
+from atomforge.task.core.resources import ExecutionResources
 
 from .shared import (
     Precision,

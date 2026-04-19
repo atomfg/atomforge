@@ -3,9 +3,9 @@ import pytest
 from atomforge.backend.subprocess.backend import SubprocessBackend
 from atomforge.env.base.env import EnvironmentSpec
 from atomforge.model.ase_lj import LennardJones
-from atomforge.model.base.property import Property
-from atomforge.task.base.capability import TaskCapabilitySpec
-from atomforge.task.base.registry import TaskRegistry
+from atomforge.model.core.property import Property
+from atomforge.task.core.capability import TaskCapabilitySpec
+from atomforge.task.registry import TaskRegistry
 from atomforge.task.bfgs import BFGS, BFGSExecutor, BFGSResult
 from atomforge.task.singlepoint import SinglePoint
 

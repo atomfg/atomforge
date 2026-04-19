@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from atomforge.task.singlepoint import SinglePoint, SinglePointExecutor
-from atomforge.model.base.property import Property
+from atomforge.model.core.property import Property
 from atomforge.structure import StructureMessage
 
 

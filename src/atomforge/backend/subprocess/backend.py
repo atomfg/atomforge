@@ -5,12 +5,12 @@ from atomforge.backend.base.session import model_session_key
 from atomforge.env.base.env import EnvironmentSpec
 from atomforge.env.base.provider import EnvironmentProvider
 from atomforge.env.uv import UVEnvironmentProvider
-from atomforge.model.base.spec import ModelSpec
-from atomforge.model.builtin import get_default_model_registry
-from atomforge.task.base.builtin import get_default_task_registry
-from atomforge.task.base.resources import ExecutionResources, ResolvedResources
-from atomforge.task.base.result import TaskResult
-from atomforge.task.base.spec import TaskSpec
+from atomforge.model.core.spec import ModelSpec
+from atomforge.model.registry.builtin import get_default_model_registry
+from atomforge.task.registry.builtin import get_default_task_registry
+from atomforge.task.core.resources import ExecutionResources, ResolvedResources
+from atomforge.task.core.result import TaskResult
+from atomforge.task.core.spec import TaskSpec
 
 from .core import read_response, write_request
 from .request import TaskRequest, ShutdownRequest, RequestMessage, InitModelRequest

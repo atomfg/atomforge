@@ -1,6 +1,6 @@
-from atomforge.model.base.resource_caps import ResourceCapabilities
+from atomforge.model.core.resource_caps import ResourceCapabilities
 from atomforge.model.probes import ProbeResult
-from atomforge.task.base.resources import ExecutionResources
+from atomforge.task.core.resources import ExecutionResources
 
 from . import Availability, SystemResources
 from .shared import (

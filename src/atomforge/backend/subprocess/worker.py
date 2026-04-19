@@ -13,14 +13,14 @@ from atomforge.backend.base.resources import (
     SystemResources,
 )
 from atomforge.backend.base.session import model_session_key
-from atomforge.model.base.executor import ModelExecutor
-from atomforge.model.base.spec import ModelSpec
-from atomforge.model.registry import ModelRegistry
-from atomforge.model.builtin import get_default_model_registry
+from atomforge.model.core.executor import ModelExecutor
+from atomforge.model.core.spec import ModelSpec
+from atomforge.model.registry.registry import ModelRegistry
+from atomforge.model.registry.builtin import get_default_model_registry
 
-from atomforge.task.base.registry import TaskRegistry
-from atomforge.task.base.builtin import get_default_task_registry
-from atomforge.task.base.resources import ResolvedResources
+from atomforge.task.registry.registry import TaskRegistry
+from atomforge.task.registry.builtin import get_default_task_registry
+from atomforge.task.core.resources import ResolvedResources
 
 from .core import (
     read_request,

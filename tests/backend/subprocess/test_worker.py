@@ -14,7 +14,7 @@ from atomforge.backend.subprocess.response import (
     ShutdownResponse,
     ErrorResponse,
 )
-from atomforge.task.base.resources import ExecutionResources
+from atomforge.task.core.resources import ExecutionResources
 
 
 @pytest.fixture(scope="module")

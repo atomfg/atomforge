@@ -2,7 +2,7 @@ import pytest
 
 from atomforge.structure import Structure
 from atomforge.model.ase_lj import LennardJonesExecutor, LennardJones
-from atomforge.task.base.resources import ResolvedResources
+from atomforge.task.core.resources import ResolvedResources
 
 @pytest.fixture
 def example_structure():

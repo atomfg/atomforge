@@ -4,7 +4,7 @@ from .spec import ModelSpecT
 from .property import Property
 from .result import ModelResult
 from atomforge.structure import Structure
-from atomforge.task.base.resources import ResolvedResources
+from atomforge.task.core.resources import ResolvedResources
 
 from typing import Generic
 

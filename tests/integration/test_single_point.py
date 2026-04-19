@@ -18,7 +18,7 @@ def make_task():
 
 
 def test_single_point():
-    from atomforge.task.base.resources import ExecutionResources
+    from atomforge.task.core.resources import ExecutionResources
 
     resources = ExecutionResources(accelerator="mps", precision="f64")
     model = LennardJones()

@@ -1,12 +1,12 @@
-from atomforge.model.base.executor import ModelExecutor
-from atomforge.model.base.property import Property
+from atomforge.model.core.executor import ModelExecutor
+from atomforge.model.core.property import Property
 from atomforge.structure import StructureMessage
 
 from typing import Literal
 
-from .base.executor import TaskExecutor
-from .base.result import TaskResult
-from .base.spec import TaskSpec
+from .core.executor import TaskExecutor
+from .core.result import TaskResult
+from .core.spec import TaskSpec
 from atomforge.structure import StructureLike
 
 KIND = "bfgs"

@@ -1,9 +1,9 @@
 from .registry import ModelRegistry
-from .probes import torch_probe
+from ..probes import torch_probe
 
 
 def register_lennard_jones(registry: ModelRegistry):
-    from .ase_lj import (
+    from ..ase_lj import (
         LennardJonesExecutor,
         LennardJones,
         LennardJonesMetadata,
@@ -26,7 +26,7 @@ def register_lennard_jones(registry: ModelRegistry):
 
 
 def register_chgnet(registry: ModelRegistry):
-    from .chgnet_model import (
+    from ..chgnet_model import (
         CHGNet,
         CHGNetExecutor,
         CHGNetMetadata,
@@ -49,7 +49,7 @@ def register_chgnet(registry: ModelRegistry):
 
 
 def register_mace(registry: ModelRegistry):
-    from .mace_model import (
+    from ..mace_model import (
         MACE,
         MACEExecutor,
         MACEMetadata,

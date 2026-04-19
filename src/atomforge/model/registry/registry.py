@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from atomforge.model.probes import ResourceProbe
 from typing import Generic
 
-from .base.executor import ModelExecutor
-from .base.metadata import ModelMetadata
-from .base.property import Property
-from .base.resource_caps import ResourceCapabilities
-from .base.spec import EnvironmentFactory, ModelSpecT
+from atomforge.model.core.executor import ModelExecutor
+from atomforge.model.core.metadata import ModelMetadata
+from atomforge.model.core.property import Property
+from atomforge.model.core.resource_caps import ResourceCapabilities
+from atomforge.model.core.spec import EnvironmentFactory, ModelSpecT
 
 
 @dataclass(frozen=True)

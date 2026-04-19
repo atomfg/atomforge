@@ -4,7 +4,7 @@ from abc import abstractmethod
 
 from pydantic import BaseModel, ConfigDict
 
-from atomforge.model.base.property import Property
+from atomforge.model.core.property import Property
 from atomforge.structure import Structure, StructureMessage
 
 

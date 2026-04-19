@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Any, Annotated, Literal
 from pydantic import Field, TypeAdapter
 
-from atomforge.task.base.resources import ResolvedResources
+from atomforge.task.core.resources import ResolvedResources
 
 
 class ShutdownResponse(BaseModel):

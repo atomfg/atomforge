@@ -1,14 +1,14 @@
 from typing import Literal
 
 from atomforge.env.base.env import EnvironmentSpec
-from atomforge.model.base.executor import ModelExecutor
-from atomforge.model.base.metadata import ModelMetadata, Reference
-from atomforge.model.base.property import Property
-from atomforge.model.base.resource_caps import ResourceCapabilities
-from atomforge.model.base.result import ModelResult
-from atomforge.model.base.spec import ModelSpec
+from atomforge.model.core.executor import ModelExecutor
+from atomforge.model.core.metadata import ModelMetadata, Reference
+from atomforge.model.core.property import Property
+from atomforge.model.core.resource_caps import ResourceCapabilities
+from atomforge.model.core.result import ModelResult
+from atomforge.model.core.spec import ModelSpec
 from atomforge.structure import Structure
-from atomforge.task.base.resources import ResolvedResources
+from atomforge.task.core.resources import ResolvedResources
 
 model_kind = "ase-lj"
 LennardJonesSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})

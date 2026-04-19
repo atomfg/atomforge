@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Protocol, TypeVar
 
-from atomforge.model.base.executor import ModelExecutor
+from atomforge.model.core.executor import ModelExecutor
 
 from .result import TaskResult
 from .spec import TaskSpec
