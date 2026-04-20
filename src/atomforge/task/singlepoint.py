@@ -18,6 +18,7 @@ SinglePointCapabilitySpec = TaskCapabilitySpec(
     optional=frozenset({Property.ENERGY, Property.FORCES}),
 )
 
+
 class SinglePoint(TaskSpec):
     kind: Literal["single_point"] = KIND
     structure: StructureLike
@@ -56,8 +57,10 @@ class SinglePoint(TaskSpec):
     def validate_properties(cls, value):
         return cls._normalize_properties(value)
 
+
 def single_point_environment_factory(spec: SinglePoint) -> None:
     return EnvironmentSpec(name="single_point")
+
 
 class SinglePointResult(TaskResult):
     kind: Literal["single_point"] = KIND

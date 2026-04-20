@@ -8,12 +8,13 @@ from atomforge.task.core.capability import TaskCapabilitySpec
 from atomforge.registry.task.registry import TaskRegistry
 from atomforge.task.bfgs import BFGS, BFGSExecutor, BFGSResult
 from atomforge.task.singlepoint import SinglePoint
+from atomforge.registry.task.registration import TaskRegistration
 
 
 def test_task_registry_duplicate_kind_fails():
     registry = TaskRegistry()
-    registry.register(
-        task_kind="bfgs",
+
+    registration = TaskRegistration(
         spec_model=BFGS,
         result_model=BFGSResult,
         executor_class=BFGSExecutor,
@@ -24,21 +25,22 @@ def test_task_registry_duplicate_kind_fails():
         environment_factory=lambda spec: EnvironmentSpec(name=spec.kind),
     )
 
+    registry._register(
+        registration,
+        task_kind="bfgs",
+    )
+
     with pytest.raises(ValueError):
-        registry.register(
-            task_kind="bfgs",
-            spec_model=BFGS,
-            result_model=BFGSResult,
-            executor_class=BFGSExecutor,
-            capability_spec=TaskCapabilitySpec(
-                required=frozenset({Property.ENERGY, Property.FORCES}),
-                optional=frozenset(),
-            ),
-            environment_factory=lambda spec: EnvironmentSpec(name=spec.kind),
-        )
+        registry._register(
+        registration,
+        task_kind="bfgs",
+    )
+
 
 
 def test_builtin_registration_exposes_capabilities_and_environment(example_structure):
+    from atomforge.registry.task.helpers import ManifestToRegistrationConverter
+
     backend = SubprocessBackend()
     registration = backend._task_registry.get("bfgs")
     task = BFGS(structure=example_structure)
@@ -48,7 +50,7 @@ def test_builtin_registration_exposes_capabilities_and_environment(example_struc
     )
     assert registration.capability_spec.optional == frozenset()
     assert registration.environment_factory(task) == EnvironmentSpec(
-        name="bfgs", requirements=["ase"]
+        name="bfgs", requirements=["ase"], provider_requirements=[ManifestToRegistrationConverter._resolve_distribution("atomforge")]
     )
 
 

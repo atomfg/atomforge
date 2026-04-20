@@ -25,8 +25,17 @@ from atomforge.backend.subprocess.core import (
     read_request,
     write_response,
 )
-from atomforge.backend.subprocess.request import ShutdownRequest, TaskRequest, InitModelRequest
-from atomforge.backend.subprocess.response import InitModelResponse, TaskResponse, ShutdownResponse, ErrorResponse
+from atomforge.backend.subprocess.request import (
+    ShutdownRequest,
+    TaskRequest,
+    InitModelRequest,
+)
+from atomforge.backend.subprocess.response import (
+    InitModelResponse,
+    TaskResponse,
+    ShutdownResponse,
+    ErrorResponse,
+)
 
 
 class SubprocessWorker:

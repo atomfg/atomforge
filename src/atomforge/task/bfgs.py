@@ -16,6 +16,7 @@ BFGSCapabilitySpec = TaskCapabilitySpec(
     optional=frozenset(),
 )
 
+
 class BFGS(TaskSpec):
     kind: Literal["bfgs"] = KIND
     structure: StructureLike
@@ -30,6 +31,7 @@ class BFGSResult(TaskResult):
     structure: StructureMessage
     energy: float
     forces: list[list[float]]
+
 
 def bfgs_environment_factory(spec: BFGS) -> EnvironmentSpec:
     return EnvironmentSpec(name="bfgs", requirements=["ase"])
@@ -74,5 +76,3 @@ class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
             energy=energy,
             forces=forces.tolist(),
         )
-
-

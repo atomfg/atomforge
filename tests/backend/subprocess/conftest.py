@@ -1,31 +1,10 @@
 import pytest
 from atomforge.backend.subprocess.worker import SubprocessWorker
-from atomforge.model.core.property import Property
 from atomforge.registry.task.registry import TaskRegistry
 from atomforge.model.registry import ModelRegistry
 from atomforge.backend.base.resources import SystemResources, Availability
 from atomforge.model.registry import register_lennard_jones
-from atomforge.task.core.capability import TaskCapabilitySpec
 
-def _register_single_point_task(registry: TaskRegistry) -> None:
-    from atomforge.task.singlepoint import (
-        SinglePointExecutor,
-        SinglePointResult,
-        SinglePoint,
-        single_point_environment_factory
-    )
-
-    registry.register(
-        task_kind="single_point",
-        spec_model=SinglePoint,
-        result_model=SinglePointResult,
-        executor_class=SinglePointExecutor,
-        capability_spec=TaskCapabilitySpec(
-            required=frozenset(),
-            optional=frozenset({Property.ENERGY, Property.FORCES}),
-        ),
-        environment_factory=single_point_environment_factory
-    )
 
 
 def simple_model_registry():
@@ -34,10 +13,8 @@ def simple_model_registry():
     return registry
 
 def simple_task_registry():
-    registry = TaskRegistry()
-    _register_single_point_task(registry)
+    registry = TaskRegistry.default()
     return registry
-
 
 @pytest.fixture(scope="module")
 def worker():

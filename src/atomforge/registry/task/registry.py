@@ -1,71 +1,25 @@
-from dataclasses import dataclass
-from typing import Callable, Generic, Self, TypeVar
+from typing import Self
 
-from atomforge.env.base.env import EnvironmentSpec
-
-from atomforge.task.core.capability import TaskCapabilitySpec
-from atomforge.task.core.executor import TaskExecutor
-from atomforge.task.core.result import TaskResult
-from atomforge.task.core.spec import TaskSpec
+from atomforge.registry.task.helpers import manifest_to_registration
 from atomforge.registry.task.manifest import TaskManifest
+from atomforge.registry.task.registration import (
+    TaskRegistration,
+)
 
-
-TaskSpecT = TypeVar("TaskSpecT", bound=TaskSpec)
-TaskResultT = TypeVar("TaskResultT", bound=TaskResult)
-
-@dataclass(frozen=True)
-class TaskRegistration(Generic[TaskSpecT, TaskResultT]):
-    spec_model: type[TaskSpecT]
-    result_model: type[TaskResultT]
-    executor_class: type[TaskExecutor[TaskSpecT, TaskResultT]]
-    capability_spec: TaskCapabilitySpec
-    environment_factory: Callable[[TaskSpecT], EnvironmentSpec]
-
-
-def load_module(dotted_path: str):
-    from importlib import import_module
-
-    module_name, class_name = dotted_path.split(":", 1)
-    module = import_module(module_name)
-    return getattr(module, class_name)
-
-def manifest_to_registration(manifest: TaskManifest) -> TaskRegistration:
-    spec_model = load_module(manifest.spec_model)
-    executor_class = load_module(manifest.executor_class)
-    result_model = load_module(manifest.result_model)
-    capability_spec = load_module(manifest.capability_spec)
-    environment_factory = load_module(manifest.environment_factory)
-    return TaskRegistration(
-        spec_model=spec_model,
-        executor_class=executor_class,
-        result_model=result_model,
-        capability_spec=capability_spec,
-        environment_factory=environment_factory,
-    ), manifest.kind
 
 class TaskRegistry:
     def __init__(self) -> None:
         self._registrations: dict[str, TaskRegistration] = {}
 
-    def register(
+    def _register(
         self,
+        registration: TaskRegistration,
         task_kind: str,
-        spec_model: type[TaskSpecT],
-        result_model: type[TaskResultT],
-        executor_class: type[TaskExecutor[TaskSpecT, TaskResultT]],
-        capability_spec: TaskCapabilitySpec,
-        environment_factory: Callable[[TaskSpecT], EnvironmentSpec],
     ) -> None:
         if task_kind in self._registrations:
             raise ValueError(f"Task kind already registered: {task_kind}")
 
-        self._registrations[task_kind] = TaskRegistration(
-            spec_model=spec_model,
-            result_model=result_model,
-            executor_class=executor_class,
-            capability_spec=capability_spec,
-            environment_factory=environment_factory,
-        )
+        self._registrations[task_kind] = registration
 
     def get(self, task_kind: str) -> TaskRegistration:
         try:
@@ -77,15 +31,27 @@ class TaskRegistry:
         from importlib.metadata import entry_points
 
         eps = entry_points(group="atomforge.task")
+        entry_point_packages = {}
 
         for ep in eps:
             manifest = ep.load()
-            registration, kind = manifest_to_registration(manifest)
+
+            if not isinstance(manifest, TaskManifest):
+                raise TypeError(
+                    f"Entry point '{ep.name}' must be a TaskManifest instance"
+                )
+
+            registration, kind = manifest_to_registration(
+                manifest, entry_point_name=ep.name, entry_point_package=ep.dist.name
+            )
 
             if kind in self._registrations:
-                raise ValueError(f"Task kind already registered: {ep.name}")
+                raise ValueError(
+                    f"Task kind already registered: {ep.name} (from {ep.dist.name} and {entry_point_packages[kind]})"
+                )
 
-            self._registrations[kind] = registration
+            self._register(registration, kind)
+            entry_point_packages[kind] = ep.dist.name
 
     @classmethod
     def default(cls) -> Self:
@@ -101,4 +67,3 @@ if __name__ == "__main__":
 
     for task_kind, registration in registry._registrations.items():
         print(registration)
-

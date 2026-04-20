@@ -11,33 +11,29 @@ class UVEnvironmentProvider(EnvironmentProvider):
     def __init__(self, root_path: Path | str | None = None):
         super().__init__(root_path)
 
-    def ensure_environment(self, spec: EnvironmentSpec) -> EnvironmentHandle:
-        # Make the environment
-        env_path = (self.root_path / Path(spec.short_hash())).resolve()
+    def _install_requirements(
+        self, env_path: Path, requirements: tuple[str, ...]
+    ) -> None:
+        command = [
+            "uv",
+            "-q",
+            "pip",
+            "install",
+            "-p",
+            env_path.as_posix(),
+            "-r",
+            "-",
+        ]
 
-        if not env_path.exists():
-            command = ["uv", "-q", "venv", env_path.as_posix()]
-            if spec.python:
-                command.extend(["--python", spec.python])
-            subprocess.run(command, check=True)
+        requirements_str = "\n".join(requirements)
+        subprocess.run(command, input=requirements_str.encode(), check=True)
 
-        # Install requirements
-        if spec.requirements:
-            command = [
-                "uv",
-                "-q",
-                "pip",
-                "install",
-                "-p",
-                env_path.as_posix(),
-                "-r",
-                "-",
-            ]
+    def _install_providers(
+        self, env_path: Path, provider_requirements: tuple[str, ...]
+    ) -> None:
+        self._install_requirements(env_path, provider_requirements)
 
-            requirements = "\n".join(spec.requirements)
-            subprocess.run(command, input=requirements.encode(), check=True)
-
-        # Install atomforge itself, ensuring that the backend code is available in the environment.
+    def _install_atomforge(self, env_path: Path) -> None:
         command = [
             "uv",
             "-q",
@@ -51,6 +47,27 @@ class UVEnvironmentProvider(EnvironmentProvider):
         ]
 
         subprocess.run(command, check=True)
+
+    def ensure_environment(self, spec: EnvironmentSpec) -> EnvironmentHandle:
+        # Make the environment
+        env_path = (self.root_path / Path(spec.short_hash())).resolve()
+
+        if not env_path.exists():
+            command = ["uv", "-q", "venv", env_path.as_posix()]
+            if spec.python:
+                command.extend(["--python", spec.python])
+            subprocess.run(command, check=True)
+
+        # Install requirements
+        if spec.requirements:
+            self._install_requirements(env_path, spec.requirements)
+
+        # Install provider requirements for entry-point / plugin discovery.
+        if spec.provider_requirements:
+            self._install_providers(env_path, spec.provider_requirements)
+
+        # Install atomforge itself, ensuring that the backend code is available in the environment.
+        self._install_atomforge(env_path)
 
         # Return a handle to the environment
         return EnvironmentHandle(

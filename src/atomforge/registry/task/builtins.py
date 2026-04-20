@@ -7,7 +7,8 @@ single_point_manifest = TaskManifest(
     result_model="atomforge.task.singlepoint:SinglePointResult",
     capability_spec="atomforge.task.singlepoint:SinglePointCapabilitySpec",
     environment_factory="atomforge.task.singlepoint:single_point_environment_factory",
-    )
+    distribution=["atomforge"],
+)
 
 bfgs_manifest = TaskManifest(
     kind="bfgs",
@@ -16,4 +17,5 @@ bfgs_manifest = TaskManifest(
     result_model="atomforge.task.bfgs:BFGSResult",
     capability_spec="atomforge.task.bfgs:BFGSCapabilitySpec",
     environment_factory="atomforge.task.bfgs:bfgs_environment_factory",
-    )
+    distribution=["atomforge"],
+)

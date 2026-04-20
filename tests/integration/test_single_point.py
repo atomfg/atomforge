@@ -19,10 +19,32 @@ def make_task():
 
 def test_single_point():
     from atomforge.task.core.resources import ExecutionResources
+    from atomforge.registry.task.registry import TaskRegistry
+    from atomforge.model.registry.builtin import get_default_model_registry
 
-    resources = ExecutionResources(accelerator="mps", precision="f64")
+    resources = ExecutionResources(accelerator="cpu", precision="f64")
     model = LennardJones()
     task = make_task()
+
+    task_registry = TaskRegistry.default()  # Ensure the registry is loaded
+    registration = task_registry.get(task.kind)
+    task_env_spec = registration.environment_factory(task)
+
+
+    model_registry = get_default_model_registry()
+    model_registration = model_registry.get(model.kind)
+    model_env_spec = model_registration.environment_factory(model)
+
+    print("Task environment spec:", task_env_spec)
+    print("Model environment spec:", model_env_spec)
+
+    print(task_env_spec + model_env_spec)
+
+
+
+
+
+
 
     with SubprocessBackend() as backend:
         result = backend.execute(task, model, resources)

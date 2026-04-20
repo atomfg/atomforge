@@ -12,7 +12,7 @@ def parse_requirement(requirement_str: str) -> tuple[str, str | None]:
         # which can have the form "package @ git+https://..."
         # or "package @ file:///path/to/package"
         name, source = requirement_str.split("@", 1)
-        return name.strip(), source.strip()
+        return name.strip(), "@" + source.strip()
     elif "==" in requirement_str:
         name, version_spec = requirement_str.split("==", 1)
         return name.strip(), "==" + version_spec.strip()
@@ -34,11 +34,28 @@ def parse_requirement(requirement_str: str) -> tuple[str, str | None]:
 
 class EnvironmentSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
-    name: str
-    python: str | None = None
-    requirements: tuple[str, ...] = ()
-    channels: tuple[str, ...] = ()
-    extras: Mapping[str, str] = Field(default_factory=dict)
+    name: str = Field(
+        description="A human-readable name for the environment specification, used for display and debugging purposes."
+    )
+    python: str | None = Field(
+        default=None,
+        description="The Python version for the environment specification.",
+    )
+    requirements: tuple[str, ...] = Field(
+        default=(),
+        description="A tuple of requirements for the environment specification. Each requirement should be a string in the format accepted by pip, e.g. 'package', 'package==1.2.3', 'package>=1.0,<2.0', 'package @ git+https://...', etc.",
+    )
+    channels: tuple[str, ...] = Field(
+        default=(), description="A tuple of channels for the environment specification."
+    )
+    extras: Mapping[str, str] = Field(
+        default_factory=dict,
+        description="A mapping of extra dependencies for the environment specification.",
+    )
+    provider_requirements: tuple[str, ...] = Field(
+        default=(),
+        description="Packages required for entry-point discovery. These are not necessarily required for the environment itself, but are needed to load registry providers that may be installed in the environment.",
+    )
 
     @field_validator("requirements", "channels", mode="before")
     @classmethod
@@ -58,6 +75,7 @@ class EnvironmentSpec(BaseModel):
             "requirements": self.requirements,
             "channels": self.channels,
             "extras": self.extras,
+            "provider_requirements": self.provider_requirements,
         }
         env_json = json.dumps(env_dict, sort_keys=True)
         return hashlib.sha256(env_json.encode()).hexdigest()
@@ -133,6 +151,9 @@ class EnvironmentSpec(BaseModel):
         channels = self.merge_channels(self.channels, other.channels)
         extras = self.extras_merge(self.extras, other.extras)
         python = self.merge_python(self.python, other.python)
+        provider_requirements = self.merge_requirements(
+            self.provider_requirements, other.provider_requirements
+        )
 
         return EnvironmentSpec(
             name=f"{self.name}-{other.name}",
@@ -140,6 +161,16 @@ class EnvironmentSpec(BaseModel):
             requirements=requirements,
             channels=channels,
             extras=extras,
+            provider_requirements=provider_requirements,
+        )
+
+    def with_provider_requirement(self, requirement: list[str]) -> "EnvironmentSpec":
+        return self.model_copy(
+            update={
+                "provider_requirements": tuple(
+                    sorted(set(self.provider_requirements) | set(requirement))
+                )
+            }
         )
 
 
