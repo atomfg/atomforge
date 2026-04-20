@@ -67,6 +67,7 @@ class SubprocessBackend:
 
         self._task_registry = TaskRegistry.default()
         self._model_registry = ModelRegistry.default()
+        self._settings = settings
 
     def setup_environment(
         self, model_spec: ModelSpec, task_env_spec: EnvironmentSpec | None
