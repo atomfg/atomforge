@@ -112,9 +112,13 @@ class ManifestToRegistrationConverter:
                 f"Environment factory '{factory_str}' must be callable"
             )
         return factory
-    
-    def _validate_distribution(self, manifest_distribution: list[str], entry_point_package: str):
-        if normalize_distribution_name(entry_point_package) not in map(normalize_distribution_name, manifest_distribution):
+
+    def _validate_distribution(
+        self, manifest_distribution: list[str], entry_point_package: str
+    ):
+        if normalize_distribution_name(entry_point_package) not in map(
+            normalize_distribution_name, manifest_distribution
+        ):
             raise TaskRegistryError(
                 f"Entry point package '{entry_point_package}' must be listed in the manifest's distribution field"
             )
@@ -148,7 +152,9 @@ class ManifestToRegistrationConverter:
             environment_factory=environment_factory,
         ), manifest.kind
 
-    def __call__(self, manifest: TaskManifest, entry_point_name: str, entry_point_package: str) -> tuple[TaskRegistration, str]:
+    def __call__(
+        self, manifest: TaskManifest, entry_point_name: str, entry_point_package: str
+    ) -> tuple[TaskRegistration, str]:
         return self.convert(manifest, entry_point_name, entry_point_package)
 
 

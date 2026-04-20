@@ -11,6 +11,7 @@ from .spec import TaskSpec
 TaskSpecT = TypeVar("TaskSpecT", bound=TaskSpec)
 TaskResultT = TypeVar("TaskResultT", bound=TaskResult)
 
+
 @typing.runtime_checkable
 class TaskExecutor(Protocol[TaskSpecT, TaskResultT]):
     @abstractmethod
