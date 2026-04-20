@@ -1,0 +1,2 @@
+class RegistryCoreError(ValueError):
+    pass

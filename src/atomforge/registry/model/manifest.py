@@ -1,9 +1,9 @@
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import Field, field_validator
+
+from atomforge.registry.core.manifest import RegistryManifestBase, ensure_dotted_path
 
 
-class ModelManifest(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
+class ModelManifest(RegistryManifestBase):
     kind: str = Field(description="Unique identifier for the model kind")
     model_spec: str = Field(
         description="The model spec class, as a dotted path like 'my_package.my_module:MyModelSpec'"
@@ -32,21 +32,6 @@ class ModelManifest(BaseModel):
         description="Optional dotted path to a resource probe callable.",
     )
 
-    @field_validator("distribution", mode="before")
-    @classmethod
-    def ensure_distribution_list(cls, value):
-        if isinstance(value, str):
-            return [value]
-        if (
-            isinstance(value, list)
-            and all(isinstance(item, str) for item in value)
-            and len(value) > 0
-        ):
-            return value
-        raise TypeError(
-            "distribution must be a non-empty list of strings or a single string"
-        )
-
     @field_validator(
         "model_spec",
         "executor_class",
@@ -58,19 +43,11 @@ class ModelManifest(BaseModel):
     )
     @classmethod
     def ensure_dotted_path(cls, value):
-        if isinstance(value, str) and ":" in value:
-            return value
-        raise TypeError(
-            "Value must be a dotted path in the format 'module.submodule:SymbolName'"
-        )
+        return ensure_dotted_path(value)
 
     @field_validator("probe", mode="before")
     @classmethod
     def ensure_probe_path(cls, value):
         if value is None:
             return value
-        if isinstance(value, str) and ":" in value:
-            return value
-        raise TypeError(
-            "Probe must be None or a dotted path in the format 'module.submodule:SymbolName'"
-        )
+        return ensure_dotted_path(value)
