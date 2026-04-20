@@ -11,12 +11,3 @@ class TaskRegistry(EntryPointRegistryBase):
 
     def _register(self, registration, task_kind: str) -> None:
         super()._register(registration, task_kind)
-
-
-if __name__ == "__main__":
-    from rich import print
-
-    registry = TaskRegistry.default()
-
-    for task_kind, registration in registry._registrations.items():
-        print(registration)

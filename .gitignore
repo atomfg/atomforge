@@ -10,6 +10,13 @@ wheels/
 .venv
 
 # Development playground
-dev# pixi environments
+dev
+# pixi environments
 .pixi/*
 !.pixi/config.toml
+
+# AI tooling
+AGENTS.md
+.codex/
+
+

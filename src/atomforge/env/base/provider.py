@@ -5,11 +5,16 @@ from pathlib import Path
 
 
 class EnvironmentProvider(ABC):
-    def __init__(self, root_path: Path | str | None = None):
-        self.root_path = (
-            Path(root_path) if root_path else Path.home() / ".atomforge" / "envs"
+    def __init__(self, search_path: tuple[Path, ...], install_path: Path):
+        self.install_path = (
+            Path(install_path) if install_path else Path.home() / ".atomforge" / "envs"
         )
-        self.root_path.mkdir(parents=True, exist_ok=True)
+        self.install_path.mkdir(parents=True, exist_ok=True)
+
+        self.search_paths = tuple(Path(p) for p in search_path if Path(p).exists())
+        if self.install_path not in self.search_paths:
+            self.search_paths = (self.install_path,) + self.search_paths
+
 
     @property
     @abstractmethod

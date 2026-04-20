@@ -8,8 +8,8 @@ from atomforge.env.base.provider import EnvironmentProvider
 class UVEnvironmentProvider(EnvironmentProvider):
     provider_name = "uv"
 
-    def __init__(self, root_path: Path | str | None = None):
-        super().__init__(root_path)
+    def __init__(self, search_path: tuple[Path, ...], install_path: Path):
+        super().__init__(search_path, install_path)
 
     def _install_requirements(
         self, env_path: Path, requirements: tuple[str, ...]
@@ -48,9 +48,23 @@ class UVEnvironmentProvider(EnvironmentProvider):
 
         subprocess.run(command, check=True)
 
-    def ensure_environment(self, spec: EnvironmentSpec) -> EnvironmentHandle:
-        # Make the environment
-        env_path = (self.root_path / Path(spec.short_hash())).resolve()
+    def search_for_environment(self, env_name: str) -> EnvironmentHandle | None:
+        for env_path in self.search_paths:
+            candidate = env_path / env_name
+            if candidate.exists():
+                return EnvironmentHandle(name=env_name, provider=self.provider_name, path=candidate)
+        return None
+
+    def ensure_environment(self, spec: EnvironmentSpec) -> EnvironmentHandle:        
+        # Look for an existing environment matching the spec. 
+        # For simplicity, we just use the short hash of the spec as the environment name.
+
+        env_name = spec.short_hash()
+        existing_env = self.search_for_environment(env_name)
+        if existing_env:
+            return existing_env
+
+        env_path = (self.install_path / env_name).resolve()
 
         if not env_path.exists():
             command = ["uv", "-q", "venv", env_path.as_posix()]

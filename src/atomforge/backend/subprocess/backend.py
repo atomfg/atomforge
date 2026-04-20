@@ -3,11 +3,11 @@ from pathlib import Path
 
 from atomforge.backend.base.session import model_session_key
 from atomforge.env.base.env import EnvironmentSpec
-from atomforge.env.base.provider import EnvironmentProvider
 from atomforge.env.uv import UVEnvironmentProvider
 from atomforge.model.core.spec import ModelSpec
 from atomforge.registry.model.registry import ModelRegistry
 from atomforge.registry.task.registry import TaskRegistry
+from atomforge.settings.settings import AtomforgeSettings
 from atomforge.task.core.resources import ExecutionResources, ResolvedResources
 from atomforge.task.core.result import TaskResult
 from atomforge.task.core.spec import TaskSpec
@@ -53,8 +53,15 @@ class EnvSubprocess:
 
 
 class SubprocessBackend:
-    def __init__(self, environment_provider: EnvironmentProvider | None = None) -> None:
-        self._environment_provider = environment_provider or UVEnvironmentProvider()
+    def __init__(self, settings: AtomforgeSettings | None = None) -> None:
+        if settings is None:
+            settings = AtomforgeSettings()
+        if settings.env_provider_kind == "uv":
+            self._environment_provider = UVEnvironmentProvider(
+                search_path=settings.env_search_paths,
+                install_path=settings.env_install_path,
+            )
+
         self.env_subprocesses: dict[str, EnvSubprocess] = {}
         self.prepared_models: dict[tuple[str, str], PreparedModelSession] = {}
 
