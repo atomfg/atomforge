@@ -1,16 +1,12 @@
 import pytest
 from atomforge.backend.subprocess.worker import SubprocessWorker
 from atomforge.registry.task.registry import TaskRegistry
-from atomforge.model.registry import ModelRegistry
+from atomforge.registry.model.registry import ModelRegistry
 from atomforge.backend.base.resources import SystemResources, Availability
-from atomforge.model.registry import register_lennard_jones
-
 
 
 def simple_model_registry():
-    registry = ModelRegistry()
-    register_lennard_jones(registry)
-    return registry
+    return ModelRegistry.default()
 
 def simple_task_registry():
     registry = TaskRegistry.default()

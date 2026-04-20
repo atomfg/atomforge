@@ -6,7 +6,7 @@ from atomforge.env.base.env import EnvironmentSpec
 from atomforge.env.base.provider import EnvironmentProvider
 from atomforge.env.uv import UVEnvironmentProvider
 from atomforge.model.core.spec import ModelSpec
-from atomforge.model.registry.builtin import get_default_model_registry
+from atomforge.registry.model.registry import ModelRegistry
 from atomforge.registry.task.registry import TaskRegistry
 from atomforge.task.core.resources import ExecutionResources, ResolvedResources
 from atomforge.task.core.result import TaskResult
@@ -59,7 +59,7 @@ class SubprocessBackend:
         self.prepared_models: dict[tuple[str, str], PreparedModelSession] = {}
 
         self._task_registry = TaskRegistry.default()
-        self._model_registry = get_default_model_registry()
+        self._model_registry = ModelRegistry.default()
 
     def setup_environment(
         self, model_spec: ModelSpec, task_env_spec: EnvironmentSpec | None

@@ -11,7 +11,7 @@ import atomforge.task
 import atomforge.task.core
 import atomforge.registry
 import atomforge.model.core
-import atomforge.model.registry
+import atomforge.registry.model.registry
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +23,6 @@ FORBIDDEN_IMPORTS = {
     "atomforge.model",
     "atomforge.task.core",
     "atomforge.model.core",
-    "atomforge.model.registry",
 }
 ALLOWED_FACADE_FILES = {
     SRC_ROOT / "__init__.py",
@@ -61,10 +60,8 @@ def test_public_facades_expose_expected_symbols():
     assert atomforge.task.core.TaskCapabilitySpec.__name__ == "TaskCapabilitySpec"
     assert atomforge.model.core.ModelSpec.__name__ == "ModelSpec"
     assert atomforge.model.core.Property.__name__ == "Property"
-    assert atomforge.model.registry.ModelRegistry.__name__ == "ModelRegistry"
-    assert atomforge.model.registry.get_default_model_registry.__name__ == (
-        "get_default_model_registry"
-    )
+    assert atomforge.model.ModelRegistry.__name__ == "ModelRegistry"
+    assert atomforge.registry.model.registry.ModelRegistry.__name__ == "ModelRegistry"
 
 
 def test_env_facade_does_not_eagerly_import_uv_provider():

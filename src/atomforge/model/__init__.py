@@ -3,7 +3,6 @@ __all__ = [
     "ModelResult",
     "Property",
     "ModelRegistry",
-    "get_default_model_registry",
 ]
 
 
@@ -21,13 +20,9 @@ def __getattr__(name: str):
 
         return Property
     if name == "ModelRegistry":
-        from .registry import ModelRegistry
+        from atomforge.registry.model.registry import ModelRegistry
 
         return ModelRegistry
-    if name == "get_default_model_registry":
-        from .registry import get_default_model_registry
-
-        return get_default_model_registry
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

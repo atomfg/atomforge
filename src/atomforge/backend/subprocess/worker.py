@@ -15,8 +15,7 @@ from atomforge.backend.base.resources import (
 from atomforge.backend.base.session import model_session_key
 from atomforge.model.core.executor import ModelExecutor
 from atomforge.model.core.spec import ModelSpec
-from atomforge.model.registry.registry import ModelRegistry
-from atomforge.model.registry.builtin import get_default_model_registry
+from atomforge.registry.model.registry import ModelRegistry
 
 from atomforge.registry.task.registry import TaskRegistry
 from atomforge.task.core.resources import ResolvedResources
@@ -210,7 +209,7 @@ class SubprocessWorker:
 
 def main(name: str) -> int:
     task_registry = TaskRegistry.default()
-    model_registry = get_default_model_registry()
+    model_registry = ModelRegistry.default()
     system_resources = discover_system_resources()
 
     worker = SubprocessWorker(
