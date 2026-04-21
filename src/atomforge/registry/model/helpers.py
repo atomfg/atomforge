@@ -11,6 +11,7 @@ from atomforge.registry.model.manifest import ModelManifest
 from atomforge.registry.model.registration import ModelRegistration
 from atomforge.env.base.factory import EnvironmentFactory
 
+
 class ModelRegistryError(RegistryCoreError):
     pass
 
@@ -40,7 +41,9 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
                 manifest.supported_properties
             ),
             "environment_factory_cls": self._load_subclass(
-                manifest.environment_factory_cls, EnvironmentFactory, "Environment factory"
+                manifest.environment_factory_cls,
+                EnvironmentFactory,
+                "Environment factory",
             ),
             "metadata": self._load_instance(
                 manifest.metadata, ModelMetadata, "Metadata"
@@ -53,14 +56,15 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             "probe": (
                 None
                 if manifest.probe is None
-                else self._load_callable(
-                    manifest.probe, "Probe", reject_classes=True
-                )
+                else self._load_callable(manifest.probe, "Probe", reject_classes=True)
             ),
         }
 
     def _build_registration(
-        self, manifest: ModelManifest, components: dict[str, object], environment_factory: EnvironmentFactory
+        self,
+        manifest: ModelManifest,
+        components: dict[str, object],
+        environment_factory: EnvironmentFactory,
     ) -> ModelRegistration:
         return ModelRegistration(
             model_spec=components["model_spec"],
@@ -70,7 +74,7 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             environment_factory=environment_factory,
             resource_capabilities=components["resource_capabilities"],
             probe=components["probe"],
-            source=manifest.distribution
+            source=manifest.distribution,
         )
 
     @staticmethod

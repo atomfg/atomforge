@@ -52,11 +52,13 @@ class UVEnvironmentProvider(EnvironmentProvider):
         for env_path in self.search_paths:
             candidate = env_path / env_name
             if candidate.exists():
-                return EnvironmentHandle(name=env_name, provider=self.provider_name, path=candidate)
+                return EnvironmentHandle(
+                    name=env_name, provider=self.provider_name, path=candidate
+                )
         return None
 
-    def ensure_environment(self, spec: EnvironmentSpec) -> EnvironmentHandle:        
-        # Look for an existing environment matching the spec. 
+    def ensure_environment(self, spec: EnvironmentSpec) -> EnvironmentHandle:
+        # Look for an existing environment matching the spec.
         # For simplicity, we just use the short hash of the spec as the environment name.
 
         env_name = spec.short_hash()

@@ -10,7 +10,10 @@ from atomforge.task.core.capability import TaskCapabilitySpec
 from atomforge.task.core.executor import TaskExecutor
 from atomforge.task.core.result import TaskResult
 from atomforge.task.core.spec import TaskSpec
-from atomforge.env.base.factory import DependencySummary, environment_factory_from_callable
+from atomforge.env.base.factory import (
+    DependencySummary,
+    environment_factory_from_callable,
+)
 
 KIND = "single_point"
 
@@ -58,10 +61,12 @@ class SinglePoint(TaskSpec):
     def validate_properties(cls, value):
         return cls._normalize_properties(value)
 
+
 SinglePointEnvironmentFactory = environment_factory_from_callable(
     lambda spec: EnvironmentSpec(name="single_point"),
     DependencySummary(base_requirements=[]),
 )
+
 
 class SinglePointResult(TaskResult):
     kind: Literal["single_point"] = KIND

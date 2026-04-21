@@ -24,4 +24,5 @@ class TaskSpec(BaseModel):
             )
         return value.to_structure()
 
+
 TaskSpecT = TypeVar("TaskSpecT", bound=TaskSpec)

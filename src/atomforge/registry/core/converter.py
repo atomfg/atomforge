@@ -66,7 +66,12 @@ class ManifestToRegistrationConverterBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _build_registration(self, manifest, components: dict[str, Any], environment_factory: EnvironmentFactory):
+    def _build_registration(
+        self,
+        manifest,
+        components: dict[str, Any],
+        environment_factory: EnvironmentFactory,
+    ):
         raise NotImplementedError
 
     def convert(self, manifest, entry_point_name: str, entry_point_package: str):
@@ -80,10 +85,7 @@ class ManifestToRegistrationConverterBase(ABC):
         factory_class = components["environment_factory_cls"]
         factory = factory_class().with_provider_requirements(provider_requirements)
 
-
-        registration = self._build_registration(
-            manifest, components, factory
-        )
+        registration = self._build_registration(manifest, components, factory)
         return registration, manifest.kind
 
     def __call__(self, manifest, entry_point_name: str, entry_point_package: str):

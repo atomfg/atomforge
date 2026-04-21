@@ -8,7 +8,10 @@ from atomforge.task.core.capability import TaskCapabilitySpec
 from atomforge.task.core.executor import TaskExecutor
 from atomforge.task.core.result import TaskResult
 from atomforge.task.core.spec import TaskSpec
-from atomforge.env.base.factory import DependencySummary, environment_factory_from_callable
+from atomforge.env.base.factory import (
+    DependencySummary,
+    environment_factory_from_callable,
+)
 
 KIND = "bfgs"
 
@@ -38,6 +41,7 @@ BFGSEnvironmentFactory = environment_factory_from_callable(
     lambda spec: EnvironmentSpec(name="bfgs", requirements=["ase"]),
     DependencySummary(base_requirements=["ase"]),
 )
+
 
 class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
     def execute(self, spec: BFGS, model_executor: ModelExecutor) -> BFGSResult:

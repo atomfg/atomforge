@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from atomforge-mace!")
+from .mace_model import MACE

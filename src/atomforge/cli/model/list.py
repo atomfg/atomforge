@@ -38,8 +38,12 @@ class TableWriter:
                     raise ValueError(
                         f"Invalid column identifier '{c}'. Valid identifiers are: {', '.join(column_converter.keys())}"
                     )
-            columns = [column.value for column in TableColumn if column.value in columns]
-            columns = [TableColumn.KIND.value] + columns  # Ensure 'kind' is always included
+            columns = [
+                column.value for column in TableColumn if column.value in columns
+            ]
+            columns = [
+                TableColumn.KIND.value
+            ] + columns  # Ensure 'kind' is always included
 
         return columns
 
@@ -59,25 +63,25 @@ class TableWriter:
             table.add_column("Plugin Source", style="blue")
 
         return table
-    
+
     def _kind_to_str(self, kind):
         return kind
-    
+
     def _supported_properties_to_str(self, model_registration):
         properties = model_registration.supported_properties
         if properties:
             return ", ".join(p.value for p in properties)
         else:
             return "N/A"
-        
+
     def _family_to_str(self, model_registration):
         method_family = model_registration.metadata.method_family
         return method_family if method_family else "N/A"
-    
+
     def _accelerator_to_str(self, model_registration):
         accelerators = model_registration.resource_capabilities.accelerator
         return ", ".join(accelerators) if accelerators else "N/A"
-    
+
     def _dependencies_to_str(self, model_registration):
         dependencies = model_registration.environment_factory.dependency_summary
         dep_str = (
@@ -111,13 +115,23 @@ class TableWriter:
         self.table.add_row(*row)
 
 
-
-@model.command(name="list", help="List all registered models with optional filtering and column selection.")
-@click.option("--columns", "-c", type=str, required=False, default="all", help="Columns to display (k=kind, s=supported properties, f=family, a=accelerator, d=dependencies, p=plugin source). Use 'all' to display all columns.")
-@click.option("--family", "-f", type=str, required=False, help="Filter models by method family.")
+@model.command(
+    name="list",
+    help="List all registered models with optional filtering and column selection.",
+)
+@click.option(
+    "--columns",
+    "-c",
+    type=str,
+    required=False,
+    default="all",
+    help="Columns to display (k=kind, s=supported properties, f=family, a=accelerator, d=dependencies, p=plugin source). Use 'all' to display all columns.",
+)
+@click.option(
+    "--family", "-f", type=str, required=False, help="Filter models by method family."
+)
 def list_command(columns: str, family: str):
     from atomforge.registry.model.registry import ModelRegistry
-
 
     registry = ModelRegistry.default()
     console = Console()

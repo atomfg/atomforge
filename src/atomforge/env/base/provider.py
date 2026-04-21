@@ -15,7 +15,6 @@ class EnvironmentProvider(ABC):
         if self.install_path not in self.search_paths:
             self.search_paths = (self.install_path,) + self.search_paths
 
-
     @property
     @abstractmethod
     def provider_name(self) -> str:

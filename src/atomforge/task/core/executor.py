@@ -8,7 +8,6 @@ from atomforge.task.core.result import TaskResultT
 from atomforge.task.core.spec import TaskSpecT
 
 
-
 @typing.runtime_checkable
 class TaskExecutor(Protocol[TaskSpecT, TaskResultT]):
     @abstractmethod

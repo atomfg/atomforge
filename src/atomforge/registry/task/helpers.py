@@ -19,7 +19,9 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
 
     def _load_components(self, manifest: TaskManifest) -> dict[str, object]:
         return {
-            "spec_model": self._load_subclass(manifest.spec_model, TaskSpec, "Spec model"),
+            "spec_model": self._load_subclass(
+                manifest.spec_model, TaskSpec, "Spec model"
+            ),
             "executor_cls": self._load_subclass(
                 manifest.executor_cls, TaskExecutor, "Executor class"
             ),
@@ -30,12 +32,17 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
                 manifest.capability_spec, TaskCapabilitySpec, "Capability spec"
             ),
             "environment_factory_cls": self._load_subclass(
-                manifest.environment_factory_cls, EnvironmentFactory, "Environment factory"
+                manifest.environment_factory_cls,
+                EnvironmentFactory,
+                "Environment factory",
             ),
         }
 
     def _build_registration(
-        self, manifest: TaskManifest, components: dict[str, object], environment_factory: EnvironmentFactory
+        self,
+        manifest: TaskManifest,
+        components: dict[str, object],
+        environment_factory: EnvironmentFactory,
     ) -> TaskRegistration:
         return TaskRegistration(
             spec_model=components["spec_model"],

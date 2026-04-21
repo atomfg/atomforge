@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 SpecT = TypeVar("SpecT")
 
+
 @dataclass(frozen=True)
 class DependencySummary:
     base_requirements: tuple[str, ...] = ()
@@ -18,6 +19,7 @@ class DependencySummary:
 
     def declared_requirements(self) -> frozenset[str]:
         return frozenset(self.base_requirements) | frozenset(self.possible_requirements)
+
 
 class EnvironmentFactory(ABC, Generic[SpecT]):
     """
@@ -63,7 +65,7 @@ class EnvironmentFactory(ABC, Generic[SpecT]):
             raise ValueError(
                 f"{self.__class__.__name__} returned undeclared requirements: {sorted(undeclared)}"
             )
-        
+
         # Validate Python
         if self.dependency_summary.python is not None:
             if env.python is None:
@@ -74,7 +76,7 @@ class EnvironmentFactory(ABC, Generic[SpecT]):
                 raise ValueError(
                     f"{self.__class__.__name__} returned Python {env.python}, but dependency summary declares Python {self.dependency_summary.python}"
                 )
-            
+
         # Validate channels
         if self.dependency_summary.channels:
             missing_channels = set(self.dependency_summary.channels) - set(env.channels)
@@ -82,13 +84,14 @@ class EnvironmentFactory(ABC, Generic[SpecT]):
                 raise ValueError(
                     f"{self.__class__.__name__} is missing required channels: {sorted(missing_channels)}"
                 )
-        
+
     def with_provider_requirements(
         self,
         requirements: list[str] | tuple[str, ...],
     ) -> Self:
         merged = tuple(sorted(set(self._provider_requirements) | set(requirements)))
         return type(self)(provider_requirements=merged)
+
 
 def environment_factory_from_callable(
     func: Callable[[SpecT], EnvironmentSpec],
