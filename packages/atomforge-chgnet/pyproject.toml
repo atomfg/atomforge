@@ -1,0 +1,22 @@
+[project]
+name = "atomforge-chgnet"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Mads-Peter", email = "machri@phys.au.dk" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "atomforge",
+]
+
+[project.entry-points.'atomforge.model']
+chgnet = "atomforge_chgnet.manifest:chgnet_manifest"
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+atomforge = { workspace = true }

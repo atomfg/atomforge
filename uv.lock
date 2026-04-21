@@ -2,6 +2,13 @@ version = 1
 revision = 3
 requires-python = ">=3.12"
 
+[manifest]
+members = [
+    "atomforge",
+    "atomforge-chgnet",
+    "atomforge-mace",
+]
+
 [[package]]
 name = "annotated-types"
 version = "0.7.0"
@@ -61,6 +68,28 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "ruff", specifier = ">=0.15.10" },
 ]
+
+[[package]]
+name = "atomforge-chgnet"
+version = "0.1.0"
+source = { editable = "packages/atomforge-chgnet" }
+dependencies = [
+    { name = "atomforge" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "atomforge", editable = "." }]
+
+[[package]]
+name = "atomforge-mace"
+version = "0.1.0"
+source = { editable = "packages/atomforge-mace" }
+dependencies = [
+    { name = "atomforge" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "atomforge", editable = "." }]
 
 [[package]]
 name = "click"

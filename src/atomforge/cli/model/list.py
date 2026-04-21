@@ -112,7 +112,7 @@ class TableWriter:
 
 
 
-@model.command(name="list")
+@model.command(name="list", help="List all registered models with optional filtering and column selection.")
 @click.option("--columns", "-c", type=str, required=False, default="all", help="Columns to display (k=kind, s=supported properties, f=family, a=accelerator, d=dependencies, p=plugin source). Use 'all' to display all columns.")
 @click.option("--family", "-f", type=str, required=False, help="Filter models by method family.")
 def list_command(columns: str, family: str):

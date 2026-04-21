@@ -83,7 +83,7 @@ def get_basic_info(model_registration):
     basic_info += f"Method Family: [blue]{metadata.method_family}[/blue]\n"
     return basic_info
 
-@model.command(name="info")
+@model.command(name="info", help="Show detailed information about a specific model kind.")
 @click.argument("model_kind")
 def info_command(model_kind: str):
     from atomforge.registry.model.registry import ModelRegistry
