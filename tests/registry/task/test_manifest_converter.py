@@ -15,7 +15,7 @@ def test_converter_invalid_spec(manifest_factory):
         converter(manifest, entry_point_name="test_spec", entry_point_package="atomforge")
 
 def test_converter_invalid_executor(manifest_factory):
-    manifest = manifest_factory(executor_class="atomforge.registry.task.manifest:TaskManifest")  # Using TaskManifest as an invalid executor_class
+    manifest = manifest_factory(executor_cls="atomforge.registry.task.manifest:TaskManifest")  # Using TaskManifest as an invalid executor_class
     converter = ManifestToRegistrationConverter()
     with pytest.raises(TaskRegistryError):
         converter(manifest, entry_point_name="test_executor", entry_point_package="atomforge")

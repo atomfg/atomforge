@@ -9,6 +9,10 @@ from atomforge.model.core.result import ModelResult
 from atomforge.model.core.spec import ModelSpec
 from atomforge.structure import Structure
 from atomforge.task.core.resources import ResolvedResources
+from atomforge.env.base.factory import (
+    environment_factory_from_callable,
+    DependencySummary,
+)
 
 model_kind = "chgnet"
 CHGNetSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
@@ -41,8 +45,10 @@ CHGNetMetadata = ModelMetadata(
 )
 
 
-def chgnet_environment(spec: CHGNet) -> EnvironmentSpec:
-    return EnvironmentSpec(name=spec.kind, python="python3.12", requirements=["chgnet"])
+CHGNetEnvironmentFactory = environment_factory_from_callable(
+    lambda spec: EnvironmentSpec(name=spec.kind, python="python3.12", requirements=["chgnet"]),
+    DependencySummary(base_requirements=["chgnet"], python="python3.12"),
+)
 
 
 class CHGNetExecutor(ModelExecutor[CHGNet]):

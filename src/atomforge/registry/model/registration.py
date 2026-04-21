@@ -1,7 +1,7 @@
-from dataclasses import dataclass
-from typing import Callable, Generic
+from dataclasses import dataclass, field
+from typing import Generic
 
-from atomforge.env.base.env import EnvironmentSpec
+from atomforge.env.base.factory import EnvironmentFactory
 from atomforge.model.core.executor import ModelExecutor
 from atomforge.model.core.metadata import ModelMetadata
 from atomforge.model.core.property import Property
@@ -16,6 +16,7 @@ class ModelRegistration(Generic[ModelSpecT]):
     metadata: ModelMetadata
     executor_class: type[ModelExecutor[ModelSpecT]]
     supported_properties: frozenset[Property]
-    environment_factory: Callable[[ModelSpecT], EnvironmentSpec]
+    environment_factory: EnvironmentFactory[ModelSpecT]
     resource_capabilities: ResourceCapabilities
     probe: ResourceProbe | None = None
+    source: list[str] = field(default_factory=list)

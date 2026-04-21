@@ -4,12 +4,9 @@ import typing
 
 from atomforge.model.core.executor import ModelExecutor
 
-from .result import TaskResult
-from .spec import TaskSpec
+from atomforge.task.core.result import TaskResultT
+from atomforge.task.core.spec import TaskSpecT
 
-
-TaskSpecT = TypeVar("TaskSpecT", bound=TaskSpec)
-TaskResultT = TypeVar("TaskResultT", bound=TaskResult)
 
 
 @typing.runtime_checkable

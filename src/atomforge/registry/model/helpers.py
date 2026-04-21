@@ -9,7 +9,7 @@ from atomforge.model.core.spec import ModelSpec
 from atomforge.model.probes import ResourceProbe
 from atomforge.registry.model.manifest import ModelManifest
 from atomforge.registry.model.registration import ModelRegistration
-
+from atomforge.env.base.factory import EnvironmentFactory
 
 class ModelRegistryError(RegistryCoreError):
     pass
@@ -33,14 +33,14 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             "model_spec": self._load_subclass(
                 manifest.model_spec, ModelSpec, "Model spec"
             ),
-            "executor_class": self._load_subclass(
-                manifest.executor_class, ModelExecutor, "Executor class"
+            "executor_cls": self._load_subclass(
+                manifest.executor_cls, ModelExecutor, "Executor class"
             ),
             "supported_properties": self._load_supported_properties(
                 manifest.supported_properties
             ),
-            "environment_factory": self._load_callable(
-                manifest.environment_factory, "Environment factory"
+            "environment_factory_cls": self._load_subclass(
+                manifest.environment_factory_cls, EnvironmentFactory, "Environment factory"
             ),
             "metadata": self._load_instance(
                 manifest.metadata, ModelMetadata, "Metadata"
@@ -60,16 +60,17 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
         }
 
     def _build_registration(
-        self, manifest: ModelManifest, components: dict[str, object], environment_factory
+        self, manifest: ModelManifest, components: dict[str, object], environment_factory: EnvironmentFactory
     ) -> ModelRegistration:
         return ModelRegistration(
             model_spec=components["model_spec"],
             metadata=components["metadata"],
-            executor_class=components["executor_class"],
+            executor_class=components["executor_cls"],
             supported_properties=components["supported_properties"],
             environment_factory=environment_factory,
             resource_capabilities=components["resource_capabilities"],
             probe=components["probe"],
+            source=manifest.distribution
         )
 
     @staticmethod

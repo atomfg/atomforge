@@ -12,11 +12,11 @@ dependencies = [
     "numpy>=2.4.4",
     "pydantic>=2.12.5",
     "rich>=14.3.3", 
-    "uv>=0.11.7,<0.12",
+    "uv>=0.11.7,<0.12", "rich-click>=1.9.7,<2",
 ]
 
 [project.scripts]
-atomforge = "atomforge:main"
+atomforge = "atomforge.cli.main:main"
 
 [project.entry-points.'atomforge.task']
 single_point = "atomforge.registry.task.builtins:single_point_manifest"

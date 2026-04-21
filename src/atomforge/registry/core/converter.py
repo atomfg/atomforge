@@ -8,8 +8,9 @@ from atomforge.registry.core.helpers import (
     load_symbol,
     normalize_distribution_name,
     resolve_distribution,
-    wrap_environment_factory,
 )
+
+from atomforge.env.base.factory import EnvironmentFactory
 
 
 class ManifestToRegistrationConverterBase(ABC):
@@ -65,7 +66,7 @@ class ManifestToRegistrationConverterBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _build_registration(self, manifest, components: dict[str, Any], environment_factory):
+    def _build_registration(self, manifest, components: dict[str, Any], environment_factory: EnvironmentFactory):
         raise NotImplementedError
 
     def convert(self, manifest, entry_point_name: str, entry_point_package: str):
@@ -75,12 +76,13 @@ class ManifestToRegistrationConverterBase(ABC):
         provider_requirements = [
             resolve_distribution(name) for name in manifest.distribution
         ]
-        wrapped_environment_factory = wrap_environment_factory(
-            components["environment_factory"], provider_requirements
-        )
+
+        factory_class = components["environment_factory_cls"]
+        factory = factory_class().with_provider_requirements(provider_requirements)
+
 
         registration = self._build_registration(
-            manifest, components, wrapped_environment_factory
+            manifest, components, factory
         )
         return registration, manifest.kind
 

@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 from atomforge.model.core.property import Property
 from atomforge.structure import Structure, StructureMessage
+from typing import TypeVar
 
 
 class TaskSpec(BaseModel):
@@ -22,3 +23,5 @@ class TaskSpec(BaseModel):
                 f"Field '{field_name}' is not a StructureMessage on {type(self).__name__}"
             )
         return value.to_structure()
+
+TaskSpecT = TypeVar("TaskSpecT", bound=TaskSpec)

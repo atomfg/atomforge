@@ -38,23 +38,6 @@ def test_converter_rejects_mismatched_distribution():
             manifest, entry_point_name="dummy", entry_point_package="atomforge"
         )
 
-
-def test_converter_wraps_environment_factory():
-    converter = DummyConverter()
-    manifest = DummyManifest(
-        kind="dummy",
-        distribution=["atomforge"],
-        environment_factory="atomforge.task.singlepoint:single_point_environment_factory",
-    )
-
-    registration, kind = converter.convert(
-        manifest, entry_point_name="dummy", entry_point_package="atomforge"
-    )
-
-    assert kind == "dummy"
-    assert callable(registration["wrapped_factory"])
-
-
 def test_converter_wraps_dotted_path_load_failures():
     converter = DummyConverter()
 

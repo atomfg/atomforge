@@ -9,6 +9,10 @@ from atomforge.model.core.result import ModelResult
 from atomforge.model.core.spec import ModelSpec
 from atomforge.structure import Structure
 from atomforge.task.core.resources import ResolvedResources
+from atomforge.env.base.factory import EnvironmentFactory, DependencySummary
+
+description="""Lennard-Jones potential implemented in the Atomic Simulation Environment (ASE).
+"""
 
 model_kind = "ase-lj"
 LennardJonesSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
@@ -30,16 +34,24 @@ LennardJonesMetadata = ModelMetadata(
     references=(
         Reference(label="ASE Documentation", url="https://ase-lib.org/", kind="docs"),
     ),
+    description=description
 )
+
 
 LennardJonesResourceCapabilities = ResourceCapabilities(
     accelerator=["cpu"], precision=None
 )
 
 
-def lj_environment(spec: LennardJones) -> EnvironmentSpec:
-    return EnvironmentSpec(name=spec.kind, python="python3.12", requirements=["ase"])
+class LennardJonesEnvironmentFactory(EnvironmentFactory[LennardJones]):
 
+    dependency_summary = DependencySummary(
+        base_requirements=("ase",),
+        python="python3.12",
+    )
+
+    def build(self, spec: LennardJones) -> EnvironmentSpec:
+        return EnvironmentSpec(name=spec.kind, python="python3.12", requirements=["ase"])
 
 class LennardJonesExecutor(ModelExecutor[LennardJones]):
     def __init__(

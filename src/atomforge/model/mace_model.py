@@ -9,6 +9,10 @@ from atomforge.model.core.result import ModelResult
 from atomforge.model.core.spec import ModelSpec
 from atomforge.structure import Structure
 from atomforge.task.core.resources import ResolvedResources
+from atomforge.env.base.factory import (
+    environment_factory_from_callable,
+    DependencySummary,
+)
 
 
 model_kind = "mace"
@@ -45,13 +49,14 @@ MACEMetadata = ModelMetadata(
 )
 
 
-def mace_environment(spec: MACE) -> EnvironmentSpec:
-    return EnvironmentSpec(
+MACEEnvironmentFactory = environment_factory_from_callable(
+    lambda spec: EnvironmentSpec(
         name=spec.kind,
         python="python3.12",
         requirements=["mace-torch", "torch"],
-    )
-
+    ),
+    DependencySummary(base_requirements=["mace-torch", "torch"], python="python3.12"),
+)
 
 class MACEExecutor(ModelExecutor[MACE]):
     def __init__(self, spec: MACE, resolved_resources: ResolvedResources) -> None:

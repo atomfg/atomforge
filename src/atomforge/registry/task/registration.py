@@ -1,14 +1,12 @@
 from dataclasses import dataclass
-from typing import Callable, Generic, TypeVar
+from typing import Callable, Generic
 
 from atomforge.env.base.env import EnvironmentSpec
 from atomforge.task.core.capability import TaskCapabilitySpec
 from atomforge.task.core.executor import TaskExecutor
-from atomforge.task.core.result import TaskResult
-from atomforge.task.core.spec import TaskSpec
-
-TaskSpecT = TypeVar("TaskSpecT", bound=TaskSpec)
-TaskResultT = TypeVar("TaskResultT", bound=TaskResult)
+from atomforge.task.core.result import TaskResultT
+from atomforge.task.core.spec import TaskSpecT
+from atomforge.env.base.factory import EnvironmentFactory
 
 
 @dataclass(frozen=True)
@@ -17,4 +15,4 @@ class TaskRegistration(Generic[TaskSpecT, TaskResultT]):
     result_model: type[TaskResultT]
     executor_class: type[TaskExecutor[TaskSpecT, TaskResultT]]
     capability_spec: TaskCapabilitySpec
-    environment_factory: Callable[[TaskSpecT], EnvironmentSpec]
+    environment_factory: EnvironmentFactory[TaskSpecT]

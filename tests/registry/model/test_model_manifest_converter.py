@@ -30,7 +30,7 @@ def test_converter_invalid_model_spec(manifest_factory):
 
 def test_converter_invalid_executor(manifest_factory):
     manifest = manifest_factory(
-        executor_class="atomforge.registry.model.manifest:ModelManifest"
+        executor_cls="atomforge.registry.model.manifest:ModelManifest"
     )
     converter = ManifestToRegistrationConverter()
     with pytest.raises(ModelRegistryError):

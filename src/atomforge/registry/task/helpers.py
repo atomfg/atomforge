@@ -1,3 +1,4 @@
+from atomforge.env.base.factory import EnvironmentFactory
 from atomforge.registry.core.converter import ManifestToRegistrationConverterBase
 from atomforge.registry.core.errors import RegistryCoreError
 from atomforge.registry.core.helpers import resolve_distribution
@@ -19,8 +20,8 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
     def _load_components(self, manifest: TaskManifest) -> dict[str, object]:
         return {
             "spec_model": self._load_subclass(manifest.spec_model, TaskSpec, "Spec model"),
-            "executor_class": self._load_subclass(
-                manifest.executor_class, TaskExecutor, "Executor class"
+            "executor_cls": self._load_subclass(
+                manifest.executor_cls, TaskExecutor, "Executor class"
             ),
             "result_model": self._load_subclass(
                 manifest.result_model, TaskResult, "Result model"
@@ -28,17 +29,17 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             "capability_spec": self._load_instance(
                 manifest.capability_spec, TaskCapabilitySpec, "Capability spec"
             ),
-            "environment_factory": self._load_callable(
-                manifest.environment_factory, "Environment factory"
+            "environment_factory_cls": self._load_subclass(
+                manifest.environment_factory_cls, EnvironmentFactory, "Environment factory"
             ),
         }
 
     def _build_registration(
-        self, manifest: TaskManifest, components: dict[str, object], environment_factory
+        self, manifest: TaskManifest, components: dict[str, object], environment_factory: EnvironmentFactory
     ) -> TaskRegistration:
         return TaskRegistration(
             spec_model=components["spec_model"],
-            executor_class=components["executor_class"],
+            executor_class=components["executor_cls"],
             result_model=components["result_model"],
             capability_spec=components["capability_spec"],
             environment_factory=environment_factory,

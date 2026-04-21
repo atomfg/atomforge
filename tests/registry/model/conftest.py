@@ -8,9 +8,9 @@ def manifest_factory():
     def factory(
         kind="ase-lj",
         model_spec="atomforge.model.ase_lj:LennardJones",
-        executor_class="atomforge.model.ase_lj:LennardJonesExecutor",
+        executor_cls="atomforge.model.ase_lj:LennardJonesExecutor",
         supported_properties="atomforge.model.ase_lj:LennardJonesSupportedProperties",
-        environment_factory="atomforge.model.ase_lj:lj_environment",
+        environment_factory_cls="atomforge.model.ase_lj:LennardJonesEnvironmentFactory",
         metadata="atomforge.model.ase_lj:LennardJonesMetadata",
         resource_capabilities="atomforge.model.ase_lj:LennardJonesResourceCapabilities",
         distribution=["atomforge"],
@@ -19,9 +19,9 @@ def manifest_factory():
         return ModelManifest(
             kind=kind,
             model_spec=model_spec,
-            executor_class=executor_class,
+            executor_cls=executor_cls,
             supported_properties=supported_properties,
-            environment_factory=environment_factory,
+            environment_factory_cls=environment_factory_cls,
             metadata=metadata,
             resource_capabilities=resource_capabilities,
             distribution=distribution,

@@ -8,7 +8,7 @@ class TaskManifest(RegistryManifestBase):
     spec_model: str = Field(
         description="The specification model for the task, as a dotted path to a class, e.g. 'my_package.my_module:MySpecModel'"
     )
-    executor_class: str = Field(
+    executor_cls: str = Field(
         description="The executor class for the task, as a dotted path to a class, e.g. 'my_package.my_module:MyTaskExecutor'"
     )
     result_model: str = Field(
@@ -17,16 +17,16 @@ class TaskManifest(RegistryManifestBase):
     capability_spec: str = Field(
         description="The capability specification for the task, as a dotted path to a class, e.g. 'my_package.my_module:MyCapabilitySpec'"
     )
-    environment_factory: str = Field(
-        description="The environment factory for the task, as a dotted path to a function, e.g. 'my_package.my_module:my_environment_factory'"
+    environment_factory_cls: str = Field(
+        description="The environment factory class for the task, as a dotted path to a class, e.g. 'my_package.my_module:MyEnvironmentFactory'"
     )
 
     @field_validator(
         "spec_model",
-        "executor_class",
+        "executor_cls",
         "result_model",
         "capability_spec",
-        "environment_factory",
+        "environment_factory_cls",
         mode="before",
     )
     @classmethod

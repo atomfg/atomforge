@@ -18,3 +18,4 @@ class ModelMetadata:
     references: tuple[Reference, ...] = ()
     tags: frozenset[str] = frozenset()
     extras: Mapping[str, Any] = field(default_factory=dict)
+    description: str | None = None

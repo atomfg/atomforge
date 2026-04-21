@@ -164,7 +164,7 @@ class EnvironmentSpec(BaseModel):
             provider_requirements=provider_requirements,
         )
 
-    def with_provider_requirement(self, requirement: list[str]) -> "EnvironmentSpec":
+    def with_provider_requirements(self, requirement: tuple[str, ...]) -> "EnvironmentSpec":
         return self.model_copy(
             update={
                 "provider_requirements": tuple(

@@ -8,14 +8,14 @@ class ModelManifest(RegistryManifestBase):
     model_spec: str = Field(
         description="The model spec class, as a dotted path like 'my_package.my_module:MyModelSpec'"
     )
-    executor_class: str = Field(
+    executor_cls: str = Field(
         description="The model executor class, as a dotted path like 'my_package.my_module:MyModelExecutor'"
     )
     supported_properties: str = Field(
         description="The model supported properties object, as a dotted path like 'my_package.my_module:MySupportedProperties'"
     )
-    environment_factory: str = Field(
-        description="The environment factory, as a dotted path like 'my_package.my_module:my_environment_factory'"
+    environment_factory_cls: str = Field(
+        description="The environment factory class, as a dotted path like 'my_package.my_module:MyEnvironmentFactory'"
     )
     metadata: str = Field(
         description="The model metadata object, as a dotted path like 'my_package.my_module:MyMetadata'"
@@ -34,9 +34,9 @@ class ModelManifest(RegistryManifestBase):
 
     @field_validator(
         "model_spec",
-        "executor_class",
+        "executor_cls",
         "supported_properties",
-        "environment_factory",
+        "environment_factory_cls",
         "metadata",
         "resource_capabilities",
         mode="before",
