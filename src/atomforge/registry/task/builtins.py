@@ -19,3 +19,13 @@ bfgs_manifest = TaskManifest(
     environment_factory_cls="atomforge.task.bfgs:BFGSEnvironmentFactory",
     distribution=["atomforge"],
 )
+
+batch_single_point_manifest = TaskManifest(
+    kind="batch_single_point",
+    executor_cls="atomforge.task.batch_singlepoint:BatchSinglePointExecutor",
+    spec_model="atomforge.task.batch_singlepoint:BatchSinglePoint",
+    result_model="atomforge.task.batch_singlepoint:BatchSinglePointResult",
+    capability_spec="atomforge.task.batch_singlepoint:BatchSinglePointCapabilitySpec",
+    environment_factory_cls="atomforge.task.batch_singlepoint:BatchSinglePointEnvironmentFactory",
+    distribution=["atomforge"],
+)

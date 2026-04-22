@@ -21,6 +21,7 @@ atomforge = "atomforge.cli.main:main"
 [project.entry-points.'atomforge.task']
 single_point = "atomforge.registry.task.builtins:single_point_manifest"
 bfgs = "atomforge.registry.task.builtins:bfgs_manifest"
+batch_single_point = "atomforge.registry.task.builtins:batch_single_point_manifest"
 
 [project.entry-points.'atomforge.model']
 lennard_jones = "atomforge.registry.model.builtins:lennard_jones_manifest"
