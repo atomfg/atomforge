@@ -6,7 +6,6 @@ __all__ = [
     "ModelSpec",
     "ModelExecutor",
     "ModelSpecT",
-    "EnvironmentFactory",
     "ResourceCapabilities",
 ]
 
@@ -40,10 +39,7 @@ def __getattr__(name: str):
         from .spec import ModelSpecT
 
         return ModelSpecT
-    if name == "EnvironmentFactory":
-        from .spec import EnvironmentFactory
 
-        return EnvironmentFactory
     if name == "ResourceCapabilities":
         from .resource_caps import ResourceCapabilities
 

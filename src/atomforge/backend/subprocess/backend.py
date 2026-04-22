@@ -41,7 +41,9 @@ class EnvSubprocess:
             text=True,
         )
 
-        if self._process.stdin is None or self._process.stdout is None:
+        if (
+            self._process.stdin is None or self._process.stdout is None
+        ):  # pragma: no cover
             raise RuntimeError("Failed to open worker pipes")
 
         self._stdin = self._process.stdin
@@ -70,7 +72,7 @@ class SubprocessBackend:
         self._settings = settings
 
     def setup_environment(
-        self, model_spec: ModelSpec, task_env_spec: EnvironmentSpec | None
+        self, model_spec: ModelSpec, task_env_spec: EnvironmentSpec
     ) -> EnvironmentSpec:
 
         # For now, we just use the default environment spec from the model,
@@ -79,10 +81,8 @@ class SubprocessBackend:
             model_spec
         )
         # Get the subprocess for the environment
-        if task_env_spec is not None:
-            env_spec = model_env_spec + task_env_spec
-        else:
-            env_spec = model_env_spec
+        env_spec = model_env_spec + task_env_spec
+
         return env_spec
 
     def get_subprocess(self, env_spec: EnvironmentSpec) -> EnvSubprocess:
@@ -105,32 +105,89 @@ class SubprocessBackend:
                 f"Response id mismatch: expected {request.request_id}, got {response.request_id}"
             )
 
-    def prepare_model(
+    def _send_request_and_get_response(
+        self, env_subprocess: EnvSubprocess, request: RequestMessage
+    ) -> ResponseMessage:
+        write_request(env_subprocess._stdin, request)
+        response = read_response(env_subprocess._stdout)
+        self._ensure_matching_response(request, response)
+        return response
+
+    def _validate_model_supports_task(
+        self, model_spec: ModelSpec, task_spec: TaskSpec
+    ) -> None:
+        model_supported_properties = self._model_registry.get(
+            model_spec.kind
+        ).supported_properties
+        task_required_properties = task_spec.required_model_properties()
+        if not task_required_properties.issubset(model_supported_properties):
+            raise ValueError(
+                f"Model of kind {model_spec.kind} does not support task of kind {task_spec.kind}"
+            )
+
+    def _retrieve_environment_and_subprocess(
+        self,
+        task: TaskSpec,
+        model_spec: ModelSpec,
+    ) -> tuple[EnvironmentSpec, EnvSubprocess]:
+        task_registration = self._task_registry.get(task.kind)
+        task_env_spec = task_registration.environment_factory(task)
+        env_spec = self.setup_environment(model_spec, task_env_spec)
+        env_subprocess = self.get_subprocess(env_spec)
+        return env_spec, env_subprocess
+
+    def _retrieve_prepared_model_session(
+        self,
+        model_spec: ModelSpec,
+        task: TaskSpec,
+        exec_resources: ExecutionResources,
+        env_spec: EnvironmentSpec,
+        env_subprocess: EnvSubprocess,
+    ) -> PreparedModelSession:
+        # Check if we have already prepared this model with the same execution resources
+        # in this subprocess, if not prepare it by sending an init_model_request.
+        model_cache_key = model_session_key(model_spec, exec_resources)
+        env_cache_key = env_spec.short_hash()
+        prepared = self.prepared_models.get((model_cache_key, env_cache_key))
+
+        if prepared is None or prepared.process_uuid != env_subprocess.process_uuid:
+            self.prepared_models.pop((model_cache_key, env_cache_key), None)
+            self.prepare_model(model_spec, task, exec_resources)
+            prepared = self.prepared_models[(model_cache_key, env_cache_key)]
+        return prepared
+
+    def _prepare_init_model_request(
         self,
         model_spec: ModelSpec,
         exec_resources: ExecutionResources,
-        task_env_spec: EnvironmentSpec | None,
-    ) -> None:
-        env_spec = self.setup_environment(model_spec, task_env_spec)
-        env_subprocess = self.get_subprocess(env_spec)
-
-        request = InitModelRequest(
-            operation="init_model",
+        env_subprocess: EnvSubprocess,
+    ) -> InitModelRequest:
+        return InitModelRequest(
             request_id=str(env_subprocess.get_request_counter()),
             model_kind=model_spec.kind,
             model_payload=model_spec.model_dump(),
             exec_resources=exec_resources,
         )
 
-        write_request(env_subprocess._stdin, request)
-        response = read_response(env_subprocess._stdout)
-        self._ensure_matching_response(request, response)
+    def prepare_model(
+        self,
+        model_spec: ModelSpec,
+        task_spec: TaskSpec,
+        exec_resources: ExecutionResources,
+    ) -> None:
+
+        # Get the environment and subprocess for this model and task
+        env_spec, env_subprocess = self._retrieve_environment_and_subprocess(
+            task_spec, model_spec
+        )
+
+        request = self._prepare_init_model_request(
+            model_spec, exec_resources, env_subprocess
+        )
+
+        response = self._send_request_and_get_response(env_subprocess, request)
 
         if response.operation == "error":
-            print(
-                f"Worker error during model initialization: {response.error}",
-                flush=True,
-            )
             raise RuntimeError(response.error or "Worker returned an unknown error")
 
         model_session_id = response.model_session_id
@@ -148,7 +205,7 @@ class SubprocessBackend:
     def execute(
         self,
         task: TaskSpec,
-        model_spec: ModelSpec,
+        model: ModelSpec,
         exec_resources: ExecutionResources | None = None,
     ) -> TaskResult:
 
@@ -156,30 +213,18 @@ class SubprocessBackend:
             exec_resources = ExecutionResources()
 
         # Check that the model can support the task before starting the subprocess
-        model_registration = self._model_registry.get(model_spec.kind)
-        task_registration = self._task_registry.get(task.kind)
-        required_properties = task.required_model_properties()
-        if not required_properties.issubset(model_registration.supported_properties):
-            raise ValueError(
-                f"Model of kind {model_spec.kind} does not support task of kind {task.kind}"
-            )
+        self._validate_model_supports_task(model, task)
 
         # Setup / Retrieve the environment and subprocess for this task
-        task_env_spec = task_registration.environment_factory(task)
-        env_spec = self.setup_environment(model_spec, task_env_spec)
-        env_subprocess = self.get_subprocess(env_spec)
+        env_spec, env_subprocess = self._retrieve_environment_and_subprocess(
+            task, model
+        )
 
         # Check if we have already prepared this model with the same execution resources
         # in this subprocess, if not prepare it by sending an init_model_request.
-
-        model_cache_key = model_session_key(model_spec, exec_resources)
-        env_cache_key = env_spec.short_hash()
-        prepared = self.prepared_models.get((model_cache_key, env_cache_key))
-
-        if prepared is None or prepared.process_uuid != env_subprocess.process_uuid:
-            self.prepared_models.pop((model_cache_key, env_cache_key), None)
-            self.prepare_model(model_spec, exec_resources, task_env_spec)
-            prepared = self.prepared_models[(model_cache_key, env_cache_key)]
+        prepared = self._retrieve_prepared_model_session(
+            model, task, exec_resources, env_spec, env_subprocess
+        )
 
         # Convert to a TaskRequest
         request = TaskRequest(
@@ -191,24 +236,19 @@ class SubprocessBackend:
         )
 
         # Send the request to the subprocess
-        write_request(env_subprocess._stdin, request)
-        response = read_response(env_subprocess._stdout)
-        self._ensure_matching_response(request, response)
+        response = self._send_request_and_get_response(env_subprocess, request)
 
         if response.operation == "error":
-            print(f"Worker error: {response.error}", flush=True)
             raise RuntimeError(response.error or "Worker returned an unknown error")
 
+        # Convert to a TaskResult of the appropriate type based on the task kind
         registration = self._task_registry.get(response.task_kind)
         result = registration.result_model.model_validate(response.result_payload)
 
         return result
 
     def send_shutdown(self, env_key: str) -> None:
-        if env_key in self.env_subprocesses:
-            env_subprocess = self.env_subprocesses[env_key]
-        else:
-            env_subprocess = None
+        env_subprocess = self.env_subprocesses.get(env_key, None)
 
         if env_subprocess is not None:
             request = ShutdownRequest(

@@ -1,4 +1,4 @@
-from atomforge.task.core.resources import ExecutionResources, ResolvedResources
+from atomforge.task.core.resources import ExecutionResources
 from atomforge.backend.base.resources import (
     Availability,
     resolve_accelerator,

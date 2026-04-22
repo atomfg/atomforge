@@ -2,7 +2,6 @@ __all__ = [
     "ModelSpec",
     "ModelResult",
     "Property",
-    "ModelRegistry",
 ]
 
 
@@ -19,10 +18,7 @@ def __getattr__(name: str):
         from .core.property import Property
 
         return Property
-    if name == "ModelRegistry":
-        from atomforge.registry.model.registry import ModelRegistry
 
-        return ModelRegistry
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

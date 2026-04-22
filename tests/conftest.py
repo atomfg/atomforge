@@ -7,10 +7,10 @@ from atomforge.task.core.resources import ResolvedResources
 @pytest.fixture
 def example_structure():
     return Structure(
-        positions=[[0, 0, 0], [1, 1, 1]],
-        cell=[[2, 0, 0], [0, 2, 0], [0, 0, 2]],
+        positions=[[4.5, 0, 0], [5.5, 0, 0]],
+        cell=[[10, 0, 0], [0, 10, 0], [0, 0, 10]],
         species=["H", "O"],
-        pbc=[True, True, True],
+        pbc=[False, False, False],
     )
 
 @pytest.fixture

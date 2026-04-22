@@ -60,7 +60,6 @@ def test_public_facades_expose_expected_symbols():
     assert atomforge.task.core.TaskCapabilitySpec.__name__ == "TaskCapabilitySpec"
     assert atomforge.model.core.ModelSpec.__name__ == "ModelSpec"
     assert atomforge.model.core.Property.__name__ == "Property"
-    assert atomforge.model.ModelRegistry.__name__ == "ModelRegistry"
     assert atomforge.registry.model.registry.ModelRegistry.__name__ == "ModelRegistry"
 
 

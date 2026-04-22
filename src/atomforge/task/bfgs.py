@@ -67,7 +67,7 @@ class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
 
         # Setup
         atoms = spec.get_structure().to_ase()
-        atoms.set_calculator(ModelCalculatorAdapter(model_executor))
+        atoms.calc = ModelCalculatorAdapter(model_executor)
         optimizer = BFGSOptimizer(atoms)
 
         # Run optimization
