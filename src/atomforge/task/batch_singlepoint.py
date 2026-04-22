@@ -25,7 +25,7 @@ BatchSinglePointCapabilitySpec = TaskCapabilitySpec(
 
 class BatchSinglePoint(TaskSpec):
     kind: Literal["batch_single_point"] = KIND
-    structures: Iterable[StructureLike]
+    structures: tuple[StructureLike, ...]
     properties: frozenset[Property] = Field(
         default_factory=lambda: frozenset({Property.ENERGY, Property.FORCES})
     )
