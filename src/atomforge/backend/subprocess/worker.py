@@ -77,8 +77,6 @@ class SubprocessWorker:
             write_response(self._stdout, response)
 
             if should_exit:
-                # self._log(f"worker processed {loop_count} request(s)")
-                # self._log("shutdown requested")
                 return 0
 
     def _shutdown_case(self, request: ShutdownRequest) -> tuple[ShutdownResponse, bool]:
@@ -207,7 +205,7 @@ class SubprocessWorker:
         print(f"worker[{self._name}]: {message}", file=self._stderr, flush=True)
 
 
-def main(name: str) -> int:
+def main(name: str) -> int: # pragma: no cover
     task_registry = TaskRegistry.default()
     model_registry = ModelRegistry.default()
     system_resources = discover_system_resources()
@@ -224,8 +222,7 @@ def main(name: str) -> int:
     return worker.run()
 
 
-if __name__ == "__main__":
-    import sys
-
+if __name__ == "__main__": # pragma: no cover
+    import sys 
     name = sys.argv[1]
     raise SystemExit(main(name))

@@ -30,6 +30,17 @@ def init_model_response(worker):
     response, should_exit = worker._handle_request(request)
     return response, should_exit
 
+@pytest.fixture(scope="module")
+def malformed_init_model_response(worker):
+    request = InitModelRequest(
+        request_id="test_request_1",
+        model_kind="unknown_model",
+        model_payload={},
+        exec_resources=ExecutionResources(),
+    )
+    response, should_exit = worker._handle_request(request)
+    return response, should_exit
+
 
 @pytest.fixture(scope="module")
 def task_request_response(worker, init_model_response):
@@ -106,6 +117,10 @@ def test_init_model_request(worker, init_model_response):
     response, _ = init_model_response
     assert response.model_session_id is not None
     assert response.model_session_id in worker._model_sessions
+
+def test_malformed_init_model_request_response(malformed_init_model_response):
+    response, _ = malformed_init_model_response
+    assert isinstance(response, ErrorResponse)
 
 def test_task_request_response(task_request_response):
     response, _ = task_request_response

@@ -7,29 +7,17 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
 def parse_requirement(requirement_str: str) -> tuple[str, str | None]:
-    if "@" in requirement_str:
-        # Handle VCS or local path requirements,
-        # which can have the form "package @ git+https://..."
-        # or "package @ file:///path/to/package"
-        name, source = requirement_str.split("@", 1)
-        return name.strip(), "@" + source.strip()
-    elif "==" in requirement_str:
-        name, version_spec = requirement_str.split("==", 1)
-        return name.strip(), "==" + version_spec.strip()
-    elif ">=" in requirement_str:
-        name, version_spec = requirement_str.split(">=", 1)
-        return name.strip(), ">=" + version_spec.strip()
-    elif "<=" in requirement_str:
-        name, version_spec = requirement_str.split("<=", 1)
-        return name.strip(), "<=" + version_spec.strip()
-    elif ">" in requirement_str:
-        name, version_spec = requirement_str.split(">", 1)
-        return name.strip(), ">" + version_spec.strip()
-    elif "<" in requirement_str:
-        name, version_spec = requirement_str.split("<", 1)
-        return name.strip(), "<" + version_spec.strip()
+    special_characters = ["==", ">=", "<=", "!=", ">", "<", "~=", "@", ";"]
+    for char in special_characters:
+        if char in requirement_str:
+            break
     else:
+        # No special characters found, return the requirement as is with no version specifier.
         return requirement_str.strip(), None
+
+    # Split at char
+    name, source = requirement_str.split(char, 1)
+    return name.strip(), (char + source).strip()
 
 
 class EnvironmentSpec(BaseModel):
@@ -60,8 +48,6 @@ class EnvironmentSpec(BaseModel):
     @field_validator("requirements", "channels", mode="before")
     @classmethod
     def normalize_string_collections(cls, value):
-        if value is None:
-            return ()
         return tuple(sorted(set(value)))
 
     def hash(self) -> str:
@@ -116,7 +102,7 @@ class EnvironmentSpec(BaseModel):
         merged = {}
         for name, spec in regs1 + regs2:
             if name in merged:
-                if merged[name] != spec:
+                if merged[name] is not None and spec is not None and merged[name] != spec:
                     raise ValueError(
                         f"Conflict in requirements for package '{name}': '{merged[name]}' vs '{spec}'"
                     )
