@@ -1,4 +1,4 @@
-from atomforge.registry.model.registry import ModelRegistry
+from atomforge._runtime.registry.model.model_registry import ModelRegistry
 
 
 def test_default_model_registry_loads_builtin_models():

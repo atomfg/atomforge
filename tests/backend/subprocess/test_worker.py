@@ -1,20 +1,20 @@
 import pytest
-from atomforge.structure import StructureData
-from atomforge.model.nodep_model import NoDep
-from atomforge.task.singlepoint import SinglePoint
+from atomforge._core.structure import StructureData
+from atomforge._builtins.model.nodep_model import NoDep
+from atomforge._builtins.task.singlepoint import SinglePoint
 
-from atomforge.backend.subprocess.request import (
+from atomforge._core.protocol.request import (
     InitModelRequest,
     TaskRequest,
     ShutdownRequest,
 )
-from atomforge.backend.subprocess.response import (
+from atomforge._core.protocol.response import (
     InitModelResponse,
     TaskResponse,
     ShutdownResponse,
     ErrorResponse,
 )
-from atomforge.task.core.resources import ExecutionResources
+from atomforge._core.resources.resource_models import ExecutionResources
 
 
 @pytest.fixture(scope="module")

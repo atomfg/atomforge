@@ -1,6 +1,6 @@
 import pytest
 
-from atomforge.task.core.resources import ExecutionResources
+from atomforge._core.resources.resource_models import ExecutionResources
 
 
 def test_execution_resources_init():

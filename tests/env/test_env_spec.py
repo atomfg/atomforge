@@ -1,5 +1,5 @@
 import pytest
-from atomforge.env.base.env import EnvironmentSpec
+from atomforge._core.env.env import EnvironmentSpec
 
 @pytest.fixture
 def env_spec() -> EnvironmentSpec:

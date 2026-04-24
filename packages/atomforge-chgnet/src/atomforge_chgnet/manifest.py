@@ -1,5 +1,5 @@
 
-from atomforge.registry.model.manifest import ModelManifest
+from atomforge._core.registry.model_manifest import ModelManifest
 
 
 chgnet_manifest = ModelManifest(

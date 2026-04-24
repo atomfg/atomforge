@@ -1,15 +1,15 @@
 from typing import Literal
 
-from atomforge.env.base.env import EnvironmentSpec
-from atomforge.model.core.executor import ModelExecutor
-from atomforge.model.core.metadata import ModelMetadata, Reference
-from atomforge.model.core.property import Property
-from atomforge.model.core.resource_caps import ResourceCapabilities
-from atomforge.model.core.result import ModelResult
-from atomforge.model.core.spec import ModelSpec
-from atomforge.structure import Structure
-from atomforge.task.core.resources import ResolvedResources
-from atomforge.env.base.factory import (
+from atomforge._core.env.env import EnvironmentSpec
+from atomforge._core.model.executor import ModelExecutor
+from atomforge._core.model.metadata import ModelMetadata, Reference
+from atomforge._core.property import Property
+from atomforge._core.resources.resource_caps import ResourceCapabilities
+from atomforge._core.model.result import ModelResult
+from atomforge._core.model.spec import ModelSpec
+from atomforge._core.structure import StructureData
+from atomforge._core.resources.resource_models import ResolvedResources
+from atomforge._core.env.factory import (
     environment_factory_from_callable,
     DependencySummary,
 )
@@ -46,8 +46,8 @@ CHGNetMetadata = ModelMetadata(
 
 
 CHGNetEnvironmentFactory = environment_factory_from_callable(
-    lambda spec: EnvironmentSpec(name=spec.kind, python="python3.12", requirements=["chgnet"]),
-    DependencySummary(base_requirements=["chgnet"], python="python3.12"),
+    lambda spec: EnvironmentSpec(name=spec.kind, python="python3.12", requirements=["chgnet", "ase"]),
+    DependencySummary(base_requirements=["chgnet", "ase"], python="python3.12"),
 )
 
 
@@ -66,10 +66,22 @@ class CHGNetExecutor(ModelExecutor[CHGNet]):
 
         self._calc = CHGNetCalculator(use_device=use_device)
 
+    def convert_to_atoms(self, structure: StructureData):
+        from ase import Atoms
+
+        atoms = Atoms(
+            numbers=structure.numbers,
+            positions=structure.positions,
+            cell=structure.cell,
+            pbc=structure.pbc,
+        )
+        return atoms
+
+
     def compute(
-        self, structure: Structure, properties: frozenset[Property]
+        self, structure: StructureData, properties: frozenset[Property]
     ) -> ModelResult:
-        atoms = structure.to_ase()
+        atoms = self.convert_to_atoms(structure)
         atoms.calc = self._calc
 
         if Property.FORCES in properties:

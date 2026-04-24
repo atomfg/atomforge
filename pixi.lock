@@ -360,7 +360,7 @@ packages:
 - pypi: ./
   name: atomforge
   version: 0.1.0
-  sha256: 50336316909d023beb631a0aa65bc8d6544b610b7a3b6a86a6a556da4d2ed8d9
+  sha256: 3c10859c34a1d7c91f4803616814a8908e25156a4091d5db1b57fe5b91dbe1d8
   requires_dist:
   - pydantic>=2.12.5
   - rich

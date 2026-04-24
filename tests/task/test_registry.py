@@ -1,14 +1,14 @@
 import pytest
 
-from atomforge.backend.subprocess.backend import SubprocessBackend
-from atomforge.env.base.env import EnvironmentSpec
-from atomforge.model.ase_lj import LennardJones
-from atomforge.model.core.property import Property
-from atomforge.task.core.capability import TaskCapabilitySpec
-from atomforge.registry.task.registry import TaskRegistry
-from atomforge.task.bfgs import BFGS, BFGSExecutor, BFGSResult
-from atomforge.task.singlepoint import SinglePoint
-from atomforge.registry.task.registration import TaskRegistration
+from atomforge._host.backend.subprocess.backend import SubprocessBackend
+from atomforge._core.env.env import EnvironmentSpec
+from atomforge._builtins.model.ase_lj import LennardJones
+from atomforge._core.property import Property
+from atomforge._core.task.capability import TaskCapabilitySpec
+from atomforge._runtime.registry.task.task_registry import TaskRegistry
+from atomforge._builtins.task.bfgs import BFGS, BFGSExecutor, BFGSResult
+from atomforge._builtins.task.singlepoint import SinglePoint
+from atomforge._runtime.registry.task_registration import TaskRegistration
 
 
 def test_task_registry_duplicate_kind_fails():
@@ -39,7 +39,7 @@ def test_task_registry_duplicate_kind_fails():
 
 
 def test_builtin_registration_exposes_capabilities_and_environment(example_structure):
-    from atomforge.registry.task.helpers import ManifestToRegistrationConverter
+    from atomforge._runtime.registry.task.task_helpers import ManifestToRegistrationConverter
 
     backend = SubprocessBackend()
     registration = backend._task_registry.get("bfgs")

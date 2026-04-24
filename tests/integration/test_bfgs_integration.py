@@ -1,7 +1,7 @@
 import pytest
-from atomforge.model.ase_lj import LennardJones
-from atomforge.task.bfgs import BFGS, BFGSResult
-from atomforge.structure import StructureData
+from atomforge._builtins.model.ase_lj import LennardJones
+from atomforge._builtins.task.bfgs import BFGS, BFGSResult
+from atomforge._core.structure import StructureData
 
 
 @pytest.fixture(scope="module")
@@ -19,7 +19,7 @@ def bfgs_task():
 
 @pytest.fixture(scope="module")
 def bfgs_result(backend, bfgs_task) -> BFGSResult:
-    from atomforge.task.core.resources import ExecutionResources
+    from atomforge._core.resources.resource_models import ExecutionResources
 
     resources = ExecutionResources(accelerator="cpu", precision="f64")
     model = LennardJones()

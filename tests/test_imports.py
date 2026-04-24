@@ -1,12 +1,12 @@
 
 def test_model_core():
-    from atomforge.model.core import ModelResult
-    from atomforge.model.core import Reference
-    from atomforge.model.core import ModelMetadata
-    from atomforge.model.core import ModelSpec
-    from atomforge.model.core import ModelSpecT
-    from atomforge.model.core import ModelExecutor
-    from atomforge.model.core import ResourceCapabilities
+    from atomforge._core.model import ModelResult
+    from atomforge._core.model import Reference
+    from atomforge._core.model import ModelMetadata
+    from atomforge._core.model import ModelSpec
+    from atomforge._core.model import ModelSpecT
+    from atomforge._core.model import ModelExecutor
+    from atomforge._core.model import ResourceCapabilities
 
 
 

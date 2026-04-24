@@ -1,8 +1,8 @@
 
-from atomforge.backend.subprocess.request import (
+from atomforge._core.protocol.request import (
     ShutdownRequest,
 )
-from atomforge.backend.subprocess.response import (
+from atomforge._core.protocol.response import (
     ShutdownResponse,
 )
 

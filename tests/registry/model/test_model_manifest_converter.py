@@ -1,11 +1,11 @@
 import pytest
 
-from atomforge.model.ase_lj import LennardJones
-from atomforge.registry.model.helpers import (
+from atomforge._builtins.model.ase_lj import LennardJones
+from atomforge._runtime.registry.model.model_helpers import (
     ManifestToRegistrationConverter,
     ModelRegistryError,
 )
-from atomforge.registry.model.registration import ModelRegistration
+from atomforge._runtime.registry.model.model_registration import ModelRegistration
 
 
 def test_manifest_to_registration_converter(manifest_factory):
@@ -110,7 +110,7 @@ def test_converter_wrapped_environment_factory(manifest_factory):
 
 
 def test_converter_loads_optional_probe(manifest_factory):
-    manifest = manifest_factory(probe="atomforge.model.probes:torch_probe")
+    manifest = manifest_factory(probe="atomforge._runtime.probes.torch_probe:torch_probe")
     converter = ManifestToRegistrationConverter()
     registration, _ = converter(
         manifest,

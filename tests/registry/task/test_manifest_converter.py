@@ -1,6 +1,6 @@
 import pytest
-from atomforge.registry.task.helpers import ManifestToRegistrationConverter, TaskRegistryError
-from atomforge.registry.task.registration import TaskRegistration
+from atomforge._runtime.registry.task.task_helpers import ManifestToRegistrationConverter, TaskRegistryError
+from atomforge._runtime.registry.task_registration import TaskRegistration
 
 def test_manifest_to_registration_converter(manifest_factory):
     manifest = manifest_factory()

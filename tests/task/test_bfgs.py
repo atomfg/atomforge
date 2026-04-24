@@ -1,7 +1,7 @@
 import pytest
-from atomforge.model.core.property import Property
-from atomforge.structure import StructureData
-from atomforge.task.bfgs import BFGS, BFGSExecutor, BFGSResult
+from atomforge._core.property import Property
+from atomforge._core.structure import StructureData
+from atomforge._builtins.task.bfgs import BFGS, BFGSExecutor, BFGSResult
 
 @pytest.fixture
 def bfgs_task(example_structure) -> BFGS:
