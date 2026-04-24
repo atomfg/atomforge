@@ -1,19 +1,28 @@
 import pytest
-import numpy as np
-from atomforge.task.singlepoint import SinglePoint, SinglePointExecutor
+
 from atomforge.model.core.property import Property
-from atomforge.structure import StructureMessage
+from atomforge.model.nodep_model import NoDep, NoDepExecutor
+from atomforge.structure import StructureData
+from atomforge.task.core.resources import ResolvedResources
+from atomforge.task.singlepoint import SinglePoint, SinglePointExecutor
+
+
+@pytest.fixture
+def nodep_executor():
+    spec = NoDep()
+    resources = ResolvedResources(accelerator="cpu", precision=None, messages=dict())
+    return NoDepExecutor(spec=spec, resolved_resources=resources)
 
 
 def test_single_point_creation(example_structure):
     task = SinglePoint(structure=example_structure)
-    assert isinstance(task.structure, StructureMessage)
-    assert task.structure == example_structure.to_message()
+    assert isinstance(task.structure, StructureData)
+    assert task.structure == example_structure
     assert task.properties == frozenset([Property.ENERGY, Property.FORCES])
-    restored = task.get_structure()
-    assert np.array_equal(restored.positions, example_structure.positions)
-    assert np.array_equal(restored.cell, example_structure.cell)
-    assert restored.species == example_structure.species
+    restored = task.structure
+    assert restored.positions == example_structure.positions
+    assert restored.cell == example_structure.cell
+    assert restored.numbers == example_structure.numbers
     assert restored.pbc == example_structure.pbc
     assert task.required_model_properties() == frozenset(
         [Property.ENERGY, Property.FORCES]
@@ -22,13 +31,13 @@ def test_single_point_creation(example_structure):
 
 def test_single_point_creation_with_properties(example_structure):
     task = SinglePoint(structure=example_structure, properties=[Property.ENERGY])
-    assert task.structure == example_structure.to_message()
+    assert task.structure == example_structure
     assert task.properties == frozenset([Property.ENERGY])
 
 
 def test_single_point_creation_with_string_properties(example_structure):
     task = SinglePoint(structure=example_structure, properties=["energy"])
-    assert task.structure == example_structure.to_message()
+    assert task.structure == example_structure
     assert task.properties == frozenset([Property.ENERGY])
 
 
@@ -67,7 +76,7 @@ def test_single_point_creation_with_duplicate_properties(example_structure):
     task = SinglePoint(
         structure=example_structure, properties=[Property.ENERGY, Property.ENERGY]
     )
-    assert task.structure == example_structure.to_message()
+    assert task.structure == example_structure
     assert task.properties == frozenset([Property.ENERGY])
 
 
@@ -76,39 +85,11 @@ def test_single_point_creation_with_mixed_case_string_properties(example_structu
     assert task.properties == frozenset([Property.ENERGY, Property.FORCES])
 
 
-def test_single_point_accepts_structure_message(example_structure):
-    task = SinglePoint(
-        structure=example_structure.to_message(), properties=[Property.ENERGY]
-    )
-    assert task.structure == example_structure.to_message()
-    restored = task.get_structure()
-    assert np.array_equal(restored.positions, example_structure.positions)
-    assert np.array_equal(restored.cell, example_structure.cell)
-    assert restored.species == example_structure.species
-    assert restored.pbc == example_structure.pbc
-
-
-def test_single_point_accepts_ase_atoms():
-    from ase import Atoms
-
-    atoms = Atoms(
-        "HOH",
-        positions=[[0, 0, 0], [0, 0, 1], [1, 0, 0]],
-        cell=[10, 10, 10],
-        pbc=False,
-    )
-
-    task = SinglePoint(structure=atoms, properties=["forces"])
-    assert isinstance(task.structure, StructureMessage)
-    assert task.properties == frozenset([Property.FORCES])
-    assert task.get_structure().species == ["H", "O", "H"]
-
-
-def test_single_point_executor(lj_executor, example_structure):
+def test_single_point_executor(nodep_executor, example_structure):
     task = SinglePoint(
         structure=example_structure, properties=[Property.ENERGY, Property.FORCES]
     )
-    result = SinglePointExecutor().execute(task, lj_executor)
+    result = SinglePointExecutor().execute(task, nodep_executor)
     assert result.kind == "single_point"
     assert isinstance(result.energy, float)
     assert isinstance(result.forces, list) and all(

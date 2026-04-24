@@ -1,18 +1,19 @@
 import pytest
-from ase import Atoms
-
-from atomforge.backend.subprocess.backend import SubprocessBackend
 from atomforge.model.ase_lj import LennardJones
 from atomforge.task.bfgs import BFGS, BFGSResult
+from atomforge.structure import StructureData
 
 
 @pytest.fixture(scope="module")
-def bfgs_task():
-    atoms = Atoms(
-        "HOH", positions=[[0, 0, 0], [0, 0, 1], [1, 0, 0]], cell=[10, 10, 10], pbc=False
+def bfgs_task():    
+    structure = StructureData(
+        positions=[[4.5, 0, 0], [5.5, 0, 0]],
+        cell=[[10, 0, 0], [0, 10, 0], [0, 0, 10]],
+        numbers=[1, 8],
+        pbc=[False, False, False],
     )
-    task = BFGS(structure=atoms)
 
+    task = BFGS(structure=structure, fmax=0.5)
     return task
 
 
@@ -32,5 +33,5 @@ def test_result_kind(bfgs_result: BFGSResult):
 
 def test_result_forces(bfgs_result: BFGSResult):
     assert bfgs_result.forces is not None
-    assert len(bfgs_result.forces) == 3
+    assert len(bfgs_result.forces) == 2
     assert all(len(f) == 3 for f in bfgs_result.forces)

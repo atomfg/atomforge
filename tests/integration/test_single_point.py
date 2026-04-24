@@ -1,6 +1,5 @@
 import pytest
-from ase import Atoms
-
+from atomforge.structure import StructureData
 from atomforge.model.ase_lj import LennardJones
 from atomforge.task.singlepoint import SinglePoint
 
@@ -11,11 +10,15 @@ def properties(request):
 @pytest.fixture(scope="module")
 def single_point_task(properties):
 
-    atoms = Atoms(
-        "HOH", positions=[[0, 0, 0], [0, 0, 1], [1, 0, 0]], cell=[10, 10, 10], pbc=False
+    structure = StructureData(
+        positions=[[4.5, 0, 0], [5.5, 0, 0]],
+        cell=[[10, 0, 0], [0, 10, 0], [0, 0, 10]],
+        numbers=[1, 8],
+        pbc=[False, False, False],
     )
 
-    task = SinglePoint(structure=atoms, properties=properties)
+
+    task = SinglePoint(structure=structure, properties=properties)
 
     return task
 
@@ -38,7 +41,7 @@ def test_result_kind(single_point_result):
 def test_result_forces(single_point_result, properties):
     if "forces" in properties:
         assert single_point_result.forces is not None
-        assert len(single_point_result.forces) == 3
+        assert len(single_point_result.forces) == 2
         assert all(len(f) == 3 for f in single_point_result.forces)
     else:
         assert single_point_result.forces is None

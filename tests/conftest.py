@@ -1,20 +1,12 @@
 import pytest
 
-from atomforge.structure import Structure
-from atomforge.model.ase_lj import LennardJonesExecutor, LennardJones
-from atomforge.task.core.resources import ResolvedResources
+from atomforge.structure import StructureData
 
 @pytest.fixture
 def example_structure():
-    return Structure(
+    return StructureData(
         positions=[[4.5, 0, 0], [5.5, 0, 0]],
         cell=[[10, 0, 0], [0, 10, 0], [0, 0, 10]],
-        species=["H", "O"],
+        numbers=[1, 8],
         pbc=[False, False, False],
     )
-
-@pytest.fixture
-def lj_executor():
-    spec = LennardJones()
-    resources = ResolvedResources(accelerator="cpu", precision=None, messages=dict())
-    return LennardJonesExecutor(spec=spec, resolved_resources=resources)

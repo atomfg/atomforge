@@ -3,7 +3,7 @@ from abc import abstractmethod, ABC
 from .spec import ModelSpecT
 from .property import Property
 from .result import ModelResult
-from atomforge.structure import Structure
+from atomforge.structure import StructureData
 from atomforge.task.core.resources import ResolvedResources
 
 from typing import Generic
@@ -16,6 +16,6 @@ class ModelExecutor(ABC, Generic[ModelSpecT]):
 
     @abstractmethod
     def compute(
-        self, structure: Structure, properties: frozenset[Property]
+        self, structure: StructureData, properties: frozenset[Property]
     ) -> ModelResult:
         raise NotImplementedError

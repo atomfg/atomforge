@@ -1,98 +1,46 @@
-from dataclasses import dataclass
-from typing_extensions import Self
-from typing import Annotated, Any
-from pydantic import BaseModel, BeforeValidator
-import numpy as np
+from pydantic import BaseModel, field_validator, model_validator
 
-
-@dataclass(slots=True)
-class Structure:
-    """
-    A simple data class representing an atomic structure.
-    """
-
-    positions: np.ndarray
-    cell: np.ndarray
-    species: list[str]
-    pbc: list[bool, bool, bool]
-
-    def __post_init__(self):
-        # Ensure that positions and cell are numpy arrays
-        self.positions = np.asarray(self.positions)
-        self.cell = np.asarray(self.cell)
-        self.species = list(self.species)
-        self.pbc = list(self.pbc)
-
-    @classmethod
-    def from_ase(cls, atoms):
-        """
-        Create a Structure from an ASE Atoms object.
-        """
-        return cls(
-            positions=atoms.get_positions(),
-            cell=atoms.get_cell().array,
-            species=atoms.get_chemical_symbols(),
-            pbc=atoms.get_pbc(),
-        )
-
-    def to_ase(self):
-        """
-        Convert this Structure to an ASE Atoms object.
-        """
-        from ase import Atoms
-
-        return Atoms(
-            symbols=self.species,
-            positions=self.positions,
-            cell=self.cell,
-            pbc=self.pbc,
-        )
-
-    def to_message(self) -> "StructureMessage":
-        """
-        Convert this Structure to a StructureMessage for serialization.
-        """
-        return StructureMessage.from_structure(self)
-
-
-class StructureMessage(BaseModel):
+class StructureData(BaseModel):
     """
     A Pydantic model for serializing and deserializing Structure data.
     """
 
     positions: list[list[float]]
     cell: list[list[float]]
-    species: list[str]
+    numbers: list[int]    
     pbc: list[bool, bool, bool]
 
-    @classmethod
-    def from_structure(cls, structure: Structure) -> Self:
-        return cls(
-            positions=structure.positions.tolist(),
-            cell=structure.cell.tolist(),
-            species=structure.species,
-            pbc=structure.pbc,
-        )
 
-    def to_structure(self) -> Structure:
-        return Structure(
-            positions=np.array(self.positions),
-            cell=np.array(self.cell),
-            species=self.species,
-            pbc=self.pbc,
-        )
-
-
-def normalize_structure_like(value: Any) -> StructureMessage:
-    from ase import Atoms
-
-    if isinstance(value, StructureMessage):
+    @field_validator('positions')
+    def validate_positions(cls, value):
+        if not isinstance(value, list) or not all(isinstance(pos, list) and len(pos) == 3 for pos in value):
+            raise ValueError("Positions must be a list of lists, each containing three floats.")
         return value
-    if isinstance(value, Structure):
-        return value.to_message()
-    if isinstance(value, Atoms):
-        return Structure.from_ase(value).to_message()
-    return value
+    
+    @field_validator('cell')
+    def validate_cell(cls, value):
+        if not isinstance(value, list) or len(value) != 3 or not all(isinstance(vec, list) and len(vec) == 3 for vec in value):
+            raise ValueError("Cell must be a list of three lists, each containing three floats.")
+        return value
+    
+    @model_validator(mode='after')
+    def validate_numbers_and_positions(self):
+        if len(self.numbers) != len(self.positions):
+            raise ValueError("The length of numbers must match the length of positions.")
+        return self
+    
 
+if __name__ == "__main__":
+    # Example usage
+    data = {
+        "positions": [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]],
+        "cell": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        "numbers": [1, 2],
+        "pbc": [True, True, True]
+    }
+    
+    structure_data = StructureData(**data)
+    print(structure_data)
+    
+        
 
-StructureLike = Annotated[StructureMessage, BeforeValidator(normalize_structure_like)]

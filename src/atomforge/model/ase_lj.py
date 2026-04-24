@@ -7,7 +7,7 @@ from atomforge.model.core.property import Property
 from atomforge.model.core.resource_caps import ResourceCapabilities
 from atomforge.model.core.result import ModelResult
 from atomforge.model.core.spec import ModelSpec
-from atomforge.structure import Structure
+from atomforge.structure import StructureData
 from atomforge.task.core.resources import ResolvedResources
 from atomforge.env.base.factory import EnvironmentFactory, DependencySummary
 
@@ -70,8 +70,18 @@ class LennardJonesExecutor(ModelExecutor[LennardJones]):
             smooth=spec.smooth,
         )
 
-    def compute(self, structure: Structure, properties: frozenset[Property]):
-        atoms = structure.to_ase()
+    def convert_structure(self, structure: StructureData):
+        from ase import Atoms
+
+        return Atoms(
+            positions=structure.positions,
+            cell=structure.cell,
+            numbers=structure.numbers,
+            pbc=structure.pbc,
+        )
+
+    def compute(self, structure: StructureData, properties: frozenset[Property]):
+        atoms = self.convert_structure(structure)
         atoms.calc = self._calc
 
         # Calculate forces if requested, otherwise set to None to avoid unnecessary computation

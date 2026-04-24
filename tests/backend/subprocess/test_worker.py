@@ -1,6 +1,6 @@
 import pytest
-from atomforge.structure import Structure
-from atomforge.model.ase_lj import LennardJones
+from atomforge.structure import StructureData
+from atomforge.model.nodep_model import NoDep
 from atomforge.task.singlepoint import SinglePoint
 
 from atomforge.backend.subprocess.request import (
@@ -19,7 +19,7 @@ from atomforge.task.core.resources import ExecutionResources
 
 @pytest.fixture(scope="module")
 def init_model_response(worker):
-    spec = LennardJones()
+    spec = NoDep()
     exec_resoruces = ExecutionResources()
     request = InitModelRequest(
         request_id="test_request_1",
@@ -45,11 +45,11 @@ def malformed_init_model_response(worker):
 @pytest.fixture(scope="module")
 def task_request_response(worker, init_model_response):
 
-    structure = Structure(
+    structure = StructureData(
         positions=[[0, 0, 0], [1, 0, 0]],
         cell=[[10, 0, 0], [0, 10, 0], [0, 0, 10]],
+        numbers=[18, 18],
         pbc=[False, False, False],
-        species=["Ar", "Ar"],
     )
 
     task = SinglePoint(structure=structure)

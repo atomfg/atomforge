@@ -3,7 +3,7 @@ from typing import Literal
 from atomforge.env.base.env import EnvironmentSpec
 from atomforge.model.core.executor import ModelExecutor
 from atomforge.model.core.property import Property
-from atomforge.structure import StructureLike, StructureMessage
+from atomforge.structure import StructureData
 from atomforge.task.core.capability import TaskCapabilitySpec
 from atomforge.task.core.executor import TaskExecutor
 from atomforge.task.core.result import TaskResult
@@ -23,7 +23,7 @@ BFGSCapabilitySpec = TaskCapabilitySpec(
 
 class BFGS(TaskSpec):
     kind: Literal["bfgs"] = KIND
-    structure: StructureLike
+    structure: StructureData
     fmax: float = 0.05
 
     def required_model_properties(self) -> frozenset[Property]:
@@ -32,7 +32,7 @@ class BFGS(TaskSpec):
 
 class BFGSResult(TaskResult):
     kind: Literal["bfgs"] = KIND
-    structure: StructureMessage
+    structure: StructureData
     energy: float
     forces: list[list[float]]
 
@@ -48,17 +48,16 @@ class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
         from ase.calculators.calculator import Calculator
         from ase.optimize import BFGS as BFGSOptimizer
 
-        from atomforge.structure import Structure
-
         class ModelCalculatorAdapter(Calculator):
             implemented_properties = ["energy", "forces"]
 
             def __init__(self, model_executor: ModelExecutor):
                 super().__init__()
                 self.model_executor = model_executor
+        
 
             def calculate(self, atoms, properties=None, system_changes=None):
-                structure = Structure.from_ase(atoms)
+                structure = convert_to_structure(atoms)
                 model_result = self.model_executor.compute(
                     structure, {Property.ENERGY, Property.FORCES}
                 )
@@ -66,7 +65,7 @@ class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
                 self.results["forces"] = model_result.forces
 
         # Setup
-        atoms = spec.get_structure().to_ase()
+        atoms = convert_to_atoms(spec.structure)
         atoms.calc = ModelCalculatorAdapter(model_executor)
         optimizer = BFGSOptimizer(atoms)
 
@@ -74,11 +73,30 @@ class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
         optimizer.run(fmax=spec.fmax)
 
         # Collect results
-        final_structure = Structure.from_ase(atoms)
+        final_structure = convert_to_structure(atoms)
         energy = atoms.get_potential_energy()
         forces = atoms.get_forces()
         return BFGSResult(
-            structure=final_structure.to_message(),
+            structure=final_structure,
             energy=energy,
             forces=forces.tolist(),
         )
+    
+
+def convert_to_atoms(structure: StructureData):
+    from ase import Atoms
+    return Atoms(
+        numbers=structure.numbers,
+        positions=structure.positions,
+        cell=structure.cell,
+        pbc=structure.pbc,
+    )
+
+def convert_to_structure(atoms) -> StructureData:
+    return StructureData(
+        numbers=atoms.get_atomic_numbers().tolist(),
+        positions=atoms.get_positions().tolist(),
+        cell=atoms.get_cell().tolist(),
+        pbc=atoms.get_pbc().tolist(),
+    )
+

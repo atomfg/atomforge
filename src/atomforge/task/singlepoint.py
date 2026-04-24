@@ -5,7 +5,7 @@ from pydantic import Field, field_validator
 from atomforge.env.base.env import EnvironmentSpec
 from atomforge.model.core.executor import ModelExecutor
 from atomforge.model.core.property import Property
-from atomforge.structure import StructureLike
+from atomforge.structure import StructureData
 from atomforge.task.core.capability import TaskCapabilitySpec
 from atomforge.task.core.executor import TaskExecutor
 from atomforge.task.core.result import TaskResult
@@ -25,7 +25,7 @@ SinglePointCapabilitySpec = TaskCapabilitySpec(
 
 class SinglePoint(TaskSpec):
     kind: Literal["single_point"] = KIND
-    structure: StructureLike
+    structure: StructureData
     properties: frozenset[Property] = Field(
         default_factory=lambda: frozenset({Property.ENERGY, Property.FORCES})
     )
@@ -78,12 +78,12 @@ class SinglePointExecutor(TaskExecutor[SinglePoint, SinglePointResult]):
     def execute(
         self, spec: SinglePoint, model_executor: ModelExecutor
     ) -> SinglePointResult:
-        structure = spec.get_structure()
+        structure = spec.structure
         properties = spec.properties
         model_result = model_executor.compute(structure, properties)
         return SinglePointResult(
             energy=model_result.energy,
-            forces=model_result.forces.tolist()
+            forces=model_result.forces
             if model_result.forces is not None
             else None,
         )
