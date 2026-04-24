@@ -21,6 +21,7 @@ class UVEnvironmentProvider(EnvironmentProvider):
             "install",
             "-p",
             env_path.as_posix(),
+            "-n",
             "-r",
             "-",
         ]

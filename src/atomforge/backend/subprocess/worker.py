@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import sys
+import os
 import traceback
 from typing import Any, TextIO
 
@@ -57,6 +58,7 @@ class SubprocessWorker:
         self._system_resources = system_resources
 
         self._model_sessions: dict[str, ModelExecutor] = {}
+        self._dev_null = open(os.devnull, "w")
 
     def run(self) -> int:
         loop_count = 0
@@ -155,8 +157,8 @@ class SubprocessWorker:
         self, request: InitModelRequest
     ) -> tuple[ModelExecutor, ResolvedResources]:
         # Get the ExecResources from the request
-        with contextlib.redirect_stdout(None) as _:
-            with contextlib.redirect_stderr(None) as _:
+        with contextlib.redirect_stdout(self._dev_null) as _:
+            with contextlib.redirect_stderr(self._dev_null) as _:
                 model_registration = self._model_registry.get(request.model_kind)
                 model_spec = model_registration.model_spec.model_validate(
                     request.model_payload
@@ -191,8 +193,8 @@ class SubprocessWorker:
         model_executor = self._get_model_executor(request.model_session_id)
 
         # Context manager that ensures nothing is written to stdout during model execution
-        with contextlib.redirect_stdout(None) as _:
-            with contextlib.redirect_stderr(None) as _:
+        with contextlib.redirect_stdout(self._dev_null) as _:
+            with contextlib.redirect_stderr(self._dev_null) as _:
                 task_result = task_executor.execute(task_spec, model_executor)
 
         return TaskResponse(

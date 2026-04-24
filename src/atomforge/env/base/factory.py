@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, TypeVar, Self, ClassVar
+from typing import Callable, Generic, TypeVar, ClassVar
+from typing_extensions import Self
 
 from atomforge.env.base.env import EnvironmentSpec
 from dataclasses import dataclass
