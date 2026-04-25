@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.8"
 dependencies = [
     "atomforge-core",
+    "pydantic>=2.12.5",
 ]
 
 [build-system]
@@ -16,4 +17,4 @@ requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
-atomforge-core = { workspace = true }
+atomforge_core = { path="/Users/au616397/Repositories/atomforge/packages/atomforge-core", editable=true }

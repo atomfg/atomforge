@@ -86,16 +86,16 @@ class SubprocessBackend:
         return env_spec
 
     def get_subprocess(self, env_spec: EnvironmentSpec) -> EnvSubprocess:
-        env_hash = env_spec.short_hash()
+        env_key = self._environment_provider.environment_key(env_spec)
 
-        if env_hash not in self.env_subprocesses:
+        if env_key not in self.env_subprocesses:
             handle = self._environment_provider.ensure_environment(env_spec)
             info = self._environment_provider.inspect_environment(handle)
-            self.env_subprocesses[env_hash] = EnvSubprocess(
-                info.python_executable, name=env_hash
+            self.env_subprocesses[env_key] = EnvSubprocess(
+                info.python_executable, name=env_key
             )
 
-        return self.env_subprocesses[env_hash]
+        return self.env_subprocesses[env_key]
 
     def _ensure_matching_response(
         self, request: RequestMessage, response: ResponseMessage
@@ -147,7 +147,7 @@ class SubprocessBackend:
         # Check if we have already prepared this model with the same execution resources
         # in this subprocess, if not prepare it by sending an init_model_request.
         model_cache_key = model_session_key(model_spec, exec_resources)
-        env_cache_key = env_spec.short_hash()
+        env_cache_key = self._environment_provider.environment_key(env_spec)
         prepared = self.prepared_models.get((model_cache_key, env_cache_key))
 
         if prepared is None or prepared.process_uuid != env_subprocess.process_uuid:
@@ -192,7 +192,7 @@ class SubprocessBackend:
 
         model_session_id = response.model_session_id
         model_cache_key = model_session_key(model_spec, exec_resources)
-        env_cache_key = env_spec.short_hash()
+        env_cache_key = self._environment_provider.environment_key(env_spec)
 
         self.prepared_models[(model_cache_key, env_cache_key)] = PreparedModelSession(
             model_spec=model_spec,

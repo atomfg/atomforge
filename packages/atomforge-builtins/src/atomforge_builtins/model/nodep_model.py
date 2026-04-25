@@ -38,12 +38,12 @@ NoDepCapabilities = ResourceCapabilities(
 class NoDepEnvironmentFactory(EnvironmentFactory[NoDep]):
     dependency_summary = DependencySummary(
         base_requirements=(),
-        python="python3.12",
+        python="3.12",
     )
 
     def build(self, spec: NoDep) -> EnvironmentSpec:
         return EnvironmentSpec(
-            name=spec.kind, python="python3.12", requirements=[]
+            name=spec.kind, python="3.12", requirements=[]
         )
 
 

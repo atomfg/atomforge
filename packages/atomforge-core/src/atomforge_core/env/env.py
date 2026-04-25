@@ -19,7 +19,7 @@ def parse_requirement(requirement_str: str) -> tuple[str, str | None]:
 
 
 class EnvironmentSpec(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
     name: str = Field(
         description="A human-readable name for the environment specification, used for display and debugging purposes."
     )
@@ -47,6 +47,25 @@ class EnvironmentSpec(BaseModel):
     @classmethod
     def normalize_string_collections(cls, value):
         return tuple(sorted(set(value)))
+    
+    @field_validator("python", mode="before")
+    def normalize_python_version(cls, value):
+        if value is None:
+            return None
+        value = value.strip()
+        if value == "":
+            return None
+        
+        if len(value.split(".")) not in (2, 3):
+            raise ValueError(f"Invalid python version specification: '{value}'")
+        
+        # Only allow numbers and operators (e.g. >=3.10, ==3.9.1, etc. not python=3.10.0-alpha)
+        allowed_characters = set("0123456789.><=!,~@")
+        if any(char not in allowed_characters for char in value):
+            raise ValueError(f"Invalid characters in python version specification: '{value}'")
+
+        return value
+
 
     def hash(self) -> str:
         import hashlib

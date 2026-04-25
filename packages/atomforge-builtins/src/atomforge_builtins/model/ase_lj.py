@@ -46,12 +46,12 @@ LennardJonesResourceCapabilities = ResourceCapabilities(
 class LennardJonesEnvironmentFactory(EnvironmentFactory[LennardJones]):
     dependency_summary = DependencySummary(
         base_requirements=("ase",),
-        python="python3.12",
+        python="3.12",
     )
 
     def build(self, spec: LennardJones) -> EnvironmentSpec:
         return EnvironmentSpec(
-            name=spec.kind, python="python3.12", requirements=["ase"]
+            name=spec.kind, python="3.12", requirements=["ase"]
         )
 
 

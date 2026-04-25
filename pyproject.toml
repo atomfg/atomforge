@@ -30,7 +30,7 @@ dev = [
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",
-    "ruff>=0.15.10",
+    "ruff>=0.15.10",    
 ]
 
 [tool.pytest.ini_options]
@@ -49,11 +49,7 @@ omit = []
 [tool.ruff]
 line-length = 88
 
-[tool.uv.workspace]
-members = ["packages/*"]
-
 [tool.uv.sources]
-atomforge-chgnet = { workspace = true }
-atomforge-core = { workspace = true }
-atomforge-runtime = { workspace = true }
-atomforge-builtins = { workspace = true }
+atomforge_core = { path="/Users/au616397/Repositories/atomforge/packages/atomforge-core", editable=true }
+atomforge_runtime = { path="/Users/au616397/Repositories/atomforge/packages/atomforge-runtime", editable=true }
+atomforge_builtins = { path="/Users/au616397/Repositories/atomforge/packages/atomforge-builtins", editable=true }
