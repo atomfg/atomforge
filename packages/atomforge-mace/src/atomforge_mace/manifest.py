@@ -9,5 +9,5 @@ mace_manifest = ModelManifest(
     metadata="atomforge_mace.mace_model:MACEMetadata",
     resource_capabilities="atomforge_mace.mace_model:MACEResourceCapabilities",
     distribution=["atomforge_mace"],
-    probe="atomforge.model.probes:torch_probe",
+    probe="atomforge_runtime.probes.torch_probe:torch_probe",
 )

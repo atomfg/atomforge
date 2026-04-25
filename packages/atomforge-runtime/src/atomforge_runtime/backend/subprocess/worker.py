@@ -108,18 +108,21 @@ class SubprocessWorker:
         ), False
 
     def _handle_request(self, request) -> tuple[TaskResponse, bool]:
-        match request.operation:
-            case "shutdown":
-                return self._shutdown_case(request)
-            case "init_model":
-                return self._init_model_case(request)
-            case "task":
-                return self._task_execution_case(request)
-            case _:
-                return ErrorResponse(
-                    request_id=request.request_id,
-                    error=f"unknown operation: {request.operation}",
-                ), False
+
+        operation_handlers = {
+            "shutdown": self._shutdown_case,
+            "init_model": self._init_model_case,
+            "task": self._task_execution_case,
+        }
+
+        handler = operation_handlers.get(request.operation, None)
+        if handler is None:
+            return ErrorResponse(
+                request_id=request.request_id,
+                error=f"unknown operation: {request.operation}",
+            ), False
+        
+        return handler(request)
 
     def _init_model_case(self, request: InitModelRequest) -> tuple[TaskResponse, bool]:
         try:

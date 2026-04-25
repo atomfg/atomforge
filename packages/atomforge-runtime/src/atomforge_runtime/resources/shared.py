@@ -1,4 +1,5 @@
-from typing import Literal, TypeAlias
+from typing import Literal, Union
+from typing_extensions import TypeAlias
 from dataclasses import dataclass
 from enum import Enum
 
@@ -7,7 +8,7 @@ Accelerator: TypeAlias = Literal["cpu", "gpu", "mps"]
 Precision: TypeAlias = Literal["f32", "f64"]
 RequestedAccelerator: TypeAlias = Literal["default", "cpu", "gpu", "mps"]
 RequestedPrecision: TypeAlias = Literal["default", "f32", "f64"]
-RequestedResource: TypeAlias = RequestedAccelerator | RequestedPrecision
+RequestedResource: TypeAlias = Union[RequestedAccelerator, RequestedPrecision]
 
 
 class Availability(str, Enum):
@@ -18,10 +19,10 @@ class Availability(str, Enum):
 
 @dataclass(frozen=True)
 class SystemResources:
-    cpu_count: int | None
+    cpu_count: Union[int, None]
     platform: str
     architecture: str
-    hostname: str | None
+    hostname: Union[str, None]
     gpu_available: Availability
 
 

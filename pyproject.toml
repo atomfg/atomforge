@@ -11,7 +11,7 @@ dependencies = [
     "atomforge-core",
     "atomforge-runtime",
     "atomforge-builtins",
-    "pydantic>=2.12.5",
+    "pydantic>=2",
     "rich",
     "uv>=0.11.7,<0.12",
     "rich-click>=1.9.7,<2",

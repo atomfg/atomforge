@@ -46,8 +46,8 @@ CHGNetMetadata = ModelMetadata(
 
 
 CHGNetEnvironmentFactory = environment_factory_from_callable(
-    lambda spec: EnvironmentSpec(name=spec.kind, python="python3.12", requirements=["chgnet", "ase"]),
-    DependencySummary(base_requirements=["chgnet", "ase"], python="python3.12"),
+    lambda spec: EnvironmentSpec(name=spec.kind, python=">=3.12", requirements=["chgnet", "ase"]),
+    DependencySummary(base_requirements=["chgnet", "ase"], python=">=3.12"),
 )
 
 
@@ -66,22 +66,15 @@ class CHGNetExecutor(ModelExecutor[CHGNet]):
 
         self._calc = CHGNetCalculator(use_device=use_device)
 
-    def convert_to_atoms(self, structure: StructureData):
+    def structure_conversion(self, structure: StructureData):
         from ase import Atoms
-
-        atoms = Atoms(
-            numbers=structure.numbers,
-            positions=structure.positions,
-            cell=structure.cell,
-            pbc=structure.pbc,
-        )
+        atoms = Atoms(**structure.to_ase_dict())
         return atoms
-
 
     def compute(
         self, structure: StructureData, properties: frozenset[Property]
     ) -> ModelResult:
-        atoms = self.convert_to_atoms(structure)
+        atoms = self.structure_conversion(structure)
         atoms.calc = self._calc
 
         if Property.FORCES in properties:

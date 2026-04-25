@@ -6,9 +6,9 @@ readme = "README.md"
 authors = [
     { name = "Mads-Peter", email = "machri@phys.au.dk" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
-    "atomforge",
+    "atomforge_core",
 ]
 
 [project.entry-points.'atomforge.model']
@@ -21,4 +21,5 @@ build-backend = "uv_build"
 
 
 [tool.uv.sources]
-atomforge = { workspace = true }
+atomforge_core = { path="/Users/au616397/Repositories/atomforge/packages/atomforge-core", editable=true }
+

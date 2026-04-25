@@ -50,7 +50,7 @@ class PyprojectSpec:
             if python_spec is None:
                 python_spec = "=="
 
-            if len(python_version.split(".")) == 2:
+            if len(python_version.split(".")) == 2 and python_spec == "==":
                 python_version = python_version + ".*"
             else:
                 python_version = python_version

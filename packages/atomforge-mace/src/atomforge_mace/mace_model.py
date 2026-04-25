@@ -7,7 +7,7 @@ from atomforge_core.property import Property
 from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.model.result import ModelResult
 from atomforge_core.model.spec import ModelSpec
-from atomforge_core.structure import Structure
+from atomforge_core.structure import StructureData
 from atomforge_core.resources.resource_models import ResolvedResources
 from atomforge_core.env.factory import (
     environment_factory_from_callable,
@@ -52,10 +52,10 @@ MACEMetadata = ModelMetadata(
 MACEEnvironmentFactory = environment_factory_from_callable(
     lambda spec: EnvironmentSpec(
         name=spec.kind,
-        python="python3.12",
+        python=">=3.12",
         requirements=["mace-torch", "torch"],
     ),
-    DependencySummary(base_requirements=["mace-torch", "torch"], python="python3.12"),
+    DependencySummary(base_requirements=["mace-torch", "torch"], python=">=3.12"),
 )
 
 class MACEExecutor(ModelExecutor[MACE]):
@@ -92,11 +92,17 @@ class MACEExecutor(ModelExecutor[MACE]):
             device = None
 
         return {"default_dtype": default_dtype, "device": device}
+    
+    def structure_conversion(self, structure: StructureData):
+        from ase import Atoms
+        # Convert the StructureData to an ASE Atoms object
+        atoms = Atoms(**structure.to_ase_dict())
+        return atoms
 
     def compute(
-        self, structure: Structure, properties: frozenset[Property]
+        self, structure: StructureData, properties: frozenset[Property]
     ) -> ModelResult:
-        atoms = structure.to_ase()
+        atoms = self.structure_conversion(structure)
         atoms.calc = self._calc
 
         if Property.FORCES in properties:

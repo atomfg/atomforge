@@ -132,5 +132,4 @@ class UVEnvironmentProvider(EnvironmentProvider):
                 else:
                     # If the environment is invalid, remove it:
                     self.remove_environment(handle)
-        print(f"No existing environment found for key {env_key}")
         return None

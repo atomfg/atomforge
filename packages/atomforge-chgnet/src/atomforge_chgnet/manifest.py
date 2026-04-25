@@ -1,6 +1,4 @@
-
 from atomforge_core.registry.model_manifest import ModelManifest
-
 
 chgnet_manifest = ModelManifest(
     kind="chgnet",
@@ -11,5 +9,5 @@ chgnet_manifest = ModelManifest(
     metadata="atomforge_chgnet.chgnet_model:CHGNetMetadata",
     resource_capabilities="atomforge_chgnet.chgnet_model:CHGNetResourceCapabilities",
     distribution=["atomforge_chgnet"],
-    probe="atomforge.model.probes:torch_probe",
+    probe="atomforge_runtime.probes.torch_probe:torch_probe",
 )

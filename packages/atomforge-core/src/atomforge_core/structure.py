@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, field_validator, model_validator
 
 class StructureData(BaseModel):
@@ -28,6 +30,14 @@ class StructureData(BaseModel):
         if len(self.numbers) != len(self.positions):
             raise ValueError("The length of numbers must match the length of positions.")
         return self
+    
+    def to_ase_dict(self) -> dict[str, Any]:
+        return {
+            "positions": self.positions,
+            "cell": self.cell,
+            "numbers": self.numbers,
+            "pbc": self.pbc
+        }
     
 
 if __name__ == "__main__":

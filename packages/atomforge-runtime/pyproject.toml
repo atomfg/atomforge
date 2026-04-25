@@ -6,10 +6,10 @@ readme = "README.md"
 authors = [
     { name = "Mads-Peter", email = "machri@phys.au.dk" }
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "atomforge-core",
-    "pydantic>=2.12.5",
+    "pydantic>=2",
 ]
 
 [build-system]
