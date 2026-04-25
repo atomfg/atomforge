@@ -1,8 +1,8 @@
 
-from atomforge._core.protocol.request import (
+from atomforge_core.protocol.request import (
     ShutdownRequest,
 )
-from atomforge._core.protocol.response import (
+from atomforge_core.protocol.response import (
     ShutdownResponse,
 )
 

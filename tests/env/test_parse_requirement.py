@@ -1,5 +1,5 @@
 import pytest
-from atomforge._core.env.env import parse_requirement
+from atomforge_core.env.env import parse_requirement
 
 @pytest.mark.parametrize(
     "requirement",

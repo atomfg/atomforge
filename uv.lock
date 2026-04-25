@@ -5,9 +5,12 @@ requires-python = ">=3.12"
 [manifest]
 members = [
     "atomforge",
+    "atomforge-builtins",
     "atomforge-chgnet",
+    "atomforge-core",
     "atomforge-mace",
     "atomforge-mg3net",
+    "atomforge-runtime",
 ]
 
 [[package]]
@@ -33,6 +36,9 @@ name = "atomforge"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "atomforge-builtins" },
+    { name = "atomforge-core" },
+    { name = "atomforge-runtime" },
     { name = "pydantic" },
     { name = "rich" },
     { name = "rich-click" },
@@ -50,6 +56,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "atomforge-builtins", editable = "packages/atomforge-builtins" },
+    { name = "atomforge-core", editable = "packages/atomforge-core" },
+    { name = "atomforge-runtime", editable = "packages/atomforge-runtime" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "rich" },
     { name = "rich-click", specifier = ">=1.9.7,<2" },
@@ -66,6 +75,17 @@ dev = [
 ]
 
 [[package]]
+name = "atomforge-builtins"
+version = "0.1.0"
+source = { editable = "packages/atomforge-builtins" }
+dependencies = [
+    { name = "atomforge-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "atomforge-core", editable = "packages/atomforge-core" }]
+
+[[package]]
 name = "atomforge-chgnet"
 version = "0.1.0"
 source = { editable = "packages/atomforge-chgnet" }
@@ -75,6 +95,17 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "atomforge", editable = "." }]
+
+[[package]]
+name = "atomforge-core"
+version = "0.1.0"
+source = { editable = "packages/atomforge-core" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.12.5" }]
 
 [[package]]
 name = "atomforge-mace"
@@ -97,6 +128,17 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "atomforge", editable = "." }]
+
+[[package]]
+name = "atomforge-runtime"
+version = "0.1.0"
+source = { editable = "packages/atomforge-runtime" }
+dependencies = [
+    { name = "atomforge-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "atomforge-core", editable = "packages/atomforge-core" }]
 
 [[package]]
 name = "click"

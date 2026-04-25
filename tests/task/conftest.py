@@ -1,7 +1,7 @@
 import pytest
 
-from atomforge._builtins.model.ase_lj import LennardJones, LennardJonesExecutor
-from atomforge._core.resources.resource_models import ResolvedResources
+from atomforge_builtins.model.ase_lj import LennardJones, LennardJonesExecutor
+from atomforge_core.resources.resource_models import ResolvedResources
 
 @pytest.fixture
 def model_executor():

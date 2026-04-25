@@ -1,4 +1,4 @@
-from atomforge._runtime.registry.helpers import (
+from atomforge_runtime.registry.helpers import (
     load_symbol,
     normalize_distribution_name,
     resolve_distribution,
@@ -20,6 +20,6 @@ def test_resolve_distribution_returns_install_requirement():
 
 
 def test_load_symbol_loads_existing_symbol():
-    symbol = load_symbol("atomforge._core.registry.task_manifest:TaskManifest")
+    symbol = load_symbol("atomforge_core.registry.task_manifest:TaskManifest")
 
     assert symbol.__name__ == "TaskManifest"

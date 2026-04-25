@@ -1,8 +1,8 @@
 import pytest
 
-from atomforge._runtime.resources.precision import resolve_precision
-from atomforge._core.resources.resource_models import ExecutionResources
-from atomforge._core.resources.resource_caps import ResourceCapabilities
+from atomforge_runtime.resources.precision import resolve_precision
+from atomforge_core.resources.resource_models import ExecutionResources
+from atomforge_core.resources.resource_caps import ResourceCapabilities
 
 def test_resolve_precision_default_prefer_f64():
     exec_resources = ExecutionResources()

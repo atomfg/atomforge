@@ -1,7 +1,7 @@
 import pytest 
 
-from atomforge._host.backend.subprocess.backend import SubprocessBackend
-from atomforge._host.settings.settings import AtomforgeSettings
+from atomforge.backend.subprocess.backend import SubprocessBackend
+from atomforge.settings.settings import AtomforgeSettings
 from pathlib import Path
 
 @pytest.fixture(scope="session")

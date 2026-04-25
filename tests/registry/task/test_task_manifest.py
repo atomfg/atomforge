@@ -1,5 +1,5 @@
 import pytest
-from atomforge._core.registry.task_manifest import TaskManifest
+from atomforge_core.registry.task_manifest import TaskManifest
 
 
 def test_task_manifest_factory_default(manifest_factory):

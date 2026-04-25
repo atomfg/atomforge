@@ -1,6 +1,6 @@
 import pytest
 from click.testing import CliRunner
-from atomforge._host.cli.model.list import list_command
+from atomforge.cli.model.list import list_command
 
 @pytest.fixture
 def runner():

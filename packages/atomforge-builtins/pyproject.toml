@@ -1,0 +1,28 @@
+[project]
+name = "atomforge-builtins"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Mads-Peter", email = "machri@phys.au.dk" }
+]
+requires-python = ">=3.8"
+dependencies = [
+    "atomforge-core",
+]
+
+[project.entry-points.'atomforge.task']
+single_point = "atomforge_builtins.task.task_manifests:single_point_manifest"
+bfgs = "atomforge_builtins.task.task_manifests:bfgs_manifest"
+
+[project.entry-points.'atomforge.model']
+lennard_jones = "atomforge_builtins.model.model_manifests:lennard_jones_manifest"
+no_dep = "atomforge_builtins.model.model_manifests:no_dep_manifest"
+
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+atomforge-core = { workspace = true }

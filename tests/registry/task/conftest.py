@@ -1,15 +1,15 @@
 import pytest
-from atomforge._core.registry.task_manifest import TaskManifest
+from atomforge_core.registry.task_manifest import TaskManifest
 
 @pytest.fixture
 def manifest_factory():
     def factory(
     kind="single_point",
-    executor_cls="atomforge._builtins.task.singlepoint:SinglePointExecutor",
-    spec_model="atomforge._builtins.task.singlepoint:SinglePoint",
-    result_model="atomforge._builtins.task.singlepoint:SinglePointResult",
-    capability_spec="atomforge._builtins.task.singlepoint:SinglePointCapabilitySpec",
-    environment_factory_cls="atomforge._builtins.task.singlepoint:SinglePointEnvironmentFactory",
+    executor_cls="atomforge_builtins.task.singlepoint:SinglePointExecutor",
+    spec_model="atomforge_builtins.task.singlepoint:SinglePoint",
+    result_model="atomforge_builtins.task.singlepoint:SinglePointResult",
+    capability_spec="atomforge_builtins.task.singlepoint:SinglePointCapabilitySpec",
+    environment_factory_cls="atomforge_builtins.task.singlepoint:SinglePointEnvironmentFactory",
     distribution=["atomforge"]):
         return TaskManifest(
             kind=kind,

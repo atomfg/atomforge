@@ -1,11 +1,11 @@
-from atomforge._core.resources.resource_models import ExecutionResources
-from atomforge._runtime.resources import (
+from atomforge_core.resources.resource_models import ExecutionResources
+from atomforge_runtime.resources import (
     Availability,
     resolve_accelerator,
     SystemResources,
 )
-from atomforge._core.resources.resource_caps import ResourceCapabilities
-from atomforge._core.resources.resource_probes import ProbeResult
+from atomforge_core.resources.resource_caps import ResourceCapabilities
+from atomforge_core.resources.resource_probes import ProbeResult
 
 import pytest
 

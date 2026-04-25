@@ -6,31 +6,23 @@ readme = "README.md"
 authors = [
     { name = "Mads-Peter", email = "machri@phys.au.dk" }
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
+    "atomforge-core",
+    "atomforge-runtime",
+    "atomforge-builtins",
     "pydantic>=2.12.5",
-    "rich", 
-    "uv>=0.11.7,<0.12", 
+    "rich",
+    "uv>=0.11.7,<0.12",
     "rich-click>=1.9.7,<2",
 ]
 
 [project.scripts]
-atomforge = "atomforge._host.cli.main:main"
-
-[project.entry-points.'atomforge.task']
-single_point = "atomforge._builtins.task.task_manifests:single_point_manifest"
-bfgs = "atomforge._builtins.task.task_manifests:bfgs_manifest"
-
-[project.entry-points.'atomforge.model']
-lennard_jones = "atomforge._builtins.model.model_manifests:lennard_jones_manifest"
-no_dep = "atomforge._builtins.model.model_manifests:no_dep_manifest"
+atomforge = "atomforge.cli.main:main"
 
 [build-system]
 requires = ["uv_build>=0.8.18,<0.9.0"]
 build-backend = "uv_build"
-
-[tool.ruff]
-line-length = 88
 
 [dependency-groups]
 dev = [
@@ -54,28 +46,14 @@ addopts = [
 [tool.coverage.run]
 omit = []
 
-
-[tool.pixi.workspace]
-channels = ["conda-forge"]
-platforms = ["osx-arm64", "osx-64", "linux-64", "win-64"]
-
-[tool.pixi.pypi-dependencies]
-atomforge = { path = ".", editable = true }
-
-[tool.pixi.environments]
-default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
-
-[tool.pixi.tasks]
-test = { cmd = "pytest", default-environment = "dev" }
-test-cov = { cmd = "pytest --cov-report term --cov-report html:.coverage-html --cov src/atomforge", default-environment = "dev" }
-test-cov-sandbox = { cmd = "pytest --cov-report term --cov-report html:.coverage-html --cov src/atomforge", env = { UV_CACHE_DIR = "/tmp/uv-cache" }, default-environment = "dev" }
-
-ruff-check = { cmd = "ruff check .", default-environment = "dev" }
-ruff-fmt = { cmd = "ruff format .", default-environment = "dev" }
+[tool.ruff]
+line-length = 88
 
 [tool.uv.workspace]
 members = ["packages/*"]
 
 [tool.uv.sources]
 atomforge-chgnet = { workspace = true }
+atomforge-core = { workspace = true }
+atomforge-runtime = { workspace = true }
+atomforge-builtins = { workspace = true }

@@ -1,10 +1,10 @@
 import pytest
 
-from atomforge._core.property import Property
-from atomforge._builtins.model.nodep_model import NoDep, NoDepExecutor
-from atomforge._core.structure import StructureData
-from atomforge._core.resources.resource_models import ResolvedResources
-from atomforge._builtins.task.singlepoint import SinglePoint, SinglePointExecutor
+from atomforge_core.property import Property
+from atomforge_builtins.model.nodep_model import NoDep, NoDepExecutor
+from atomforge_core.structure import StructureData
+from atomforge_core.resources.resource_models import ResolvedResources
+from atomforge_builtins.task.singlepoint import SinglePoint, SinglePointExecutor
 
 
 @pytest.fixture

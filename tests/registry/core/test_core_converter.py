@@ -1,7 +1,7 @@
 import pytest
 
-from atomforge._runtime.registry.base_converter import ManifestToRegistrationConverterBase
-from atomforge._core.registry.errors import RegistryCoreError
+from atomforge_runtime.registry.base_converter import ManifestToRegistrationConverterBase
+from atomforge_core.registry.errors import RegistryCoreError
 
 
 class DummyConverter(ManifestToRegistrationConverterBase):

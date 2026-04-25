@@ -1,8 +1,8 @@
 import pytest
-from atomforge._runtime.backend.subprocess.worker import SubprocessWorker
-from atomforge._runtime.registry.task.task_registry import TaskRegistry
-from atomforge._runtime.registry.model.model_registry import ModelRegistry
-from atomforge._runtime.resources import SystemResources, Availability
+from atomforge_runtime.backend.subprocess.worker import SubprocessWorker
+from atomforge_runtime.registry.task.task_registry import TaskRegistry
+from atomforge_runtime.registry.model.model_registry import ModelRegistry
+from atomforge_runtime.resources import SystemResources, Availability
 from io import StringIO
 
 

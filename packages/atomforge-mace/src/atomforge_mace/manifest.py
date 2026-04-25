@@ -1,4 +1,4 @@
-from atomforge._core.registry.model_manifest import ModelManifest
+from atomforge_core.registry.model_manifest import ModelManifest
 
 mace_manifest = ModelManifest(
     kind="mace",

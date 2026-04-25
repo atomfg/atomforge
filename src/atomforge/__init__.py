@@ -1,1 +1,1 @@
-from atomforge._core.structure import StructureData
+from atomforge_core.structure import StructureData

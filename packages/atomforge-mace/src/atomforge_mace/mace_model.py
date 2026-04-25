@@ -1,15 +1,15 @@
 from typing import Literal, Any
 
-from atomforge._core.env.env import EnvironmentSpec
-from atomforge._core.model.executor import ModelExecutor
-from atomforge._core.model.metadata import ModelMetadata, Reference
-from atomforge._core.property import Property
-from atomforge._core.resources.resource_caps import ResourceCapabilities
-from atomforge._core.model.result import ModelResult
-from atomforge._core.model.spec import ModelSpec
-from atomforge._core.structure import Structure
-from atomforge._core.resources.resource_models import ResolvedResources
-from atomforge._core.env.factory import (
+from atomforge_core.env.env import EnvironmentSpec
+from atomforge_core.model.executor import ModelExecutor
+from atomforge_core.model.metadata import ModelMetadata, Reference
+from atomforge_core.property import Property
+from atomforge_core.resources.resource_caps import ResourceCapabilities
+from atomforge_core.model.result import ModelResult
+from atomforge_core.model.spec import ModelSpec
+from atomforge_core.structure import Structure
+from atomforge_core.resources.resource_models import ResolvedResources
+from atomforge_core.env.factory import (
     environment_factory_from_callable,
     DependencySummary,
 )

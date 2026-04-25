@@ -18,8 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: prefix-dev/setup-pixi@v0.9.4
+      - uses: astral-sh/setup-uv@v6
         with:
-          pixi-version: v0.66.0
-          cache: true
-      - run: pixi run test
+          enable-cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Sync dev dependencies
+        run: uv sync --group dev
+
+      - name: Run tests
+        run: just test

@@ -1,4 +1,4 @@
-from atomforge._core.structure import StructureData
+from atomforge_core.structure import StructureData
 
 def compare_structures(struct1, struct2):
     assert struct1.positions.tolist() == struct2.positions.tolist()

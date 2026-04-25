@@ -1,14 +1,14 @@
 import pytest
 
-from atomforge._host.backend.subprocess.backend import SubprocessBackend
-from atomforge._core.env.env import EnvironmentSpec
-from atomforge._builtins.model.ase_lj import LennardJones
-from atomforge._core.property import Property
-from atomforge._core.task.capability import TaskCapabilitySpec
-from atomforge._runtime.registry.task.task_registry import TaskRegistry
-from atomforge._builtins.task.bfgs import BFGS, BFGSExecutor, BFGSResult
-from atomforge._builtins.task.singlepoint import SinglePoint
-from atomforge._runtime.registry.task_registration import TaskRegistration
+from atomforge.backend.subprocess.backend import SubprocessBackend
+from atomforge_core.env.env import EnvironmentSpec
+from atomforge_builtins.model.ase_lj import LennardJones
+from atomforge_core.property import Property
+from atomforge_core.task.capability import TaskCapabilitySpec
+from atomforge_runtime.registry.task.task_registry import TaskRegistry
+from atomforge_builtins.task.bfgs import BFGS, BFGSExecutor, BFGSResult
+from atomforge_builtins.task.singlepoint import SinglePoint
+from atomforge_runtime.registry.task_registration import TaskRegistration
 
 
 def test_task_registry_duplicate_kind_fails():
@@ -39,7 +39,7 @@ def test_task_registry_duplicate_kind_fails():
 
 
 def test_builtin_registration_exposes_capabilities_and_environment(example_structure):
-    from atomforge._runtime.registry.task.task_helpers import ManifestToRegistrationConverter
+    from atomforge_runtime.registry.task.task_helpers import ManifestToRegistrationConverter
 
     backend = SubprocessBackend()
     registration = backend._task_registry.get("bfgs")
@@ -50,7 +50,7 @@ def test_builtin_registration_exposes_capabilities_and_environment(example_struc
     )
     assert registration.capability_spec.optional == frozenset()
     assert registration.environment_factory(task) == EnvironmentSpec(
-        name="bfgs", requirements=["ase"], provider_requirements=[ManifestToRegistrationConverter._resolve_distribution("atomforge")]
+        name="bfgs", requirements=["ase"], provider_requirements=[ManifestToRegistrationConverter._resolve_distribution("atomforge_builtins")],
     )
 
 

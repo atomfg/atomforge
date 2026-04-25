@@ -1,6 +1,6 @@
 import pytest
 
-from atomforge._core.registry.model_manifest import ModelManifest
+from atomforge_core.registry.model_manifest import ModelManifest
 
 
 def test_model_manifest_factory_default(manifest_factory):

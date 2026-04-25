@@ -1,7 +1,7 @@
 import pytest
-from atomforge._core.structure import StructureData
-from atomforge._builtins.model.ase_lj import LennardJones
-from atomforge._builtins.task.singlepoint import SinglePoint
+from atomforge_core.structure import StructureData
+from atomforge_builtins.model.ase_lj import LennardJones
+from atomforge_builtins.task.singlepoint import SinglePoint
 
 @pytest.fixture(scope="module", params=[["forces", "energy"], ["forces"], ["energy"]])
 def properties(request):
@@ -24,7 +24,7 @@ def single_point_task(properties):
 
 @pytest.fixture(scope="module")
 def single_point_result(backend, single_point_task):
-    from atomforge._core.resources.resource_models import ExecutionResources
+    from atomforge_core.resources.resource_models import ExecutionResources
 
     resources = ExecutionResources(accelerator="cpu", precision="f64")
     model = LennardJones()
