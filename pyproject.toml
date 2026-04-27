@@ -51,6 +51,6 @@ omit = []
 line-length = 88
 
 [tool.uv.sources]
-atomforge_core = { path="/Users/au616397/Repositories/atomforge/packages/atomforge-core", editable=true }
-atomforge_runtime = { path="/Users/au616397/Repositories/atomforge/packages/atomforge-runtime", editable=true }
-atomforge_builtins = { path="/Users/au616397/Repositories/atomforge/packages/atomforge-builtins", editable=true }
+atomforge_core = { path="packages/atomforge-core", editable=true }
+atomforge_runtime = { path="packages/atomforge-runtime", editable=true }
+atomforge_builtins = { path="packages/atomforge-builtins", editable=true }

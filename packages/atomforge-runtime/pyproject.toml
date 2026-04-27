@@ -17,4 +17,4 @@ requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
-atomforge_core = { path="/Users/au616397/Repositories/atomforge/packages/atomforge-core", editable=true }
+atomforge_core = { path="../atomforge-core", editable=true }
