@@ -1,6 +1,7 @@
 import pytest
 from atomforge_core.env.env import EnvironmentSpec
 
+
 @pytest.fixture
 def env_spec() -> EnvironmentSpec:
     return EnvironmentSpec(
@@ -62,3 +63,77 @@ def test_merge_extras_conflict(env_spec: EnvironmentSpec):
     extras2 = {"dev": "tox"}
     with pytest.raises(ValueError):
         env_spec.extras_merge(extras1, extras2)
+
+
+def test_provider_requirements_are_normalized():
+    env_spec = EnvironmentSpec(
+        name="test-env",
+        provider_requirements=(" Atomforge_Mace ", "atomforge-mace", "foo.bar"),
+    )
+
+    assert env_spec.provider_requirements == ("atomforge-mace", "foo.bar")
+
+
+@pytest.mark.parametrize(
+    "provider_requirement",
+    [
+        "atomforge-mg3net>=1",
+        "foo[bar]",
+        "foo ; python_version<'3.12'",
+        "foo @ file:///tmp/foo",
+    ],
+)
+def test_provider_requirements_reject_non_name_syntax(provider_requirement: str):
+    with pytest.raises(ValueError):
+        EnvironmentSpec(
+            name="test-env",
+            provider_requirements=(provider_requirement,),
+        )
+
+
+def test_provider_requirements_reject_non_string_entries():
+    with pytest.raises(TypeError):
+        EnvironmentSpec(
+            name="test-env",
+            provider_requirements=("atomforge-core", 123),
+        )
+
+
+def test_provider_requirements_reject_single_string_input():
+    with pytest.raises(TypeError):
+        EnvironmentSpec(
+            name="test-env",
+            provider_requirements="atomforge-core",
+        )
+
+
+def test_requirements_still_accept_rich_requirement_strings():
+    env_spec = EnvironmentSpec(
+        name="test-env",
+        requirements=(
+            "foo[bar]",
+            "foo @ file:///tmp/foo",
+            "foo ; python_version<'3.12'",
+        ),
+    )
+
+    assert env_spec.requirements == (
+        "foo ; python_version<'3.12'",
+        "foo @ file:///tmp/foo",
+        "foo[bar]",
+    )
+
+
+def test_merge_provider_requirements_deduplicates_normalized_names():
+    left = EnvironmentSpec(
+        name="left",
+        provider_requirements=("atomforge_mace",),
+    )
+    right = EnvironmentSpec(
+        name="right",
+        provider_requirements=("atomforge-mace",),
+    )
+
+    merged = left + right
+
+    assert merged.provider_requirements == ("atomforge-mace",)

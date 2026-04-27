@@ -104,9 +104,7 @@ def test_converter_wrapped_environment_factory(manifest_factory):
     example_model_spec = LennardJones()
     env_spec = environment_factory(example_model_spec)
 
-    assert env_spec.provider_requirements == (
-        ManifestToRegistrationConverter._resolve_distribution("atomforge"),
-    )
+    assert env_spec.provider_requirements == ("atomforge",)
 
 
 def test_converter_loads_optional_probe(manifest_factory):

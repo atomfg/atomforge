@@ -40,6 +40,5 @@ def test_converter_wrapped_environment_factory(manifest_factory, example_structu
     example_task_spec = registration.spec_model(structure=example_structure)
     env_spec = environment_factory(example_task_spec)
 
-    assert env_spec.provider_requirements == (ManifestToRegistrationConverter._resolve_distribution("atomforge"),)
-
+    assert env_spec.provider_requirements == ("atomforge",)
 

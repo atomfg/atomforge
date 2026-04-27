@@ -78,12 +78,8 @@ class ManifestToRegistrationConverterBase(ABC):
         components = self._load_components(manifest)
         self._validate_distribution(manifest.distribution, entry_point_package)
 
-        provider_requirements = [
-            resolve_distribution(name) for name in manifest.distribution
-        ]
-
         factory_class = components["environment_factory_cls"]
-        factory = factory_class().with_provider_requirements(provider_requirements)
+        factory = factory_class().with_provider_requirements(manifest.distribution)
 
         registration = self._build_registration(manifest, components, factory)
         return registration, manifest.kind

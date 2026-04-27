@@ -39,8 +39,6 @@ def test_task_registry_duplicate_kind_fails():
 
 
 def test_builtin_registration_exposes_capabilities_and_environment(example_structure):
-    from atomforge_runtime.registry.task.task_helpers import ManifestToRegistrationConverter
-
     backend = SubprocessBackend()
     registration = backend._task_registry.get("bfgs")
     task = BFGS(structure=example_structure)
@@ -50,7 +48,7 @@ def test_builtin_registration_exposes_capabilities_and_environment(example_struc
     )
     assert registration.capability_spec.optional == frozenset()
     assert registration.environment_factory(task) == EnvironmentSpec(
-        name="bfgs", requirements=["ase"], provider_requirements=[ManifestToRegistrationConverter._resolve_distribution("atomforge_builtins")],
+        name="bfgs", requirements=["ase"], provider_requirements=["atomforge-builtins"],
     )
 
 

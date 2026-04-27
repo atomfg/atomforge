@@ -1,7 +1,27 @@
 from __future__ import annotations
 from typing import Mapping
+import re
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+
+_DISTRIBUTION_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def normalize_distribution_name(name: str) -> str:
+    return name.strip().lower().replace("_", "-")
+
+
+def validate_distribution_name(name: str) -> str:
+    stripped = name.strip()
+    if not stripped:
+        raise ValueError("distribution name must not be empty")
+    if not _DISTRIBUTION_NAME_RE.fullmatch(stripped):
+        raise ValueError(
+            "distribution names must be bare package names only "
+            f"(got {name!r})"
+        )
+    return normalize_distribution_name(stripped)
 
 
 def parse_requirement(requirement_str: str) -> tuple[str, str | None]:
@@ -47,6 +67,24 @@ class EnvironmentSpec(BaseModel):
     @classmethod
     def normalize_string_collections(cls, value):
         return tuple(sorted(set(value)))
+
+    @field_validator("provider_requirements", mode="before")
+    @classmethod
+    def normalize_provider_requirements(cls, value):
+        if value is None:
+            return ()
+        if isinstance(value, str):
+            raise TypeError(
+                "provider_requirements must be an iterable of strings, not a single string"
+            )
+
+        normalized = []
+        for item in value:
+            if not isinstance(item, str):
+                raise TypeError("provider_requirements must contain only strings")
+            normalized.append(validate_distribution_name(item))
+
+        return tuple(sorted(set(normalized)))
     
     @field_validator("python", mode="before")
     def normalize_python_version(cls, value):
@@ -170,10 +208,13 @@ class EnvironmentSpec(BaseModel):
     def with_provider_requirements(
         self, requirement: tuple[str, ...]
     ) -> "EnvironmentSpec":
-        return self.model_copy(
-            update={
-                "provider_requirements": tuple(
-                    sorted(set(self.provider_requirements) | set(requirement))
-                )
-            }
+        return EnvironmentSpec(
+            name=self.name,
+            python=self.python,
+            requirements=self.requirements,
+            channels=self.channels,
+            extras=self.extras,
+            provider_requirements=tuple(
+                sorted(set(self.provider_requirements) | set(requirement))
+            ),
         )

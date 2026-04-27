@@ -7,9 +7,8 @@ from atomforge_core.env.env import EnvironmentSpec
 from atomforge.env.base.handle import EnvironmentHandle
 from atomforge.env.base.info import EnvironmentInfo
 from atomforge.env.base.provider import EnvironmentProvider
-from atomforge.env.uv.pyproject_writer import PyprojectSpec
-
-from atomforge.env.uv.resolve import resolve_distribution
+from atomforge.env.uv.uv_pyproject_writer import UVPyprojectWriter
+from atomforge.env.base.dependency import ResolvedDependency
 import hashlib
 
 
@@ -18,8 +17,8 @@ class UVEnvironmentProvider(EnvironmentProvider):
 
     def __init__(self, search_path: tuple[Path, ...], install_path: Path):
         super().__init__(search_path, install_path)
-        self._core_resolved = resolve_distribution("atomforge-core")
-        self._runtime_resolved = resolve_distribution("atomforge-runtime")
+        self._core_resolved = ResolvedDependency(requirement="atomforge-core", exact=True)
+        self._runtime_resolved = ResolvedDependency(requirement="atomforge-runtime", exact=True)
         self._internal_package_fingerprint = (
             self._core_resolved.fingerprint + self._runtime_resolved.fingerprint
         )
@@ -49,8 +48,7 @@ class UVEnvironmentProvider(EnvironmentProvider):
         # Write the pyproject.toml for the environment:
         project_path = self.install_path / self.provider_name / env_key
         project_path.mkdir(parents=True, exist_ok=True)
-        pyproject_spec = self._make_pyproject_spec(spec)
-        pyproject_spec.write(project_path / "pyproject.toml")
+        self._write_pyproject(spec, project_path / "pyproject.toml")
 
         # Sync the environment:
         command = [
@@ -95,30 +93,17 @@ class UVEnvironmentProvider(EnvironmentProvider):
             if result.returncode != 0:
                 raise RuntimeError(f"Failed to remove environment: {result}")
 
-    def _make_pyproject_spec(self, spec: EnvironmentSpec) -> PyprojectSpec:
-        provider_requirements = spec.provider_requirements
-        atomforge_requirements = tuple(
-            [
-                self._core_resolved.dependency_entry,
-                self._runtime_resolved.dependency_entry,
-            ]
-        )
-        spec_requirements = spec.requirements
-        all_requirements = (
-            provider_requirements + atomforge_requirements + spec_requirements
-        )
-
-        sources = {}
-        for resolved in (self._core_resolved, self._runtime_resolved):
-            if resolved.uv_source:
-                sources[resolved.name] = resolved.get_source_entry()
-
-        return PyprojectSpec(
+    def _write_pyproject(self, spec: EnvironmentSpec, path: Path) -> None:
+        provider_requirements = [ResolvedDependency(req, exact=True) for req in spec.provider_requirements]
+        atomforge_requirements = [self._runtime_resolved, self._core_resolved]
+        spec_requirements = [ResolvedDependency(req, exact=False) for req in spec.requirements]
+        all_requirements = provider_requirements + atomforge_requirements + spec_requirements
+        writer = UVPyprojectWriter(
             env_name=spec.name,
             python_version=spec.python,
             dependencies=list(all_requirements),
-            uv_sources=sources,
         )
+        writer.write(path)
 
     def _search_for_environment(self, env_key: str) -> EnvironmentHandle | None:
         for path in self.search_paths:
