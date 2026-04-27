@@ -1,12 +1,8 @@
-from atomforge_core.env.factory import EnvironmentFactory
 from atomforge_runtime.registry.base_converter import ManifestToRegistrationConverterBase
 from atomforge_core.registry.errors import RegistryCoreError
 from atomforge_runtime.registry.helpers import resolve_distribution
 from atomforge_core.registry.task_manifest import TaskManifest
 from atomforge_runtime.registry.task_registration import TaskRegistration
-from atomforge_core.task.capability import TaskCapabilitySpec
-from atomforge_core.task.executor import TaskExecutor
-from atomforge_core.task.result import TaskResult
 from atomforge_core.task.spec import TaskSpec
 
 
@@ -22,34 +18,25 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             "spec_model": self._load_subclass(
                 manifest.spec_model, TaskSpec, "Spec model"
             ),
-            "executor_cls": self._load_subclass(
-                manifest.executor_cls, TaskExecutor, "Executor class"
-            ),
-            "result_model": self._load_subclass(
-                manifest.result_model, TaskResult, "Result model"
-            ),
-            "capability_spec": self._load_instance(
-                manifest.capability_spec, TaskCapabilitySpec, "Capability spec"
-            ),
-            "environment_factory_cls": self._load_subclass(
-                manifest.environment_factory_cls,
-                EnvironmentFactory,
-                "Environment factory",
-            ),
+            "executor_cls": manifest.executor_cls,
+            "result_model": manifest.result_model,
+            "capability_spec": manifest.capability_spec,
+            "environment_factory_cls": manifest.environment_factory_cls,
         }
 
     def _build_registration(
         self,
         manifest: TaskManifest,
         components: dict[str, object],
-        environment_factory: EnvironmentFactory,
     ) -> TaskRegistration:
         return TaskRegistration(
+            kind=manifest.kind,
             spec_model=components["spec_model"],
-            executor_class=components["executor_cls"],
-            result_model=components["result_model"],
-            capability_spec=components["capability_spec"],
-            environment_factory=environment_factory,
+            executor_class_path=components["executor_cls"],
+            result_model_path=components["result_model"],
+            capability_spec_path=components["capability_spec"],
+            environment_factory_path=components["environment_factory_cls"],
+            source=manifest.distribution,
         )
 
     @staticmethod

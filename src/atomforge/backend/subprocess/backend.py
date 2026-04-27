@@ -77,7 +77,7 @@ class SubprocessBackend:
 
         # For now, we just use the default environment spec from the model,
         # but in the future we could allow tasks to specify their own environment requirements
-        model_env_spec = self._model_registry.get(model_spec.kind).environment_factory(
+        model_env_spec = self._model_registry.get(model_spec.kind).load_environment_factory()(
             model_spec
         )
         # Get the subprocess for the environment
@@ -118,7 +118,7 @@ class SubprocessBackend:
     ) -> None:
         model_supported_properties = self._model_registry.get(
             model_spec.kind
-        ).supported_properties
+        ).load_supported_properties()
         task_required_properties = task_spec.required_model_properties()
         if not task_required_properties.issubset(model_supported_properties):
             raise ValueError(
@@ -131,7 +131,7 @@ class SubprocessBackend:
         model_spec: ModelSpec,
     ) -> tuple[EnvironmentSpec, EnvSubprocess]:
         task_registration = self._task_registry.get(task.kind)
-        task_env_spec = task_registration.environment_factory(task)
+        task_env_spec = task_registration.load_environment_factory()(task)
         env_spec = self.setup_environment(model_spec, task_env_spec)
         env_subprocess = self.get_subprocess(env_spec)
         return env_spec, env_subprocess
@@ -243,7 +243,7 @@ class SubprocessBackend:
 
         # Convert to a TaskResult of the appropriate type based on the task kind
         registration = self._task_registry.get(response.task_kind)
-        result = registration.result_model.model_validate(response.result_payload)
+        result = registration.load_result_model().model_validate(response.result_payload)
 
         return result
 

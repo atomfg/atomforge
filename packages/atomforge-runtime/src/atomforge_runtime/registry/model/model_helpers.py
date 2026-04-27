@@ -1,14 +1,9 @@
 from atomforge_runtime.registry.base_converter import ManifestToRegistrationConverterBase
 from atomforge_core.registry.errors import RegistryCoreError
 from atomforge_runtime.registry.helpers import resolve_distribution
-from atomforge_core.model.executor import ModelExecutor
-from atomforge_core.model.metadata import ModelMetadata
-from atomforge_core.property import Property
-from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.model.spec import ModelSpec
 from atomforge_core.registry.model_manifest import ModelManifest
 from atomforge_runtime.registry.model.model_registration import ModelRegistration
-from atomforge_core.env.factory import EnvironmentFactory
 
 
 class ModelRegistryError(RegistryCoreError):
@@ -18,61 +13,33 @@ class ModelRegistryError(RegistryCoreError):
 class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
     error_class = ModelRegistryError
 
-    def _load_supported_properties(self, properties_str: str) -> frozenset[Property]:
-        supported_properties = self._load_symbol(properties_str)
-        if not isinstance(supported_properties, frozenset) or not all(
-            isinstance(prop, Property) for prop in supported_properties
-        ):
-            self._raise(
-                f"Supported properties '{properties_str}' must be a frozenset of Property values"
-            )
-        return supported_properties
-
     def _load_components(self, manifest: ModelManifest) -> dict[str, object]:
         return {
             "model_spec": self._load_subclass(
                 manifest.model_spec, ModelSpec, "Model spec"
             ),
-            "executor_cls": self._load_subclass(
-                manifest.executor_cls, ModelExecutor, "Executor class"
-            ),
-            "supported_properties": self._load_supported_properties(
-                manifest.supported_properties
-            ),
-            "environment_factory_cls": self._load_subclass(
-                manifest.environment_factory_cls,
-                EnvironmentFactory,
-                "Environment factory",
-            ),
-            "metadata": self._load_instance(
-                manifest.metadata, ModelMetadata, "Metadata"
-            ),
-            "resource_capabilities": self._load_instance(
-                manifest.resource_capabilities,
-                ResourceCapabilities,
-                "Resource capabilities",
-            ),
-            "probe": (
-                None
-                if manifest.probe is None
-                else self._load_callable(manifest.probe, "Probe", reject_classes=True)
-            ),
+            "executor_cls": manifest.executor_cls,
+            "supported_properties": manifest.supported_properties,
+            "environment_factory_cls": manifest.environment_factory_cls,
+            "metadata": manifest.metadata,
+            "resource_capabilities": manifest.resource_capabilities,
+            "probe": manifest.probe,
         }
 
     def _build_registration(
         self,
         manifest: ModelManifest,
         components: dict[str, object],
-        environment_factory: EnvironmentFactory,
     ) -> ModelRegistration:
         return ModelRegistration(
+            kind=manifest.kind,
             model_spec=components["model_spec"],
-            metadata=components["metadata"],
-            executor_class=components["executor_cls"],
-            supported_properties=components["supported_properties"],
-            environment_factory=environment_factory,
-            resource_capabilities=components["resource_capabilities"],
-            probe=components["probe"],
+            metadata_path=components["metadata"],
+            executor_class_path=components["executor_cls"],
+            supported_properties_path=components["supported_properties"],
+            environment_factory_path=components["environment_factory_cls"],
+            resource_capabilities_path=components["resource_capabilities"],
+            probe_path=components["probe"],
             source=manifest.distribution,
         )
 

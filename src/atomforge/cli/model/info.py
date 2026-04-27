@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 
 def _get_description(model_registration):
-    description = model_registration.metadata.description
+    description = model_registration.load_metadata().description
     if description:
         return description + "\n"
     else:
@@ -14,7 +14,7 @@ def _get_description(model_registration):
 
 
 def _get_references(model_registration):
-    references = model_registration.metadata.references
+    references = model_registration.load_metadata().references
     if references:
         ref_str = "\n".join(
             f"- [blue]{ref.label}[/blue]: {ref.url}" for ref in references
@@ -34,7 +34,7 @@ def _get_source(model_registration):
 
 
 def _get_accelerators(model_registration):
-    accelerators = model_registration.resource_capabilities.accelerator
+    accelerators = model_registration.load_resource_capabilities().accelerator
     if accelerators:
         return "\n".join(f"- [blue]{accel}[/blue]" for accel in accelerators) + "\n"
     else:
@@ -65,7 +65,7 @@ def _get_parameters(model_registration):
 
 
 def _get_dependencies(model_registration):
-    dependencies = model_registration.environment_factory.dependency_summary
+    dependencies = model_registration.load_environment_factory().dependency_summary
     if dependencies:
         dep_str = ""
         if dependencies.base_requirements:
@@ -87,7 +87,7 @@ def _get_dependencies(model_registration):
 
 
 def get_supported_properties(model_registration):
-    properties = model_registration.supported_properties
+    properties = model_registration.load_supported_properties()
     if properties:
         return "\n".join(f"- [blue]{prop.value}[/blue]" for prop in properties) + "\n"
     else:
@@ -95,7 +95,7 @@ def get_supported_properties(model_registration):
 
 
 def get_basic_info(model_registration):
-    metadata = model_registration.metadata
+    metadata = model_registration.load_metadata()
     basic_info = f"Name: [blue]{metadata.name}[/blue]\n"
     basic_info += f"Kind: [blue]{metadata.id}[/blue]\n"
     basic_info += f"Method Family: [blue]{metadata.method_family}[/blue]\n"
@@ -117,7 +117,7 @@ def info_command(model_kind: str):
         console.print(f"[red]Model kind '{model_kind}' not found in registry.[/red]")
         return
 
-    metadata = handle.metadata
+    metadata = handle.load_metadata()
     console = Console()
 
     panel_elements = OrderedDict(

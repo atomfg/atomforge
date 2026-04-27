@@ -167,12 +167,13 @@ class SubprocessWorker:
                     request.model_payload
                 )
 
-                if model_registration.probe is not None:
-                    probe_result = model_registration.probe(model_spec)
+                probe = model_registration.load_probe()
+                if probe is not None:
+                    probe_result = probe(model_spec)
                 else:
                     probe_result = None
 
-                resource_capabilities = model_registration.resource_capabilities
+                resource_capabilities = model_registration.load_resource_capabilities()
                 resolved_resources = resolve_resources(
                     exec_resources=request.exec_resources,
                     system_resources=self._system_resources,
@@ -180,7 +181,7 @@ class SubprocessWorker:
                     probe_result=probe_result,
                 )
 
-                model_executor = model_registration.executor_class(
+                model_executor = model_registration.load_executor_class()(
                     model_spec, resolved_resources
                 )
 
@@ -190,7 +191,7 @@ class SubprocessWorker:
         # Validate the model and task payloads and construct the executors
         task_registration = self._task_registry.get(request.task_kind)
         task_spec = task_registration.spec_model.model_validate(request.task_payload)
-        task_executor = task_registration.executor_class()
+        task_executor = task_registration.load_executor_class()()
 
         # Get the model executor for the task
         model_executor = self._get_model_executor(request.model_session_id)

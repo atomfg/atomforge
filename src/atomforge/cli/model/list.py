@@ -68,22 +68,22 @@ class TableWriter:
         return kind
 
     def _supported_properties_to_str(self, model_registration):
-        properties = model_registration.supported_properties
+        properties = model_registration.load_supported_properties()
         if properties:
             return ", ".join(p.value for p in properties)
         else:
             return "N/A"
 
     def _family_to_str(self, model_registration):
-        method_family = model_registration.metadata.method_family
+        method_family = model_registration.load_metadata().method_family
         return method_family if method_family else "N/A"
 
     def _accelerator_to_str(self, model_registration):
-        accelerators = model_registration.resource_capabilities.accelerator
+        accelerators = model_registration.load_resource_capabilities().accelerator
         return ", ".join(accelerators) if accelerators else "N/A"
 
     def _dependencies_to_str(self, model_registration):
-        dependencies = model_registration.environment_factory.dependency_summary
+        dependencies = model_registration.load_environment_factory().dependency_summary
         dep_str = (
             ", ".join(dependencies.base_requirements)
             if dependencies and dependencies.base_requirements
@@ -139,7 +139,7 @@ def list_command(columns: str, family: str):
     table_writer = TableWriter(columns)
 
     for kind, handle in registry:
-        if family and handle.metadata.method_family != family:
+        if family and handle.load_metadata().method_family != family:
             continue
         table_writer.add_row(kind, handle)
     console.print(table_writer.table)

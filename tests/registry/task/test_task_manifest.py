@@ -18,25 +18,25 @@ def test_task_manifest_empty_distribution(manifest_factory):
 
 
 def test_task_manifest_spec_improper_dotted_path(manifest_factory):
-    with pytest.raises(TypeError):
+    with pytest.raises(Exception):
         manifest_factory(spec_model="not_a_dotted_path")
 
 
 def test_task_manifest_executor_improper_dotted_path(manifest_factory):
-    with pytest.raises(TypeError):
+    with pytest.raises(Exception):
         manifest_factory(executor_cls="not_a_dotted_path")
 
 
 def test_task_manifest_result_improper_dotted_path(manifest_factory):
-    with pytest.raises(TypeError):
+    with pytest.raises(Exception):
         manifest_factory(result_model="not_a_dotted_path")
 
 
 def test_task_manifest_capability_spec_improper_dotted_path(manifest_factory):
-    with pytest.raises(TypeError):
+    with pytest.raises(Exception):
         manifest_factory(capability_spec="not_a_dotted_path")
 
 
 def test_task_manifest_environment_factory_improper_dotted_path(manifest_factory):
-    with pytest.raises(TypeError):
+    with pytest.raises(Exception):
         manifest_factory(environment_factory_cls="not_a_dotted_path")

@@ -3,6 +3,8 @@ import re
 from importlib import import_module
 from importlib.metadata import distribution
 
+from atomforge_core.registry.symbol_path import SymbolPath
+
 
 def normalize_distribution_name(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower()
@@ -23,7 +25,10 @@ def resolve_distribution(name: str) -> str:
         return f"{name} @ {url}"
     return f"{dist.metadata['Name']}=={dist.version}"
 
-def load_symbol(dotted_path: str):
+def load_symbol(dotted_path: str | SymbolPath):
+    if isinstance(dotted_path, SymbolPath):
+        return dotted_path.load_symbol()
+
     module_name, symbol_name = dotted_path.split(":", 1)
     module = import_module(module_name)
     return getattr(module, symbol_name)
