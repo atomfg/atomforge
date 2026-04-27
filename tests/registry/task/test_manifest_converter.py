@@ -44,3 +44,20 @@ def test_converter_wrapped_environment_factory(manifest_factory, example_structu
     env_spec = environment_factory(example_task_spec)
 
     assert env_spec.provider_requirements == ("atomforge",)
+
+
+def test_task_registration_validate_strict_warms_cache(manifest_factory):
+    manifest = manifest_factory()
+    converter = ManifestToRegistrationConverter()
+    registration, _ = converter(
+        manifest,
+        entry_point_name="test_validate_strict",
+        entry_point_package="atomforge",
+    )
+
+    registration.validate_strict()
+
+    result_model = registration.load_result_model()
+    registration.validate_strict()
+
+    assert result_model is registration.load_result_model()

@@ -1,6 +1,5 @@
 from atomforge_runtime.registry.base_converter import ManifestToRegistrationConverterBase
 from atomforge_core.registry.errors import RegistryCoreError
-from atomforge_runtime.registry.helpers import resolve_distribution
 from atomforge_core.model.spec import ModelSpec
 from atomforge_core.registry.model_manifest import ModelManifest
 from atomforge_runtime.registry.model.model_registration import ModelRegistration
@@ -42,10 +41,6 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             probe_path=components["probe"],
             source=manifest.distribution,
         )
-
-    @staticmethod
-    def _resolve_distribution(name: str) -> str:
-        return resolve_distribution(name)
 
 
 def manifest_to_registration(

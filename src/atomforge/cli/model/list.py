@@ -16,7 +16,8 @@ class TableColumn(Enum):
 
 
 class TableWriter:
-    def __init__(self, columns: str):
+    def __init__(self, columns: str, *, strict: bool = False):
+        self.strict = strict
         self.columns = self._parse_columns(columns)
         self.table = self._setup_table()
 
@@ -50,6 +51,8 @@ class TableWriter:
     def _setup_table(self):
         table = Table(title="Atomforge Models", show_lines=True)
         table.add_column("Kind", style="cyan", no_wrap=True)
+        if self.strict:
+            table.add_column("Strict", style="white")
 
         if TableColumn.SUPPORTED_PROPERTIES.value in self.columns:
             table.add_column("Supported Properties", style="magenta")
@@ -95,22 +98,53 @@ class TableWriter:
         sources = model_registration.source
         return ", ".join(sources) if sources else "N/A"
 
-    def add_row(self, kind, model_registration):
-        row = []
+    def _failed_value_for_column(self, column, model_registration):
+        if column == TableColumn.PLUGIN_SOURCE.value:
+            return self._plugin_source_to_str(model_registration)
+        return "N/A"
+
+    def _strict_status_to_str(self, strict_result):
+        if strict_result is None:
+            return ""
+
+        is_valid, message = strict_result
+        if is_valid:
+            return "[green]PASS[/green]"
+
+        return f"[red]FAIL[/red]: {message}"
+
+    def add_row(self, kind, model_registration, strict_result=None):
+        row = [self._kind_to_str(kind)]
+        if self.strict:
+            row.append(self._strict_status_to_str(strict_result))
+
+        strict_failed = strict_result is not None and not strict_result[0]
         for column in self.columns:
             match column:
                 case TableColumn.KIND.value:
-                    row.append(self._kind_to_str(kind))
+                    continue
                 case TableColumn.SUPPORTED_PROPERTIES.value:
+                    if strict_failed:
+                        row.append(self._failed_value_for_column(column, model_registration))
+                        continue
                     row.append(self._supported_properties_to_str(model_registration))
                 case TableColumn.FAMILY.value:
+                    if strict_failed:
+                        row.append(self._failed_value_for_column(column, model_registration))
+                        continue
                     row.append(self._family_to_str(model_registration))
                 case TableColumn.ACCELERATOR.value:
+                    if strict_failed:
+                        row.append(self._failed_value_for_column(column, model_registration))
+                        continue
                     row.append(self._accelerator_to_str(model_registration))
                 case TableColumn.DEPENDENCIES.value:
+                    if strict_failed:
+                        row.append(self._failed_value_for_column(column, model_registration))
+                        continue
                     row.append(self._dependencies_to_str(model_registration))
                 case TableColumn.PLUGIN_SOURCE.value:
-                    row.append(self._plugin_source_to_str(model_registration))
+                    row.append(self._failed_value_for_column(column, model_registration))
 
         self.table.add_row(*row)
 
@@ -130,16 +164,37 @@ class TableWriter:
 @click.option(
     "--family", "-f", type=str, required=False, help="Filter models by method family."
 )
-def list_command(columns: str, family: str):
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Load the model registry in strict mode and validate all lazy fields.",
+)
+def list_command(columns: str, family: str, strict: bool):
     from atomforge_runtime.registry.model.model_registry import ModelRegistry
 
-    registry = ModelRegistry.default()
     console = Console()
-
-    table_writer = TableWriter(columns)
+    registry = ModelRegistry.default()
+    table_writer = TableWriter(columns, strict=strict)
 
     for kind, handle in registry:
-        if family and handle.load_metadata().method_family != family:
+        strict_result = None
+        if strict:
+            try:
+                handle.validate_strict()
+                strict_result = (True, "")
+            except Exception as exc:
+                strict_result = (False, str(exc))
+
+        if family:
+            try:
+                if handle.load_metadata().method_family != family:
+                    continue
+            except Exception:
+                if not strict:
+                    raise
+
+        if strict_result is not None and not strict_result[0]:
+            table_writer.add_row(kind, handle, strict_result=strict_result)
             continue
-        table_writer.add_row(kind, handle)
+        table_writer.add_row(kind, handle, strict_result=strict_result)
     console.print(table_writer.table)

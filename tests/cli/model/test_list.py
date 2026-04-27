@@ -1,6 +1,10 @@
+from dataclasses import replace
+
 import pytest
 from click.testing import CliRunner
 from atomforge.cli.model.list import list_command
+from atomforge_core.registry.symbol_path import SymbolPath
+from atomforge_runtime.registry.model.model_registry import ModelRegistry
 
 @pytest.fixture
 def runner():
@@ -19,6 +23,11 @@ def failed_invocation(runner):
 @pytest.fixture
 def column_select_invocation(runner):
     result = runner.invoke(list_command, ["-c", "sad"])
+    return result
+
+@pytest.fixture
+def strict_invocation(runner):
+    result = runner.invoke(list_command, ["--strict"])
     return result
 
 @pytest.fixture(params=["empirical", "mlip"])
@@ -54,6 +63,38 @@ def test_column_select_output_does_not_have_unselected_columns(column_select_inv
     assert "Plugin Source" not in column_select_invocation.output
     assert "Family" not in column_select_invocation.output
 
+def test_strict_exit_code(strict_invocation):
+    assert strict_invocation.exit_code == 0
+
+def test_strict_output_has_status_column(strict_invocation):
+    assert "Strict" in strict_invocation.output
+
+def test_strict_output_marks_valid_models(strict_invocation):
+    assert "PASS" in strict_invocation.output
+
+def test_strict_output_has_kind(strict_invocation):
+    assert "Kind" in strict_invocation.output
+
+def test_strict_shows_failing_models(runner, monkeypatch):
+    registry = ModelRegistry.default()
+    broken = replace(
+        registry.get("ase-lj"),
+        kind="broken-ase-lj",
+        metadata_path=SymbolPath("atomforge.registry.model.manifest:ModelManifest"),
+    )
+    registry._register(broken, broken.kind)
+
+    monkeypatch.setattr(
+        "atomforge_runtime.registry.model.model_registry.ModelRegistry.default",
+        lambda: registry,
+    )
+
+    result = runner.invoke(list_command, ["--strict"])
+
+    assert result.exit_code == 0
+    assert "FAIL" in result.output
+    assert "broken-ase-lj" in result.output
+
 def test_family_filter_exit_code(family_filter_invocation):
     assert family_filter_invocation.exit_code == 0
 
@@ -62,4 +103,3 @@ def test_family_filter(family_filter_invocation, family_type):
         assert "ase-lj" in family_filter_invocation.output
     else:
         assert "ase-lj" not in family_filter_invocation.output
-

@@ -95,3 +95,23 @@ class TaskRegistration(Generic[TaskSpecT, TaskResultT]):
                 ),
             )
         return self._environment_factory
+
+    def _strict_validation_entries(self):
+        return [
+            ("result_model", self.result_model_path, self.load_result_model),
+            ("executor_class", self.executor_class_path, self.load_executor_class),
+            (
+                "capability_spec",
+                self.capability_spec_path,
+                self.load_capability_spec,
+            ),
+            (
+                "environment_factory",
+                self.environment_factory_path,
+                self.load_environment_factory,
+            ),
+        ]
+
+    def validate_strict(self) -> None:
+        for _, _, loader in self._strict_validation_entries():
+            loader()

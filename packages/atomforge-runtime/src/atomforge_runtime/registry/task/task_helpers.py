@@ -1,6 +1,5 @@
 from atomforge_runtime.registry.base_converter import ManifestToRegistrationConverterBase
 from atomforge_core.registry.errors import RegistryCoreError
-from atomforge_runtime.registry.helpers import resolve_distribution
 from atomforge_core.registry.task_manifest import TaskManifest
 from atomforge_runtime.registry.task_registration import TaskRegistration
 from atomforge_core.task.spec import TaskSpec
@@ -38,10 +37,6 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             environment_factory_path=components["environment_factory_cls"],
             source=manifest.distribution,
         )
-
-    @staticmethod
-    def _resolve_distribution(name: str) -> str:
-        return resolve_distribution(name)
 
 
 def manifest_to_registration(

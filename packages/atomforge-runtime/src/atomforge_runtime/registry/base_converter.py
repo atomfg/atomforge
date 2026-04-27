@@ -5,13 +5,8 @@ from typing import Any
 
 from atomforge_core.registry.errors import RegistryCoreError
 from atomforge_core.registry.symbol_path import SymbolPath
-from atomforge_runtime.registry.helpers import (
-    load_symbol,
-    normalize_distribution_name,
-    resolve_distribution,
-)
-
-from atomforge_core.env.factory import EnvironmentFactory
+from atomforge_runtime.registry.helpers import normalize_distribution_name
+from atomforge_runtime.registry.loading import load_subclass_path
 
 
 class ManifestToRegistrationConverterBase(ABC):
@@ -20,78 +15,9 @@ class ManifestToRegistrationConverterBase(ABC):
     def _raise(self, message: str):
         raise self.error_class(message)
 
-    @staticmethod
-    def load_symbol_path(path: SymbolPath):
-        try:
-            return load_symbol(path)
-        except (ImportError, AttributeError, ValueError) as exc:
-            raise ValueError(f"Error loading module '{path}': {exc}") from exc
-
-    @classmethod
-    def load_subclass_path(
-        cls, path: SymbolPath, expected_type: type, label: str
-    ):
-        symbol = cls.load_symbol_path(path)
-        if not issubclass(symbol, expected_type):
-            raise TypeError(
-                f"{label} '{path}' must be a subclass of {expected_type.__name__}"
-            )
-        return symbol
-
-    @classmethod
-    def load_instance_path(
-        cls, path: SymbolPath, expected_type: type, label: str
-    ):
-        symbol = cls.load_symbol_path(path)
-        if not isinstance(symbol, expected_type):
-            raise TypeError(
-                f"{label} '{path}' must be an instance of {expected_type.__name__}"
-            )
-        return symbol
-
-    @classmethod
-    def load_callable_path(
-        cls, path: SymbolPath, label: str, *, reject_classes: bool = False
-    ):
-        symbol = cls.load_symbol_path(path)
-        if reject_classes and isinstance(symbol, type):
-            raise TypeError(f"{label} '{path}' must be callable")
-        if not callable(symbol):
-            raise TypeError(f"{label} '{path}' must be callable")
-        return symbol
-
-    @classmethod
-    def build_environment_factory(
-        cls, path: SymbolPath, distribution: list[str], label: str
-    ) -> EnvironmentFactory:
-        factory_class = cls.load_subclass_path(path, EnvironmentFactory, label)
-        return factory_class().with_provider_requirements(distribution)
-
-    def _load_symbol(self, dotted_path: SymbolPath):
-        try:
-            return self.load_symbol_path(dotted_path)
-        except (TypeError, ValueError) as exc:
-            self._raise(str(exc))
-
     def _load_subclass(self, dotted_path: SymbolPath, expected_type: type, label: str):
         try:
-            return self.load_subclass_path(dotted_path, expected_type, label)
-        except (TypeError, ValueError) as exc:
-            self._raise(str(exc))
-
-    def _load_instance(self, dotted_path: SymbolPath, expected_type: type, label: str):
-        try:
-            return self.load_instance_path(dotted_path, expected_type, label)
-        except (TypeError, ValueError) as exc:
-            self._raise(str(exc))
-
-    def _load_callable(
-        self, dotted_path: SymbolPath, label: str, *, reject_classes: bool = False
-    ):
-        try:
-            return self.load_callable_path(
-                dotted_path, label, reject_classes=reject_classes
-            )
+            return load_subclass_path(dotted_path, expected_type, label)
         except (TypeError, ValueError) as exc:
             self._raise(str(exc))
 

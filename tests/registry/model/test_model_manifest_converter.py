@@ -127,6 +127,26 @@ def test_converter_loads_optional_probe(manifest_factory):
     assert callable(registration.load_probe())
 
 
+def test_model_registration_validate_strict_warms_cache_and_allows_optional_probe(
+    manifest_factory,
+):
+    manifest = manifest_factory(probe=None)
+    converter = ManifestToRegistrationConverter()
+    registration, _ = converter(
+        manifest,
+        entry_point_name="test_validate_strict",
+        entry_point_package="atomforge",
+    )
+
+    registration.validate_strict()
+
+    metadata = registration.load_metadata()
+    registration.validate_strict()
+
+    assert metadata is registration.load_metadata()
+    assert registration.load_probe() is None
+
+
 def test_converter_leaves_lazy_fields_as_symbol_paths(manifest_factory):
     manifest = manifest_factory()
     converter = ManifestToRegistrationConverter()

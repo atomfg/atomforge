@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from atomforge_core.env.factory import EnvironmentFactory
 from atomforge_core.registry.symbol_path import SymbolPath
-from atomforge_runtime.registry.base_converter import ManifestToRegistrationConverterBase
+from atomforge_runtime.registry.helpers import load_symbol
 
 
 def _wrap_error(
@@ -10,6 +11,45 @@ def _wrap_error(
     return type(exc)(
         f"{registration_label} '{kind}' failed to load {field_name} from '{path}': {exc}"
     )
+
+
+def load_symbol_path(path: SymbolPath):
+    try:
+        return load_symbol(path)
+    except (ImportError, AttributeError, ValueError) as exc:
+        raise ValueError(f"Error loading module '{path}': {exc}") from exc
+
+
+def load_subclass_path(path: SymbolPath, expected_type: type, label: str):
+    symbol = load_symbol_path(path)
+    if not issubclass(symbol, expected_type):
+        raise TypeError(
+            f"{label} '{path}' must be a subclass of {expected_type.__name__}"
+        )
+    return symbol
+
+
+def load_instance_path(path: SymbolPath, expected_type: type, label: str):
+    symbol = load_symbol_path(path)
+    if not isinstance(symbol, expected_type):
+        raise TypeError(
+            f"{label} '{path}' must be an instance of {expected_type.__name__}"
+        )
+    return symbol
+
+
+def load_callable_path(path: SymbolPath, label: str, *, reject_classes: bool = False):
+    symbol = load_symbol_path(path)
+    if reject_classes and isinstance(symbol, type):
+        raise TypeError(f"{label} '{path}' must be callable")
+    if not callable(symbol):
+        raise TypeError(f"{label} '{path}' must be callable")
+    return symbol
+
+
+def build_environment_factory(path: SymbolPath, distribution: list[str], label: str):
+    factory_class = load_subclass_path(path, EnvironmentFactory, label)
+    return factory_class().with_provider_requirements(distribution)
 
 
 def load_subclass(
@@ -21,9 +61,7 @@ def load_subclass(
     field_name: str,
 ):
     try:
-        return ManifestToRegistrationConverterBase.load_subclass_path(
-            path, expected_type, field_name
-        )
+        return load_subclass_path(path, expected_type, field_name)
     except (TypeError, ValueError, ImportError, AttributeError) as exc:
         raise _wrap_error(
             exc,
@@ -43,9 +81,7 @@ def load_instance(
     field_name: str,
 ):
     try:
-        return ManifestToRegistrationConverterBase.load_instance_path(
-            path, expected_type, field_name
-        )
+        return load_instance_path(path, expected_type, field_name)
     except (TypeError, ValueError, ImportError, AttributeError) as exc:
         raise _wrap_error(
             exc,
@@ -65,9 +101,7 @@ def load_callable(
     reject_classes: bool = False,
 ):
     try:
-        return ManifestToRegistrationConverterBase.load_callable_path(
-            path, field_name, reject_classes=reject_classes
-        )
+        return load_callable_path(path, field_name, reject_classes=reject_classes)
     except (TypeError, ValueError, ImportError, AttributeError) as exc:
         raise _wrap_error(
             exc,
@@ -87,9 +121,7 @@ def load_environment_factory(
     field_name: str,
 ):
     try:
-        return ManifestToRegistrationConverterBase.build_environment_factory(
-            path, distribution, field_name
-        )
+        return build_environment_factory(path, distribution, field_name)
     except (TypeError, ValueError, ImportError, AttributeError) as exc:
         raise _wrap_error(
             exc,

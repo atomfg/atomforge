@@ -136,3 +136,29 @@ class ModelRegistration(Generic[ModelSpecT]):
                 ),
             )
         return self._probe
+
+    def _strict_validation_entries(self):
+        return [
+            ("metadata", self.metadata_path, self.load_metadata),
+            ("executor_class", self.executor_class_path, self.load_executor_class),
+            (
+                "supported_properties",
+                self.supported_properties_path,
+                self.load_supported_properties,
+            ),
+            (
+                "environment_factory",
+                self.environment_factory_path,
+                self.load_environment_factory,
+            ),
+            (
+                "resource_capabilities",
+                self.resource_capabilities_path,
+                self.load_resource_capabilities,
+            ),
+            ("probe", self.probe_path, self.load_probe),
+        ]
+
+    def validate_strict(self) -> None:
+        for _, _, loader in self._strict_validation_entries():
+            loader()

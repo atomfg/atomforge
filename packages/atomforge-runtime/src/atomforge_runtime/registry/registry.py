@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing_extensions import Self
 
+from atomforge_runtime.registry.strict import (
+    RegistryStrictValidationError,
+    StrictValidationFailure,
+)
+
 
 class EntryPointRegistryBase:
     entry_point_group: str
@@ -52,8 +57,42 @@ class EntryPointRegistryBase:
             self._register(registration, kind)
             entry_point_packages[kind] = ep.dist.name
 
+    def _collect_registration_strict_failures(
+        self, registration
+    ) -> list[StrictValidationFailure]:
+        collect_checks = getattr(registration, "_strict_validation_entries", None)
+        if collect_checks is None:
+            registration.validate_strict()
+            return []
+
+        failures = []
+        for field_name, path, loader in collect_checks():
+            try:
+                loader()
+            except Exception as exc:
+                failures.append(
+                    StrictValidationFailure(
+                        kind_label=self.kind_label,
+                        registration_kind=registration.kind,
+                        field_name=field_name,
+                        path=None if path is None else str(path),
+                        message=str(exc),
+                    )
+                )
+        return failures
+
     @classmethod
     def default(cls) -> Self:
         instance = cls()
         instance._load_entry_points()
+        return instance
+
+    @classmethod
+    def strict(cls) -> Self:
+        instance = cls.default()
+        failures = []
+        for _, registration in instance:
+            failures.extend(instance._collect_registration_strict_failures(registration))
+        if failures:
+            raise RegistryStrictValidationError(failures)
         return instance

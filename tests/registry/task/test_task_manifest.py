@@ -1,5 +1,6 @@
 import pytest
 from atomforge_core.registry.task_manifest import TaskManifest
+from atomforge_runtime.registry.task.task_registry import TaskRegistry
 
 
 def test_task_manifest_factory_default(manifest_factory):
@@ -40,3 +41,8 @@ def test_task_manifest_capability_spec_improper_dotted_path(manifest_factory):
 def test_task_manifest_environment_factory_improper_dotted_path(manifest_factory):
     with pytest.raises(Exception):
         manifest_factory(environment_factory_cls="not_a_dotted_path")
+
+
+def test_strict_task_registry_loads_builtin_tasks():
+    registry = TaskRegistry.strict()
+    assert registry.get("single_point").spec_model.__name__ == "SinglePoint"

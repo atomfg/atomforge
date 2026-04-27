@@ -48,6 +48,15 @@ def test_converter_wraps_dotted_path_load_failures():
     converter = DummyConverter()
 
     with pytest.raises(RegistryCoreError):
-        converter._load_symbol(
-            SymbolPath("atomforge_builtins.task.singlepoint:DoesNotExist")
+        converter._load_subclass(
+            SymbolPath("atomforge_builtins.task.singlepoint:DoesNotExist"),
+            EnvironmentFactory,
+            "Environment factory",
         )
+
+
+def test_base_converter_no_longer_exposes_generic_lazy_loading_helpers():
+    assert not hasattr(ManifestToRegistrationConverterBase, "load_symbol_path")
+    assert not hasattr(ManifestToRegistrationConverterBase, "load_instance_path")
+    assert not hasattr(ManifestToRegistrationConverterBase, "load_callable_path")
+    assert not hasattr(ManifestToRegistrationConverterBase, "build_environment_factory")
