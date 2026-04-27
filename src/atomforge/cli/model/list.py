@@ -48,7 +48,7 @@ class TableWriter:
         return columns
 
     def _setup_table(self):
-        table = Table(title="Atomforge Models")
+        table = Table(title="Atomforge Models", show_lines=True)
         table.add_column("Kind", style="cyan", no_wrap=True)
 
         if TableColumn.SUPPORTED_PROPERTIES.value in self.columns:
