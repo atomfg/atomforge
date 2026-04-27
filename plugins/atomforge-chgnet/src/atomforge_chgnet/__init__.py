@@ -1,3 +1,3 @@
-from atomforge_chgnet.chgnet_model import CHGNet
+from atomforge_chgnet.spec import CHGNet
 
 __all__ = ["CHGNet"]

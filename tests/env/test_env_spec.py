@@ -77,7 +77,7 @@ def test_provider_requirements_are_normalized():
 @pytest.mark.parametrize(
     "provider_requirement",
     [
-        "atomforge-mg3net>=1",
+        "atomforge-m3gnet>=1",
         "foo[bar]",
         "foo ; python_version<'3.12'",
         "foo @ file:///tmp/foo",

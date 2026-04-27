@@ -1,1 +1,3 @@
-from .mace_model import MACE
+from atomforge_mace.spec import MACE
+
+__all__ = ["MACE"]

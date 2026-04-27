@@ -1,5 +1,5 @@
 [project]
-name = "atomforge-mg3net"
+name = "atomforge-m3gnet"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.entry-points.'atomforge.model']
-mg3net = "atomforge_mg3net.manifest:manifest"
+m3gnet = "atomforge_m3gnet.manifest:m3gnet_manifest"
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
