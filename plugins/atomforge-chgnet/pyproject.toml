@@ -1,23 +1,22 @@
 [project]
-name = "atomforge-mg3net"
+name = "atomforge-chgnet"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
     { name = "Mads-Peter", email = "machri@phys.au.dk" }
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "atomforge_core",
 ]
 
 [project.entry-points.'atomforge.model']
-mg3net = "atomforge_mg3net.manifest:manifest"
+chgnet = "atomforge_chgnet.manifest:chgnet_manifest"
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
-atomforge_core = { path="/Users/au616397/Repositories/atomforge/packages/atomforge-core", editable=true }
-
+atomforge_core = { path="../../packages/atomforge-core", editable=true }
