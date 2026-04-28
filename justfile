@@ -1,37 +1,35 @@
-set shell := ["/bin/zsh", "-cu"]
-
 test:
     just test-host
 
 test-host:
-    UV_CACHE_DIR=/tmp/uv-cache uv run pytest
+    uv run pytest
 
 test-cov-host:
-    UV_CACHE_DIR=/tmp/uv-cache uv run pytest --cov-report term --cov-report xml:.coverage-host.xml --cov src/atomforge
+    uv run pytest --cov-report term --cov-report xml:.coverage-host.xml --cov src/atomforge
 
 test-cov:
     just test-cov-host
 
 test-cov-sandbox:
-    UV_CACHE_DIR=/tmp/uv-cache uv run pytest --cov-report term --cov-report html:.coverage-html --cov src/atomforge
+    uv run pytest --cov-report term --cov-report html:.coverage-html --cov src/atomforge
 
 test-core:
-    cd packages/atomforge-core && UV_CACHE_DIR=/tmp/uv-cache uv run pytest
+    cd packages/atomforge-core && uv run pytest
 
 test-cov-core:
-    cd packages/atomforge-core && UV_CACHE_DIR=/tmp/uv-cache uv run pytest --cov-report term --cov-report xml:.coverage-core.xml --cov src/atomforge_core
+    cd packages/atomforge-core && uv run pytest --cov-report term --cov-report xml:.coverage-core.xml --cov src/atomforge_core
 
 test-runtime:
-    cd packages/atomforge-runtime && UV_CACHE_DIR=/tmp/uv-cache uv run pytest
+    cd packages/atomforge-runtime && uv run pytest
 
 test-cov-runtime:
-    cd packages/atomforge-runtime && UV_CACHE_DIR=/tmp/uv-cache uv run pytest --cov-report term --cov-report xml:.coverage-runtime.xml --cov src/atomforge_runtime
+    cd packages/atomforge-runtime && uv run pytest --cov-report term --cov-report xml:.coverage-runtime.xml --cov src/atomforge_runtime
 
 test-builtins:
-    cd packages/atomforge-builtins && UV_CACHE_DIR=/tmp/uv-cache uv run pytest
+    cd packages/atomforge-builtins && uv run pytest
 
 test-cov-builtins:
-    cd packages/atomforge-builtins && UV_CACHE_DIR=/tmp/uv-cache uv run pytest --cov-report term --cov-report xml:.coverage-builtins.xml --cov src/atomforge_builtins
+    cd packages/atomforge-builtins && uv run pytest --cov-report term --cov-report xml:.coverage-builtins.xml --cov src/atomforge_builtins
 
 test-all:
     just test-core
