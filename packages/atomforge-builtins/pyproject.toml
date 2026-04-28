@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Mads-Peter", email = "machri@phys.au.dk" }
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "atomforge-core",
 ]
@@ -24,5 +24,16 @@ no_dep = "atomforge_builtins.model.model_manifests:no_dep_manifest"
 requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
 
+[dependency-groups]
+dev = [
+    "atomforge-runtime",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.uv.sources]
 atomforge_core = { path="../atomforge-core", editable=true }
+atomforge_runtime = { path="../atomforge-runtime", editable=true }

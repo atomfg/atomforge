@@ -38,19 +38,4 @@ class StructureData(BaseModel):
             "numbers": self.numbers,
             "pbc": self.pbc
         }
-    
-
-if __name__ == "__main__":
-    # Example usage
-    data = {
-        "positions": [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]],
-        "cell": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-        "numbers": [1, 2],
-        "pbc": [True, True, True]
-    }
-    
-    structure_data = StructureData(**data)
-    print(structure_data)
-    
-        
 

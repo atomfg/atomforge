@@ -46,9 +46,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "atomforge-builtins", editable = "/Users/au616397/Repositories/atomforge/packages/atomforge-builtins" },
-    { name = "atomforge-core", editable = "/Users/au616397/Repositories/atomforge/packages/atomforge-core" },
-    { name = "atomforge-runtime", editable = "/Users/au616397/Repositories/atomforge/packages/atomforge-runtime" },
+    { name = "atomforge-builtins", editable = "packages/atomforge-builtins" },
+    { name = "atomforge-core", editable = "packages/atomforge-core" },
+    { name = "atomforge-runtime", editable = "packages/atomforge-runtime" },
     { name = "packaging", specifier = ">=26.0" },
     { name = "pydantic", specifier = ">=2" },
     { name = "rich" },
@@ -68,18 +68,24 @@ dev = [
 [[package]]
 name = "atomforge-builtins"
 version = "0.1.0"
-source = { editable = "/Users/au616397/Repositories/atomforge/packages/atomforge-builtins" }
+source = { editable = "packages/atomforge-builtins" }
 dependencies = [
     { name = "atomforge-core" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "atomforge-core", editable = "/Users/au616397/Repositories/atomforge/packages/atomforge-core" }]
+requires-dist = [{ name = "atomforge-core", editable = "packages/atomforge-core" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "atomforge-runtime", editable = "packages/atomforge-runtime" },
+    { name = "pytest", specifier = ">=9.0.3" },
+]
 
 [[package]]
 name = "atomforge-core"
 version = "0.1.0"
-source = { editable = "/Users/au616397/Repositories/atomforge/packages/atomforge-core" }
+source = { editable = "packages/atomforge-core" }
 dependencies = [
     { name = "pydantic" },
 ]
@@ -87,10 +93,13 @@ dependencies = [
 [package.metadata]
 requires-dist = [{ name = "pydantic", specifier = ">=2" }]
 
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.3" }]
+
 [[package]]
 name = "atomforge-runtime"
 version = "0.1.0"
-source = { editable = "/Users/au616397/Repositories/atomforge/packages/atomforge-runtime" }
+source = { editable = "packages/atomforge-runtime" }
 dependencies = [
     { name = "atomforge-core" },
     { name = "pydantic" },
@@ -98,9 +107,12 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "atomforge-core", editable = "/Users/au616397/Repositories/atomforge/packages/atomforge-core" },
+    { name = "atomforge-core", editable = "packages/atomforge-core" },
     { name = "pydantic", specifier = ">=2" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.3" }]
 
 [[package]]
 name = "click"
