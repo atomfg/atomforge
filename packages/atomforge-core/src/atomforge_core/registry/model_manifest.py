@@ -32,3 +32,8 @@ class ModelManifest(RegistryManifestBase):
         default=None,
         description="Optional dotted path to a resource probe callable.",
     )
+
+    task_overrides: dict[str, SymbolPath] = Field(
+        default_factory=dict,
+        description="Optional mapping of task kinds to model-specific TaskSpec overrides, where the value is a dotted path to a TaskExecutor subclass.",
+    )

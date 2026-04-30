@@ -9,6 +9,7 @@ from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.model.spec import ModelSpecT
 from atomforge_core.resources.resource_probes import ResourceProbe
 from atomforge_core.registry.symbol_path import SymbolPath
+from atomforge_core.task.executor import TaskExecutor
 from atomforge_runtime.registry.loading import (
     load_callable,
     load_environment_factory,
@@ -17,6 +18,7 @@ from atomforge_runtime.registry.loading import (
 )
 
 _UNSET = object()  # Sentinel for unset values
+
 
 @dataclass(frozen=True)
 class ModelRegistration(Generic[ModelSpecT]):
@@ -29,9 +31,12 @@ class ModelRegistration(Generic[ModelSpecT]):
     resource_capabilities_path: SymbolPath
     probe_path: SymbolPath | None = None
     source: list[str] = field(default_factory=list)
+    task_overrides: dict[str, SymbolPath] = field(default_factory=dict)
 
     _metadata: object = field(default=_UNSET, init=False, repr=False, compare=False)
-    _executor_class: object = field(default=_UNSET, init=False, repr=False, compare=False)
+    _executor_class: object = field(
+        default=_UNSET, init=False, repr=False, compare=False
+    )
     _supported_properties: object = field(
         default=_UNSET, init=False, repr=False, compare=False
     )
@@ -42,6 +47,10 @@ class ModelRegistration(Generic[ModelSpecT]):
         default=_UNSET, init=False, repr=False, compare=False
     )
     _probe: object = field(default=_UNSET, init=False, repr=False, compare=False)
+
+    _task_override_executors: object = field(
+        default=_UNSET, init=False, repr=False, compare=False
+    )
 
     def load_metadata(self) -> ModelMetadata:
         if self._metadata is _UNSET:
@@ -137,6 +146,39 @@ class ModelRegistration(Generic[ModelSpecT]):
             )
         return self._probe
 
+    def check_task_override(self, task_kind: str) -> bool:
+        return task_kind in self.task_overrides
+
+    def load_task_override_executor_class(
+        self, task_kind: str
+    ) -> type[TaskExecutor] | None:
+        if task_kind not in self.task_overrides:
+            return None
+        if self._task_override_executors is _UNSET:
+            object.__setattr__(self, "_task_override_executors", {})
+        if task_kind not in self._task_override_executors:
+            object.__setattr__(
+                self,
+                "_task_override_executors",
+                {
+                    **self._task_override_executors,
+                    task_kind: load_subclass(
+                        self.task_overrides[task_kind],
+                        TaskExecutor,
+                        registration_label="Model registration",
+                        kind=self.kind,
+                        field_name=f"task_overrides[{task_kind}]",
+                    ),
+                },
+            )
+        return self._task_override_executors.get(task_kind, None)
+    
+    def load_all_task_override_executors(self) -> dict[str, type[TaskExecutor]]:
+        executors = {}
+        for task_kind in self.task_overrides.keys():
+            executors[task_kind] = self.load_task_override_executor_class(task_kind)
+        return executors
+
     def _strict_validation_entries(self):
         return [
             ("metadata", self.metadata_path, self.load_metadata),
@@ -157,6 +199,11 @@ class ModelRegistration(Generic[ModelSpecT]):
                 self.load_resource_capabilities,
             ),
             ("probe", self.probe_path, self.load_probe),
+            (
+                "task_override_executors",
+                self.task_overrides,
+                self.load_all_task_override_executors,
+            ),
         ]
 
     def validate_strict(self) -> None:

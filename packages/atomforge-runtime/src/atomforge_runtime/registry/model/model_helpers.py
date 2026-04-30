@@ -23,6 +23,7 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             "metadata": manifest.metadata,
             "resource_capabilities": manifest.resource_capabilities,
             "probe": manifest.probe,
+            "task_overrides": manifest.task_overrides,
         }
 
     def _build_registration(
@@ -39,6 +40,7 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             environment_factory_path=components["environment_factory_cls"],
             resource_capabilities_path=components["resource_capabilities"],
             probe_path=components["probe"],
+            task_overrides=components["task_overrides"],
             source=manifest.distribution,
         )
 

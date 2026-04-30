@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import contextlib
 import sys
 import os
@@ -16,6 +18,8 @@ from atomforge_runtime.resources import (
 from atomforge_core.protocol.session import model_session_key
 from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.model.spec import ModelSpec
+from atomforge_core.task.executor import TaskExecutor
+from atomforge_core.task.spec import TaskSpec
 from atomforge_runtime.registry.model.model_registry import ModelRegistry
 
 from atomforge_runtime.registry.task.task_registry import TaskRegistry
@@ -38,6 +42,13 @@ from atomforge_core.protocol.response import (
 )
 
 
+@dataclass
+class ModelSession:
+    model_executor: ModelExecutor
+    resolved_resources: ResolvedResources
+    kind: str
+
+
 class SubprocessWorker:
     def __init__(
         self,
@@ -57,7 +68,7 @@ class SubprocessWorker:
         self._model_registry = model_registry
         self._system_resources = system_resources
 
-        self._model_sessions: dict[str, ModelExecutor] = {}
+        self._model_sessions: dict[str, ModelSession] = {}
         self._dev_null = open(os.devnull, "w")
 
     def run(self) -> int:
@@ -121,7 +132,7 @@ class SubprocessWorker:
                 request_id=request.request_id,
                 error=f"unknown operation: {request.operation}",
             ), False
-        
+
         return handler(request)
 
     def _init_model_case(self, request: InitModelRequest) -> tuple[TaskResponse, bool]:
@@ -132,7 +143,11 @@ class SubprocessWorker:
             return self._failed_execution_case(request.request_id, exc)
 
         model_session_id = self._get_model_session_id(request)
-        self._model_sessions[model_session_id] = model_executor
+        self._model_sessions[model_session_id] = ModelSession(
+            model_executor=model_executor,
+            resolved_resources=resolved_resources,
+            kind=request.model_kind,
+        )
 
         return InitModelResponse(
             request_id=request.request_id,
@@ -149,12 +164,16 @@ class SubprocessWorker:
         model_spec = self._get_model_spec(request)
         model_session_id = model_session_key(model_spec, request.exec_resources)
         return model_session_id
+    
+    def _get_model_session(self, model_session_id: str) -> ModelSession:
+        model_session = self._model_sessions.get(model_session_id)
+        if model_session is None:
+            raise ValueError(f"unknown model session id: {model_session_id}")
+        return model_session
 
     def _get_model_executor(self, model_session_id: str) -> ModelExecutor:
-        model_executor = self._model_sessions.get(model_session_id)
-        if model_executor is None:
-            raise ValueError(f"unknown model session id: {model_session_id}")
-        return model_executor
+        model_session = self._get_model_session(model_session_id)
+        return model_session.model_executor
 
     def _create_model_executor(
         self, request: InitModelRequest
@@ -187,11 +206,37 @@ class SubprocessWorker:
 
         return model_executor, resolved_resources
 
-    def _execute_task(self, request: TaskRequest) -> Any:
+    def _resolve_task(self, request: TaskRequest) -> tuple[TaskSpec, TaskExecutor]:
         # Validate the model and task payloads and construct the executors
         task_registration = self._task_registry.get(request.task_kind)
         task_spec = task_registration.spec_model.model_validate(request.task_payload)
-        task_executor = task_registration.load_executor_class()()
+
+        model_kind = self._get_model_session(request.model_session_id).kind
+        model_registration = self._model_registry.get(model_kind)
+        has_override = model_registration.check_task_override(request.task_kind)
+
+        if task_spec.execution_policy == "require_model_override" and not has_override:
+            raise ValueError(
+                f"task kind '{request.task_kind}' requires, according to execution policy {task_spec.execution_policy}, a model override executor, but no override was found for model kind '{model_kind}'"
+            )
+        elif (
+            task_spec.execution_policy
+            in ["prefer_model_override", "require_model_override"]
+            and has_override
+        ):
+            override_executor_cls = (
+                model_registration.load_task_override_executor_class(request.task_kind)
+            )
+            task_executor = override_executor_cls()
+
+        else:
+            task_executor = task_registration.load_executor_class()()
+
+        return task_spec, task_executor
+
+    def _execute_task(self, request: TaskRequest) -> Any:
+
+        task_spec, task_executor = self._resolve_task(request)
 
         # Get the model executor for the task
         model_executor = self._get_model_executor(request.model_session_id)
@@ -211,7 +256,7 @@ class SubprocessWorker:
         print(f"worker[{self._name}]: {message}", file=self._stderr, flush=True)
 
 
-def main(name: str) -> int: # pragma: no cover
+def main(name: str) -> int:  # pragma: no cover
     task_registry = TaskRegistry.default()
     model_registry = ModelRegistry.default()
     system_resources = discover_system_resources()
@@ -228,7 +273,8 @@ def main(name: str) -> int: # pragma: no cover
     return worker.run()
 
 
-if __name__ == "__main__": # pragma: no cover
-    import sys 
+if __name__ == "__main__":  # pragma: no cover
+    import sys
+
     name = sys.argv[1]
     raise SystemExit(main(name))
