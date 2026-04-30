@@ -22,7 +22,7 @@ class TaskRegistration(Generic[TaskSpecT, TaskResultT]):
     kind: str
     spec_model: type[TaskSpecT]
     result_model_path: SymbolPath
-    executor_class_path: SymbolPath
+    executor_class_path: SymbolPath | None
     capability_spec_path: SymbolPath
     environment_factory_path: SymbolPath
     source: list[str]
@@ -51,7 +51,10 @@ class TaskRegistration(Generic[TaskSpecT, TaskResultT]):
             )
         return self._result_model
 
-    def load_executor_class(self) -> type[TaskExecutor[TaskSpecT, TaskResultT]]:
+    def load_executor_class(self) -> type[TaskExecutor[TaskSpecT, TaskResultT]] | None:
+        if self.executor_class_path is None:
+            return None
+
         if self._executor_class is _UNSET:
             object.__setattr__(
                 self,
@@ -65,6 +68,9 @@ class TaskRegistration(Generic[TaskSpecT, TaskResultT]):
                 ),
             )
         return self._executor_class
+    
+    def has_default_executor(self) -> bool:
+        return self.executor_class_path is not None
 
     def load_capability_spec(self) -> TaskCapabilitySpec:
         if self._capability_spec is _UNSET:

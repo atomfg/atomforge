@@ -229,8 +229,16 @@ class SubprocessWorker:
             )
             task_executor = override_executor_cls()
 
-        else:
+        elif task_spec.execution_policy in ["default", "prefer_model_override"]:
+            if not task_registration.has_default_executor():
+                raise ValueError(
+                    f"task kind '{request.task_kind}' does not have a default executor, and no model override was found for model kind '{model_kind}'"
+                )
             task_executor = task_registration.load_executor_class()()
+        else:
+            raise ValueError(
+                f"no executor found for task kind '{request.task_kind}' and model kind '{model_kind}'"
+            )
 
         return task_spec, task_executor
 

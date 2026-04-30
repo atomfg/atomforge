@@ -4,7 +4,7 @@ from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.property import Property
 from atomforge_core.registry.symbol_path import SymbolPath
 from atomforge_runtime.registry.task.task_registry import TaskRegistry
-from atomforge_runtime.registry.task_registration import TaskRegistration
+from atomforge_runtime.registry.task.task_registration import TaskRegistration
 
 from atomforge_builtins.model.ase_lj import LennardJones
 from atomforge_builtins.task.bfgs import BFGS

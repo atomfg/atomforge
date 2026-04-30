@@ -20,7 +20,7 @@ from atomforge_core.task.spec import TaskSpec
 from atomforge_runtime.registry.model.model_registration import ModelRegistration
 from atomforge_runtime.registry.model.model_registry import ModelRegistry
 from atomforge_runtime.registry.task.task_registry import TaskRegistry
-from atomforge_runtime.registry.task_registration import TaskRegistration
+from atomforge_runtime.registry.task.task_registration import TaskRegistration
 
 
 class FakeModel(ModelSpec):

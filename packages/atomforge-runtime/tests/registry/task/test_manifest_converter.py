@@ -5,7 +5,7 @@ from atomforge_runtime.registry.task.task_helpers import (
     ManifestToRegistrationConverter,
     TaskRegistryError,
 )
-from atomforge_runtime.registry.task_registration import TaskRegistration
+from atomforge_runtime.registry.task.task_registration import TaskRegistration
 
 from runtime_fakes import FakeTask
 

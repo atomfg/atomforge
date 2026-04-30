@@ -9,8 +9,8 @@ class TaskManifest(RegistryManifestBase):
     spec_model: SymbolPath = Field(
         description="The specification model for the task, as a dotted path to a class, e.g. 'my_package.my_module:MySpecModel'"
     )
-    executor_cls: SymbolPath = Field(
-        description="The executor class for the task, as a dotted path to a class, e.g. 'my_package.my_module:MyTaskExecutor'"
+    executor_cls: SymbolPath | None = Field(
+        description="The executor class for the task, as a dotted path to a class, e.g. 'my_package.my_module:MyTaskExecutor'. If not provided, the task will require model overrides to specify the executor."
     )
     result_model: SymbolPath = Field(
         description="The result model for the task, as a dotted path to a class, e.g. 'my_package.my_module:MyResultModel'"
