@@ -3,11 +3,11 @@ from atomforge_core.model.result import ModelResult
 from atomforge_core.resources.resource_models import ResolvedResources
 from atomforge_core.structure import StructureData
 
-from atomforge_m3gnet.spec import MG3Net
+from atomforge_m3gnet.spec import M3GNet
 
 
-class MG3NetExecutor(ModelExecutor[MG3Net]):
-    def __init__(self, spec: MG3Net, resolved_resources: ResolvedResources) -> None:
+class M3GNetExecutor(ModelExecutor[M3GNet]):
+    def __init__(self, spec: M3GNet, resolved_resources: ResolvedResources) -> None:
         super().__init__(spec, resolved_resources)
         from m3gnet.models import M3GNet, Potential
 

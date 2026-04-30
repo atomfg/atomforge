@@ -9,16 +9,16 @@ if str(PLUGIN_SRC) not in sys.path:
 
 
 def test_m3gnet_public_reexport_and_manifest_symbols():
-    from atomforge_m3gnet import MG3Net
+    from atomforge_m3gnet import M3GNet
     from atomforge_m3gnet.manifest import m3gnet_manifest
-    from atomforge_m3gnet.spec import MG3Net as MG3NetSpec
+    from atomforge_m3gnet.spec import M3GNet as M3GNetSpec
 
-    assert MG3Net is MG3NetSpec
-    assert m3gnet_manifest.model_spec.load_symbol() is MG3NetSpec
-    assert m3gnet_manifest.executor_cls.load_symbol().__name__ == "MG3NetExecutor"
+    assert M3GNet is M3GNetSpec
+    assert m3gnet_manifest.model_spec.load_symbol() is M3GNetSpec
+    assert m3gnet_manifest.executor_cls.load_symbol().__name__ == "M3GNetExecutor"
     assert m3gnet_manifest.supported_properties.load_symbol()
     assert str(m3gnet_manifest.environment_factory_cls) == (
-        "atomforge_m3gnet.environment:MG3NetEnvironmentFactory"
+        "atomforge_m3gnet.environment:M3GNetEnvironmentFactory"
     )
     assert m3gnet_manifest.environment_factory_cls.load_symbol()
     assert m3gnet_manifest.metadata.load_symbol().id == "m3gnet"
