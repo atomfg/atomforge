@@ -1,5 +1,7 @@
 from atomforge_core.registry.model_manifest import ModelManifest
 
+task_overrides = {"atomic_descriptor": "atomforge_chgnet.overrides.atomic_fingerprint:AtomicFingerprintExecutor"}
+
 chgnet_manifest = ModelManifest(
     kind="chgnet",
     model_spec="atomforge_chgnet.spec:CHGNet",
@@ -10,4 +12,5 @@ chgnet_manifest = ModelManifest(
     resource_capabilities="atomforge_chgnet.definitions:CHGNetResourceCapabilities",
     distribution=["atomforge_chgnet"],
     probe="atomforge_runtime.probes.torch_probe:torch_probe",
+    task_overrides=task_overrides,
 )

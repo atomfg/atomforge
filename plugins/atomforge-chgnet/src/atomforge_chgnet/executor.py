@@ -11,6 +11,7 @@ class CHGNetExecutor(ModelExecutor[CHGNet]):
     def __init__(self, spec: CHGNet, resolved_resources: ResolvedResources) -> None:
         super().__init__(spec, resolved_resources)
         from chgnet.model.dynamics import CHGNetCalculator
+        from chgnet.model import CHGNet as CHGNetModel
 
         use_device = None
         if resolved_resources.accelerator == "gpu":
@@ -20,7 +21,8 @@ class CHGNetExecutor(ModelExecutor[CHGNet]):
         elif resolved_resources.accelerator == "cpu":
             use_device = "cpu"
 
-        self._calc = CHGNetCalculator(use_device=use_device)
+        self._model = CHGNetModel.load(verbose=False, use_device=use_device)
+        self._calc = CHGNetCalculator(model=self._model, device=use_device)
 
     def convert_structure(self, structure: StructureData):
         from ase import Atoms
@@ -44,3 +46,15 @@ class CHGNetExecutor(ModelExecutor[CHGNet]):
             energy = None
 
         return ModelResult(energy=energy, forces=forces)
+    
+    def compute_atomic_descriptors(
+        self, structure: StructureData
+    ) -> list[list[float]]:
+        from pymatgen.io.ase import AseAtomsAdaptor
+        
+        atoms = self.convert_structure(structure)
+
+        pymatgen_structure = AseAtomsAdaptor.get_structure(atoms)
+        model_results = self._model.predict_structure(pymatgen_structure, return_atom_feas=True)
+
+        return model_results["atom_fea"].tolist()

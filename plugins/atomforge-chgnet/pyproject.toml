@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "atomforge_core",
+    "atomforge-builtins",
 ]
 
 [project.entry-points.'atomforge.model']
@@ -20,3 +21,4 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 atomforge_core = { path="../../packages/atomforge-core", editable=true }
+atomforge-builtins = { path="../../packages/atomforge-builtins", editable=true }

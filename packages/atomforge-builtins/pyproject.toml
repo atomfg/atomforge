@@ -14,6 +14,7 @@ dependencies = [
 [project.entry-points.'atomforge.task']
 single_point = "atomforge_builtins.task.single_point.manifest:single_point_manifest"
 bfgs = "atomforge_builtins.task.bfgs.manifest:bfgs_manifest"
+atomic_descriptor = "atomforge_builtins.task.atomic_descriptor.manifest:atomic_descriptor_manifest"
 
 [project.entry-points.'atomforge.model']
 lennard_jones = "atomforge_builtins.model.ase_lj.manifest:lennard_jones_manifest"
