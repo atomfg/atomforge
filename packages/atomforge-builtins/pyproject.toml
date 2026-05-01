@@ -12,12 +12,12 @@ dependencies = [
 ]
 
 [project.entry-points.'atomforge.task']
-single_point = "atomforge_builtins.task.task_manifests:single_point_manifest"
-bfgs = "atomforge_builtins.task.task_manifests:bfgs_manifest"
+single_point = "atomforge_builtins.task.single_point.manifest:single_point_manifest"
+bfgs = "atomforge_builtins.task.bfgs.manifest:bfgs_manifest"
 
 [project.entry-points.'atomforge.model']
-lennard_jones = "atomforge_builtins.model.model_manifests:lennard_jones_manifest"
-no_dep = "atomforge_builtins.model.model_manifests:no_dep_manifest"
+lennard_jones = "atomforge_builtins.model.ase_lj.manifest:lennard_jones_manifest"
+no_dep = "atomforge_builtins.model.nodep_model:no_dep_manifest"
 
 
 [build-system]

@@ -8,7 +8,7 @@ from atomforge_runtime.registry.task.task_registration import TaskRegistration
 
 from atomforge_builtins.model.ase_lj import LennardJones
 from atomforge_builtins.task.bfgs import BFGS
-from atomforge_builtins.task.singlepoint import SinglePoint
+from atomforge_builtins.task.single_point import SinglePoint
 
 
 def test_task_registry_duplicate_kind_fails():
@@ -17,13 +17,15 @@ def test_task_registry_duplicate_kind_fails():
     registration = TaskRegistration(
         kind="bfgs",
         spec_model=BFGS,
-        result_model_path=SymbolPath("atomforge_builtins.task.bfgs:BFGSResult"),
-        executor_class_path=SymbolPath("atomforge_builtins.task.bfgs:BFGSExecutor"),
+        result_model_path=SymbolPath("atomforge_builtins.task.bfgs.result:BFGSResult"),
+        executor_class_path=SymbolPath(
+            "atomforge_builtins.task.bfgs.executor:BFGSExecutor"
+        ),
         capability_spec_path=SymbolPath(
-            "atomforge_builtins.task.bfgs:BFGSCapabilitySpec"
+            "atomforge_builtins.task.bfgs.definitions:BFGSCapabilitySpec"
         ),
         environment_factory_path=SymbolPath(
-            "atomforge_builtins.task.bfgs:BFGSEnvironmentFactory"
+            "atomforge_builtins.task.bfgs.environment:BFGSEnvironmentFactory"
         ),
         source=["atomforge-builtins"],
     )

@@ -15,12 +15,12 @@ def manifest_factory():
 
     def factory(
         kind="ase-lj",
-        model_spec="atomforge_builtins.model.ase_lj:LennardJones",
-        executor_cls="atomforge_builtins.model.ase_lj:LennardJonesExecutor",
-        supported_properties="atomforge_builtins.model.ase_lj:LennardJonesSupportedProperties",
-        environment_factory_cls="atomforge_builtins.model.ase_lj:LennardJonesEnvironmentFactory",
-        metadata="atomforge_builtins.model.ase_lj:LennardJonesMetadata",
-        resource_capabilities="atomforge_builtins.model.ase_lj:LennardJonesResourceCapabilities",
+        model_spec="atomforge_builtins.model.ase_lj.spec:LennardJones",
+        executor_cls="atomforge_builtins.model.ase_lj.executor:LennardJonesExecutor",
+        supported_properties="atomforge_builtins.model.ase_lj.definitions:LennardJonesSupportedProperties",
+        environment_factory_cls="atomforge_builtins.model.ase_lj.environment:LennardJonesEnvironmentFactory",
+        metadata="atomforge_builtins.model.ase_lj.definitions:LennardJonesMetadata",
+        resource_capabilities="atomforge_builtins.model.ase_lj.definitions:LennardJonesResourceCapabilities",
         distribution=["atomforge-builtins"],
         probe=None,
     ):
@@ -181,4 +181,3 @@ def test_converter_leaves_lazy_fields_as_symbol_paths(manifest_factory):
     assert registration.supported_properties_path == SymbolPath(
         manifest.supported_properties.raw
     )
-

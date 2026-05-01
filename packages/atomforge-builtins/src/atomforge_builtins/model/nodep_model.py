@@ -4,6 +4,7 @@ from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.model.metadata import ModelMetadata
 from atomforge_core.property import Property
+from atomforge_core.registry.model_manifest import ModelManifest
 from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.model.result import ModelResult
 from atomforge_core.model.spec import ModelSpec
@@ -72,3 +73,15 @@ class NoDepExecutor(ModelExecutor[NoDep]):
             energy=energy,
             forces=forces,
         )
+
+
+no_dep_manifest = ModelManifest(
+    kind="no-dep",
+    model_spec="atomforge_builtins.model.nodep_model:NoDep",
+    executor_cls="atomforge_builtins.model.nodep_model:NoDepExecutor",
+    supported_properties="atomforge_builtins.model.nodep_model:NoDepSupportedProperties",
+    environment_factory_cls="atomforge_builtins.model.nodep_model:NoDepEnvironmentFactory",
+    metadata="atomforge_builtins.model.nodep_model:NoDepMetadata",
+    resource_capabilities="atomforge_builtins.model.nodep_model:NoDepCapabilities",
+    distribution=["atomforge_builtins"],
+)

@@ -13,11 +13,11 @@ def test_task_manifest_builtin_registry_loads_tasks():
 def manifest_factory():
     def factory(
         kind="single_point",
-        executor_cls="atomforge_builtins.task.singlepoint:SinglePointExecutor",
-        spec_model="atomforge_builtins.task.singlepoint:SinglePoint",
-        result_model="atomforge_builtins.task.singlepoint:SinglePointResult",
-        capability_spec="atomforge_builtins.task.singlepoint:SinglePointCapabilitySpec",
-        environment_factory_cls="atomforge_builtins.task.singlepoint:SinglePointEnvironmentFactory",
+        executor_cls="atomforge_builtins.task.single_point.executor:SinglePointExecutor",
+        spec_model="atomforge_builtins.task.single_point.spec:SinglePoint",
+        result_model="atomforge_builtins.task.single_point.result:SinglePointResult",
+        capability_spec="atomforge_builtins.task.single_point.definitions:SinglePointCapabilitySpec",
+        environment_factory_cls="atomforge_builtins.task.single_point.environment:SinglePointEnvironmentFactory",
         distribution=["atomforge-builtins"],
     ):
         return TaskManifest(
@@ -36,4 +36,3 @@ def manifest_factory():
 def test_task_manifest_factory_default(manifest_factory):
     manifest = manifest_factory()
     assert isinstance(manifest, TaskManifest)
-

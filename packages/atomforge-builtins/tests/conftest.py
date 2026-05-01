@@ -16,9 +16,9 @@ def example_structure():
 
 @pytest.fixture
 def model_executor():
-    from atomforge_builtins.model.ase_lj import LennardJones, LennardJonesExecutor
+    from atomforge_builtins.model.ase_lj import LennardJones
+    from atomforge_builtins.model.ase_lj.executor import LennardJonesExecutor
 
     resources = ResolvedResources(accelerator="cpu", precision=None, messages={})
     model = LennardJones(sigma=0.5, epsilon=2)
     return LennardJonesExecutor(model, resources)
-

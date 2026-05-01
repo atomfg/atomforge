@@ -1,7 +1,8 @@
 import pytest
 
 from atomforge_builtins.model.nodep_model import NoDep, NoDepExecutor
-from atomforge_builtins.task.singlepoint import SinglePoint, SinglePointExecutor
+from atomforge_builtins.task.single_point import SinglePoint
+from atomforge_builtins.task.single_point.executor import SinglePointExecutor
 from atomforge_core.property import Property
 from atomforge_core.resources.resource_models import ResolvedResources
 from atomforge_core.structure import StructureData
@@ -95,4 +96,3 @@ def test_single_point_executor(nodep_executor, example_structure):
     assert isinstance(result.forces, list) and all(
         isinstance(f, list) for f in result.forces
     )
-

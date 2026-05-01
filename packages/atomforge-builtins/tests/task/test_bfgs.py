@@ -1,6 +1,7 @@
 import pytest
 
-from atomforge_builtins.task.bfgs import BFGS, BFGSExecutor, BFGSResult
+from atomforge_builtins.task.bfgs import BFGS, BFGSResult
+from atomforge_builtins.task.bfgs.executor import BFGSExecutor
 from atomforge_core.property import Property
 from atomforge_core.structure import StructureData
 
@@ -58,4 +59,3 @@ def test_bfgs_result_kind(bfgs_result):
 def test_bfgs_result_structure(bfgs_result, example_structure):
     assert isinstance(bfgs_result.structure, StructureData)
     assert bfgs_result.structure != example_structure
-

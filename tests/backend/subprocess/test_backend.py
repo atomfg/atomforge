@@ -38,7 +38,7 @@ def test_prepare_model_error(backend, mocker):
 
 def test_validate_task_executability(backend, example_structure):
     from atomforge_builtins.model.ase_lj import LennardJones
-    from atomforge_builtins.task.singlepoint import SinglePoint
+    from atomforge_builtins.task.single_point import SinglePoint
 
     model_spec = LennardJones()
     task_spec = SinglePoint(structure=example_structure)
@@ -77,4 +77,3 @@ def test_validate_task_executability_unsupported(backend):
 
     with pytest.raises(ValueError, match="required properties"):
         backend._validate_task_executability(model_spec, task_spec)
-
