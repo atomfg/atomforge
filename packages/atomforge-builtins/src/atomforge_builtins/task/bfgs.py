@@ -5,6 +5,7 @@ from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.property import Property
 from atomforge_core.structure import StructureData
 from atomforge_core.task.capability import TaskCapabilitySpec
+from atomforge_core.task.executability import CompatibilityCheck
 from atomforge_core.task.executor import TaskExecutor
 from atomforge_core.task.result import TaskResult
 from atomforge_core.task.spec import TaskSpec
@@ -44,6 +45,12 @@ BFGSEnvironmentFactory = environment_factory_from_callable(
 
 
 class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
+    @classmethod
+    def check_compatibility(
+        cls, spec: BFGS, model_executor: ModelExecutor
+    ) -> CompatibilityCheck:
+        return CompatibilityCheck(ok=True)
+
     def execute(self, spec: BFGS, model_executor: ModelExecutor) -> BFGSResult:
         from ase.calculators.calculator import Calculator
         from ase.optimize import BFGS as BFGSOptimizer
@@ -99,4 +106,3 @@ def convert_to_structure(atoms) -> StructureData:
         cell=atoms.get_cell().tolist(),
         pbc=atoms.get_pbc().tolist(),
     )
-

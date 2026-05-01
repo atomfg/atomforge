@@ -7,6 +7,7 @@ from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.property import Property
 from atomforge_core.structure import StructureData
 from atomforge_core.task.capability import TaskCapabilitySpec
+from atomforge_core.task.executability import CompatibilityCheck
 from atomforge_core.task.executor import TaskExecutor
 from atomforge_core.task.result import TaskResult
 from atomforge_core.task.spec import TaskSpec
@@ -75,6 +76,12 @@ class SinglePointResult(TaskResult):
 
 
 class SinglePointExecutor(TaskExecutor[SinglePoint, SinglePointResult]):
+    @classmethod
+    def check_compatibility(
+        cls, spec: SinglePoint, model_executor: ModelExecutor
+    ) -> CompatibilityCheck:
+        return CompatibilityCheck(ok=True)
+
     def execute(
         self, spec: SinglePoint, model_executor: ModelExecutor
     ) -> SinglePointResult:

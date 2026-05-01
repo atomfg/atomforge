@@ -4,9 +4,11 @@ from atomforge_core.protocol.request import InitModelRequest, ShutdownRequest, T
 from atomforge_core.protocol.response import (
     ErrorResponse,
     InitModelResponse,
+    IncompatibilityResponse,
     ShutdownResponse,
     TaskResponse,
 )
+from atomforge_core.task.execution_policy import ExecutionPolicy
 from atomforge_core.resources.resource_models import ExecutionResources
 
 from runtime_fakes import FakeTask
@@ -57,6 +59,24 @@ def malformed_task_request_response(worker, init_model_response):
         model_session_id=init_model_response[0].model_session_id,
         task_kind="fake-task",
         task_payload={"invalid": "payload"},
+    )
+
+    response, should_exit = worker._handle_request(task_request)
+    return response, should_exit
+
+
+@pytest.fixture(scope="module")
+def incompatible_task_request_response(worker, init_model_response, example_structure):
+    task = FakeTask(
+        structure=example_structure,
+        allow_execution=False,
+        execution_policy=ExecutionPolicy.DEFAULT,
+    )
+    task_request = TaskRequest(
+        request_id="test_request_6",
+        model_session_id=init_model_response[0].model_session_id,
+        task_kind="fake-task",
+        task_payload=task.model_dump(),
     )
 
     response, should_exit = worker._handle_request(task_request)
@@ -144,7 +164,16 @@ def test_malformed_task_request_should_exit(malformed_task_request_response):
     assert not should_exit
 
 
+def test_incompatible_task_request_response(incompatible_task_request_response):
+    response, _ = incompatible_task_request_response
+    assert isinstance(response, IncompatibilityResponse)
+
+
+def test_incompatible_task_request_should_exit(incompatible_task_request_response):
+    _, should_exit = incompatible_task_request_response
+    assert not should_exit
+
+
 def test_unknown_operation_request_response(unknown_operation_request_response):
     response, _ = unknown_operation_request_response
     assert isinstance(response, ErrorResponse)
-

@@ -15,6 +15,7 @@ from atomforge_core.resources.resource_models import ResolvedResources
 from atomforge_core.resources.resource_probes import ProbeResult
 from atomforge_core.structure import StructureData
 from atomforge_core.task.capability import TaskCapabilitySpec
+from atomforge_core.task.executability import CompatibilityCheck
 from atomforge_core.task.result import TaskResult
 from atomforge_core.task.spec import TaskSpec
 from atomforge_runtime.registry.model.model_registration import ModelRegistration
@@ -58,6 +59,8 @@ class FakeModelExecutor(ModelExecutor[FakeModel]):
 class FakeTask(TaskSpec):
     kind: Literal["fake-task"] = "fake-task"
     structure: StructureData
+    allow_execution: bool = True
+    minimum_override_scale: float = 0.0
 
     def required_model_properties(self) -> frozenset[Property]:
         return frozenset({Property.ENERGY, Property.FORCES})
@@ -70,6 +73,17 @@ class FakeTaskResult(TaskResult):
 
 
 class FakeTaskExecutor:
+    @classmethod
+    def check_compatibility(
+        cls, spec: FakeTask, model_executor: ModelExecutor
+    ) -> CompatibilityCheck:
+        if not spec.allow_execution:
+            return CompatibilityCheck(
+                ok=False,
+                reason="FakeTaskExecutor does not support allow_execution=False",
+            )
+        return CompatibilityCheck(ok=True)
+
     def execute(
         self, spec: FakeTask, model_executor: ModelExecutor
     ) -> FakeTaskResult:
@@ -80,7 +94,24 @@ class FakeTaskExecutor:
         return FakeTaskResult(energy=result.energy, forces=result.forces)
 
 
+class FakeOverrideTaskExecutor(FakeTaskExecutor):
+    @classmethod
+    def check_compatibility(
+        cls, spec: FakeTask, model_executor: ModelExecutor
+    ) -> CompatibilityCheck:
+        if model_executor.spec.scale < spec.minimum_override_scale:
+            return CompatibilityCheck(
+                ok=False,
+                reason=(
+                    f"FakeOverrideTaskExecutor requires model scale >= "
+                    f"{spec.minimum_override_scale}"
+                ),
+            )
+        return CompatibilityCheck(ok=True)
+
+
 FakeSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
+EmptySupportedProperties = frozenset()
 FakeCapabilitySpec = TaskCapabilitySpec(
     required=frozenset({Property.ENERGY, Property.FORCES}),
     optional=frozenset(),
@@ -113,6 +144,7 @@ def build_model_registration() -> ModelRegistration:
         environment_factory_path=SymbolPath("runtime_fakes:FakeEnvironmentFactory"),
         resource_capabilities_path=SymbolPath("runtime_fakes:FakeResourceCapabilities"),
         probe_path=SymbolPath("runtime_fakes:fake_probe"),
+        task_overrides={"fake-task": SymbolPath("runtime_fakes:FakeOverrideTaskExecutor")},
         source=["runtime-test-plugin"],
     )
 
@@ -148,3 +180,6 @@ def build_task_registry() -> TaskRegistry:
 def build_broken_model_registration(**kwargs) -> ModelRegistration:
     return replace(build_model_registration(), **kwargs)
 
+
+def build_broken_task_registration(**kwargs) -> TaskRegistration:
+    return replace(build_task_registration(), **kwargs)

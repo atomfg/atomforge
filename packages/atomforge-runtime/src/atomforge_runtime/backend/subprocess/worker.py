@@ -6,7 +6,7 @@ import contextlib
 import sys
 import os
 import traceback
-from typing import Any, TextIO
+from typing import TextIO
 
 from pydantic import ValidationError
 
@@ -18,12 +18,14 @@ from atomforge_runtime.resources import (
 from atomforge_core.protocol.session import model_session_key
 from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.model.spec import ModelSpec
+from atomforge_core.task.executability import CompatibilityCheck, ExecutionRoute
 from atomforge_core.task.executor import TaskExecutor
 from atomforge_core.task.spec import TaskSpec
 from atomforge_runtime.registry.model.model_registry import ModelRegistry
 
 from atomforge_runtime.registry.task.task_registry import TaskRegistry
 from atomforge_core.resources.resource_models import ResolvedResources
+from atomforge_runtime.task.resolution import resolve_worker_execution
 
 from atomforge_core.protocol.core import (
     read_request,
@@ -39,6 +41,7 @@ from atomforge_core.protocol.response import (
     TaskResponse,
     ShutdownResponse,
     ErrorResponse,
+    IncompatibilityResponse,
 )
 
 
@@ -98,7 +101,7 @@ class SubprocessWorker:
             message="worker shutting down",
         ), True
 
-    def _task_execution_case(self, request: TaskRequest) -> tuple[TaskResponse, bool]:
+    def _task_execution_case(self, request: TaskRequest) -> tuple[object, bool]:
         try:
             response = self._execute_task(request)
         except Exception as exc:
@@ -118,7 +121,7 @@ class SubprocessWorker:
             ),
         ), False
 
-    def _handle_request(self, request) -> tuple[TaskResponse, bool]:
+    def _handle_request(self, request) -> tuple[object, bool]:
 
         operation_handlers = {
             "shutdown": self._shutdown_case,
@@ -206,48 +209,40 @@ class SubprocessWorker:
 
         return model_executor, resolved_resources
 
-    def _resolve_task(self, request: TaskRequest) -> tuple[TaskSpec, TaskExecutor]:
-        # Validate the model and task payloads and construct the executors
+    def _resolve_task(
+        self, request: TaskRequest
+    ) -> tuple[TaskSpec, ExecutionRoute, type[TaskExecutor], CompatibilityCheck]:
         task_registration = self._task_registry.get(request.task_kind)
         task_spec = task_registration.spec_model.model_validate(request.task_payload)
 
+        model_executor = self._get_model_executor(request.model_session_id)
         model_kind = self._get_model_session(request.model_session_id).kind
         model_registration = self._model_registry.get(model_kind)
-        has_override = model_registration.check_task_override(request.task_kind)
+        route, task_executor_cls, compatibility = resolve_worker_execution(
+            task_spec,
+            task_registration,
+            model_registration,
+            model_executor,
+        )
+        return task_spec, route, task_executor_cls, compatibility
 
-        if task_spec.execution_policy == "require_model_override" and not has_override:
-            raise ValueError(
-                f"task kind '{request.task_kind}' requires, according to execution policy {task_spec.execution_policy}, a model override executor, but no override was found for model kind '{model_kind}'"
-            )
-        elif (
-            task_spec.execution_policy
-            in ["prefer_model_override", "require_model_override"]
-            and has_override
-        ):
-            override_executor_cls = (
-                model_registration.load_task_override_executor_class(request.task_kind)
-            )
-            task_executor = override_executor_cls()
+    def _execute_task(
+        self, request: TaskRequest
+    ) -> TaskResponse | IncompatibilityResponse:
 
-        elif task_spec.execution_policy in ["default", "prefer_model_override"]:
-            if not task_registration.has_default_executor():
-                raise ValueError(
-                    f"task kind '{request.task_kind}' does not have a default executor, and no model override was found for model kind '{model_kind}'"
-                )
-            task_executor = task_registration.load_executor_class()()
-        else:
-            raise ValueError(
-                f"no executor found for task kind '{request.task_kind}' and model kind '{model_kind}'"
-            )
-
-        return task_spec, task_executor
-
-    def _execute_task(self, request: TaskRequest) -> Any:
-
-        task_spec, task_executor = self._resolve_task(request)
+        task_spec, route, task_executor_cls, compatibility = self._resolve_task(request)
 
         # Get the model executor for the task
         model_executor = self._get_model_executor(request.model_session_id)
+        if not compatibility.ok:
+            return IncompatibilityResponse(
+                request_id=request.request_id,
+                task_kind=request.task_kind,
+                reason=compatibility.reason
+                or "Task spec is not compatible with the selected executor",
+                route_kind=route.route_kind.value,
+            )
+        task_executor = task_executor_cls()
 
         # Context manager that ensures nothing is written to stdout during model execution
         with contextlib.redirect_stdout(self._dev_null) as _:

@@ -120,3 +120,15 @@ def test_task_registration_validate_strict_warms_cache():
 
     assert result_model is registration.load_result_model()
 
+
+def test_task_registration_without_default_executor_validates_strict():
+    manifest = manifest_factory(executor_cls=None)
+    converter = ManifestToRegistrationConverter()
+    registration, _ = converter(
+        manifest,
+        entry_point_name="test_no_default_executor",
+        entry_point_package="runtime-test-plugin",
+    )
+
+    registration.validate_strict()
+    assert registration.load_executor_class() is None

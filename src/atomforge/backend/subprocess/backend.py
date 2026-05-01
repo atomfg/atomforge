@@ -15,6 +15,7 @@ from atomforge_core.task.spec import TaskSpec
 from atomforge_core.protocol.core import read_response, write_request
 from atomforge_core.protocol.request import TaskRequest, ShutdownRequest, RequestMessage, InitModelRequest
 from atomforge_core.protocol.response import ResponseMessage
+from atomforge_runtime.task.resolution import resolve_host_execution
 
 from dataclasses import dataclass
 from uuid import uuid4
@@ -113,17 +114,18 @@ class SubprocessBackend:
         self._ensure_matching_response(request, response)
         return response
 
-    def _validate_model_supports_task(
+    def _validate_task_executability(
         self, model_spec: ModelSpec, task_spec: TaskSpec
     ) -> None:
-        model_supported_properties = self._model_registry.get(
-            model_spec.kind
-        ).load_supported_properties()
-        task_required_properties = task_spec.required_model_properties()
-        if not task_required_properties.issubset(model_supported_properties):
-            raise ValueError(
-                f"Model of kind {model_spec.kind} does not support task of kind {task_spec.kind}"
-            )
+        task_registration = self._task_registry.get(task_spec.kind)
+        model_registration = self._model_registry.get(model_spec.kind)
+        report = resolve_host_execution(
+            task_spec,
+            task_registration,
+            model_registration,
+        )
+        if not report.ok:
+            raise ValueError(report.reason or "Task is not executable")
 
     def _retrieve_environment_and_subprocess(
         self,
@@ -213,7 +215,7 @@ class SubprocessBackend:
             exec_resources = ExecutionResources()
 
         # Check that the model can support the task before starting the subprocess
-        self._validate_model_supports_task(model, task)
+        self._validate_task_executability(model, task)
 
         # Setup / Retrieve the environment and subprocess for this task
         env_spec, env_subprocess = self._retrieve_environment_and_subprocess(
@@ -240,6 +242,8 @@ class SubprocessBackend:
 
         if response.operation == "error":
             raise RuntimeError(response.error or "Worker returned an unknown error")
+        if response.operation == "incompatibility":
+            raise ValueError(response.reason)
 
         # Convert to a TaskResult of the appropriate type based on the task kind
         registration = self._task_registry.get(response.task_kind)

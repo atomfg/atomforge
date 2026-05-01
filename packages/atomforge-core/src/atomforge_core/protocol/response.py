@@ -29,6 +29,15 @@ class ErrorResponse(BaseModel):
     traceback: str | None = None
 
 
+class IncompatibilityResponse(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    operation: Literal["incompatibility"] = "incompatibility"
+    request_id: str
+    task_kind: str
+    reason: str
+    route_kind: str | None = None
+
+
 class TaskResponse(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     operation: Literal["task"] = "task"
@@ -38,7 +47,11 @@ class TaskResponse(BaseModel):
 
 
 ResponseMessage = Annotated[
-    TaskResponse | ShutdownResponse | ErrorResponse | InitModelResponse,
+    TaskResponse
+    | ShutdownResponse
+    | ErrorResponse
+    | InitModelResponse
+    | IncompatibilityResponse,
     Field(discriminator="operation"),
 ]
 
