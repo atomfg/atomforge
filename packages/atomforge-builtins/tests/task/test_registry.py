@@ -8,6 +8,7 @@ from atomforge_runtime.registry.task.task_registration import TaskRegistration
 
 from atomforge_builtins.model.ase_lj import LennardJones
 from atomforge_builtins.task.bfgs import BFGS
+from atomforge_builtins.task.optimize import Optimize
 from atomforge_builtins.task.single_point import SinglePoint
 
 
@@ -63,3 +64,19 @@ def test_model_and_task_environment_specs_merge(example_structure):
         provider_requirements=["atomforge-builtins"],
     )
     assert LennardJones().kind == "ase-lj"
+
+
+def test_optimize_registration_exposes_capabilities_and_environment(example_structure):
+    registry = TaskRegistry.default()
+    registration = registry.get("optimize")
+    task = Optimize(structure=example_structure)
+
+    assert registration.load_capability_spec().required == frozenset(
+        {Property.ENERGY, Property.FORCES}
+    )
+    assert registration.load_capability_spec().optional == frozenset()
+    assert registration.load_environment_factory()(task) == EnvironmentSpec(
+        name="optimize",
+        requirements=["ase"],
+        provider_requirements=["atomforge-builtins"],
+    )
