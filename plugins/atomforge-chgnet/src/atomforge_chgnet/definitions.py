@@ -4,7 +4,7 @@ from atomforge_core.resources.resource_caps import ResourceCapabilities
 
 model_kind = "chgnet"
 
-CHGNetSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
+CHGNetSupportedProperties = frozenset({Property.ENERGY, Property.FORCES, Property.ENERGIES, Property.MAGMOMS, Property.STRESS})
 
 CHGNetResourceCapabilities = ResourceCapabilities(
     accelerator=["cpu", "gpu", "mps"],

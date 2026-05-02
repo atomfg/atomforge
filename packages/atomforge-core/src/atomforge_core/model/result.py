@@ -5,5 +5,7 @@ class ModelResult:
     energy: float | None = None
     forces: list[list[float]] | None = None
     stress: list[list[float]] | None = None
+    magmoms: list[float] | None = None
+    energies: list[float] | None = None    
     extras: dict[str, object] = field(default_factory=dict)
     metadata: dict[str, str] = field(default_factory=dict)

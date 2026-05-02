@@ -5,5 +5,13 @@ KIND = "single_point"
 
 SinglePointCapabilitySpec = TaskCapabilitySpec(
     required=frozenset(),
-    optional=frozenset({Property.ENERGY, Property.FORCES}),
+    optional=frozenset(
+        {
+            Property.ENERGY,
+            Property.FORCES,
+            Property.STRESS,
+            Property.MAGMOMS,
+            Property.ENERGIES,
+        }
+    ),
 )

@@ -21,7 +21,10 @@ class SinglePointExecutor(TaskExecutor[SinglePoint, SinglePointResult]):
         model_result = model_executor.compute(structure, properties)
         return SinglePointResult(
             energy=model_result.energy,
-            forces=model_result.forces
-            if model_result.forces is not None
+            forces=model_result.forces if model_result.forces is not None else None,
+            stress=model_result.stress if model_result.stress is not None else None,
+            magmoms=model_result.magmoms if model_result.magmoms is not None else None,
+            energies=model_result.energies
+            if model_result.energies is not None
             else None,
         )

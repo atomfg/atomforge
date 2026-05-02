@@ -7,3 +7,5 @@ class Property(str, Enum):
     ENERGY = "energy"
     FORCES = "forces"
     STRESS = "stress"
+    ENERGIES = "energies"
+    MAGMOMS = "magmoms"

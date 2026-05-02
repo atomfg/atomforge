@@ -34,7 +34,7 @@ class SinglePoint(TaskSpec):
             ]
 
         properties = frozenset(properties)
-        allowed = frozenset({Property.ENERGY, Property.FORCES})
+        allowed = frozenset({Property.ENERGY, Property.FORCES, Property.ENERGIES, Property.MAGMOMS, Property.STRESS})
         if not properties.issubset(allowed):
             raise ValueError(
                 f"Invalid properties: {properties - allowed}. Valid properties are: {allowed}"
