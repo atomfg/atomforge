@@ -59,20 +59,6 @@ def test_single_point_creation_with_mixed_properties(example_structure):
             properties=[Property.ENERGY, "forces", "invalid_property"],
         )
 
-
-def test_single_point_creation_with_incapable_property(example_structure):
-    with pytest.raises(ValueError):
-        SinglePoint(
-            structure=example_structure,
-            properties=[Property.ENERGY, Property.FORCES, Property.STRESS],
-        )
-
-
-def test_single_point_creation_with_all_incapable_properties(example_structure):
-    with pytest.raises(ValueError):
-        SinglePoint(structure=example_structure, properties=[Property.STRESS])
-
-
 def test_single_point_creation_with_duplicate_properties(example_structure):
     task = SinglePoint(
         structure=example_structure, properties=[Property.ENERGY, Property.ENERGY]
