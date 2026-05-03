@@ -6,6 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Mads-Peter", email = "machri@phys.au.dk" }
 ]
+license = { file = "LICENSE"}
 requires-python = ">=3.11"
 dependencies = [
     "atomforge-core",
