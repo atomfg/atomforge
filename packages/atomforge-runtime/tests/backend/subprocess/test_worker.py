@@ -11,7 +11,7 @@ from atomforge_core.protocol.response import (
 from atomforge_core.task.execution_policy import ExecutionPolicy
 from atomforge_core.resources.resource_models import ExecutionResources
 
-from runtime_fakes import FakeTask
+from runtime_fakes import FakeTask, FakeTaskOnly
 
 
 @pytest.fixture(scope="module")
@@ -59,6 +59,34 @@ def malformed_task_request_response(worker, init_model_response):
         model_session_id=init_model_response[0].model_session_id,
         task_kind="fake-task",
         task_payload={"invalid": "payload"},
+    )
+
+    response, should_exit = worker._handle_request(task_request)
+    return response, should_exit
+
+
+@pytest.fixture(scope="module")
+def task_only_request_response(worker):
+    task = FakeTaskOnly(value=7)
+    task_request = TaskRequest(
+        request_id="test_request_task_only",
+        model_session_id=None,
+        task_kind="fake-task-only",
+        task_payload=task.model_dump(),
+    )
+
+    response, should_exit = worker._handle_request(task_request)
+    return response, should_exit
+
+
+@pytest.fixture(scope="module")
+def missing_model_task_request_response(worker, example_structure):
+    task = FakeTask(structure=example_structure)
+    task_request = TaskRequest(
+        request_id="test_request_missing_model",
+        model_session_id=None,
+        task_kind="fake-task",
+        task_payload=task.model_dump(),
     )
 
     response, should_exit = worker._handle_request(task_request)
@@ -142,6 +170,23 @@ def test_task_request_should_exit(task_request_response):
 def test_task_request_result(task_request_response):
     response, _ = task_request_response
     assert "energy" in response.result_payload
+
+
+def test_task_only_request_response(task_only_request_response):
+    response, _ = task_only_request_response
+    assert isinstance(response, TaskResponse)
+
+
+def test_task_only_request_result(task_only_request_response):
+    response, _ = task_only_request_response
+    assert response.result_payload["doubled_value"] == 14
+    assert response.result_payload["used_model"] is False
+
+
+def test_missing_model_task_request_response(missing_model_task_request_response):
+    response, _ = missing_model_task_request_response
+    assert isinstance(response, ErrorResponse)
+    assert "requires a model session" in response.error
 
 
 def test_shutdown_request_response(shutdown_response):

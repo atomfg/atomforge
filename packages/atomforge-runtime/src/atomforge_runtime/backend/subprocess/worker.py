@@ -19,7 +19,7 @@ from atomforge_core.protocol.session import model_session_key
 from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.model.spec import ModelSpec
 from atomforge_core.task.executability import CompatibilityCheck, ExecutionRoute
-from atomforge_core.task.executor import TaskExecutor
+from atomforge_core.task.executor import TaskExecutionContext, TaskExecutor
 from atomforge_core.task.spec import TaskSpec
 from atomforge_runtime.registry.model.model_registry import ModelRegistry
 
@@ -211,29 +211,62 @@ class SubprocessWorker:
 
     def _resolve_task(
         self, request: TaskRequest
-    ) -> tuple[TaskSpec, ExecutionRoute, type[TaskExecutor], CompatibilityCheck]:
+    ) -> tuple[
+        TaskSpec,
+        TaskExecutionContext,
+        ExecutionRoute,
+        type[TaskExecutor],
+        CompatibilityCheck,
+    ]:
         task_registration = self._task_registry.get(request.task_kind)
         task_spec = task_registration.spec_model.model_validate(request.task_payload)
 
-        model_executor = self._get_model_executor(request.model_session_id)
-        model_kind = self._get_model_session(request.model_session_id).kind
-        model_registration = self._model_registry.get(model_kind)
+        context = self._build_task_execution_context(request, task_spec)
+        model_registration = self._get_model_registration_for_task(request, task_spec)
         route, task_executor_cls, compatibility = resolve_worker_execution(
             task_spec,
             task_registration,
             model_registration,
-            model_executor,
+            context,
         )
-        return task_spec, route, task_executor_cls, compatibility
+        return task_spec, context, route, task_executor_cls, compatibility
+
+    def _get_model_registration_for_task(
+        self, request: TaskRequest, task_spec: TaskSpec
+    ):
+        if not task_spec.requires_model:
+            return None
+        if request.model_session_id is None:
+            raise ValueError(
+                f"Task of kind {task_spec.kind} requires a model session, but none was provided"
+            )
+        model_kind = self._get_model_session(request.model_session_id).kind
+        return self._model_registry.get(model_kind)
+
+    def _build_task_execution_context(
+        self, request: TaskRequest, task_spec: TaskSpec
+    ) -> TaskExecutionContext:
+        if not task_spec.requires_model:
+            return TaskExecutionContext(model_executor=None, resolved_resources=None)
+
+        if request.model_session_id is None:
+            raise ValueError(
+                f"Task of kind {task_spec.kind} requires a model session, but none was provided"
+            )
+
+        model_session = self._get_model_session(request.model_session_id)
+        return TaskExecutionContext(
+            model_executor=model_session.model_executor,
+            resolved_resources=model_session.resolved_resources,
+        )
 
     def _execute_task(
         self, request: TaskRequest
     ) -> TaskResponse | IncompatibilityResponse:
 
-        task_spec, route, task_executor_cls, compatibility = self._resolve_task(request)
-
-        # Get the model executor for the task
-        model_executor = self._get_model_executor(request.model_session_id)
+        task_spec, context, route, task_executor_cls, compatibility = self._resolve_task(
+            request
+        )
         if not compatibility.ok:
             return IncompatibilityResponse(
                 request_id=request.request_id,
@@ -247,7 +280,7 @@ class SubprocessWorker:
         # Context manager that ensures nothing is written to stdout during model execution
         with contextlib.redirect_stdout(self._dev_null) as _:
             with contextlib.redirect_stderr(self._dev_null) as _:
-                task_result = task_executor.execute(task_spec, model_executor)
+                task_result = task_executor.execute(task_spec, context)
 
         return TaskResponse(
             request_id=request.request_id,

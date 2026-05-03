@@ -14,6 +14,7 @@ from atomforge_builtins.task.optimize.executor import (
 )
 from atomforge_core.property import Property
 from atomforge_core.structure import StructureData
+from atomforge_core.task.executor import TaskExecutionContext
 
 HAS_ASE = find_spec("ase") is not None
 
@@ -118,13 +119,17 @@ def optimize_executor() -> OptimizeExecutor:
 
 @pytest.mark.skipif(not HAS_ASE, reason="Requires ASE installation")
 def test_optimize_result_type(optimize_task, optimize_executor, model_executor):
-    result = optimize_executor.execute(optimize_task, model_executor)
+    result = optimize_executor.execute(
+        optimize_task, TaskExecutionContext(model_executor=model_executor)
+    )
     assert isinstance(result, OptimizeResult)
 
 
 @pytest.mark.skipif(not HAS_ASE, reason="Requires ASE installation")
 def test_optimize_result_fields(optimize_task, optimize_executor, model_executor):
-    result = optimize_executor.execute(optimize_task, model_executor)
+    result = optimize_executor.execute(
+        optimize_task, TaskExecutionContext(model_executor=model_executor)
+    )
     assert result.kind == "optimize"
     assert isinstance(result.structure, StructureData)
     assert isinstance(result.energy, float)
@@ -137,6 +142,6 @@ def test_optimize_result_fields(optimize_task, optimize_executor, model_executor
 def test_optimize_max_steps_forwarding(example_structure, optimize_executor, model_executor):
     result = optimize_executor.execute(
         Optimize(structure=example_structure, fmax=0.5, max_steps=1),
-        model_executor,
+        TaskExecutionContext(model_executor=model_executor),
     )
     assert result.steps <= 1

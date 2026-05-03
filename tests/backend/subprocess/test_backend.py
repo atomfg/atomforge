@@ -1,7 +1,29 @@
 import pytest
+from unittest.mock import Mock
 from atomforge.backend.subprocess.backend import SubprocessBackend
 from atomforge_core.protocol.response import ShutdownResponse
 from atomforge_core.protocol.request import ShutdownRequest
+from atomforge_core.task.spec import TaskSpec
+
+
+class TaskOnlySpec(TaskSpec):
+    requires_model = False
+    kind: str = "task-only"
+    value: int = 1
+
+    def required_model_properties(self):
+        return frozenset()
+
+
+class TaskOnlyResult:
+    @classmethod
+    def model_validate(cls, payload):
+        result = cls()
+        result.kind = payload["kind"]
+        result.doubled_value = payload["doubled_value"]
+        result.used_model = payload["used_model"]
+        result.resource_accelerator = payload["resource_accelerator"]
+        return result
 
 @pytest.fixture
 def backend():
@@ -77,3 +99,57 @@ def test_validate_task_executability_unsupported(backend):
 
     with pytest.raises(ValueError, match="required properties"):
         backend._validate_task_executability(model_spec, task_spec)
+
+
+def test_validate_task_executability_model_free(backend):
+    registration = Mock()
+    registration.has_default_executor.return_value = True
+    backend._task_registry.get = Mock(return_value=registration)
+    task_spec = TaskOnlySpec(value=5)
+    backend._validate_task_executability(None, task_spec)
+
+
+def test_execute_model_free_does_not_prepare_model(backend, mocker):
+    task = TaskOnlySpec(value=9)
+
+    mock_env_subprocess = mocker.Mock()
+    mock_env_subprocess.get_request_counter.side_effect = [1]
+    registration = mocker.Mock()
+    registration.has_default_executor.return_value = True
+    registration.load_result_model.return_value = TaskOnlyResult
+    backend._task_registry.get = mocker.Mock(return_value=registration)
+    mocker.patch(
+        "atomforge.backend.subprocess.backend.SubprocessBackend._retrieve_environment_and_subprocess",
+        return_value=(None, mock_env_subprocess),
+    )
+    prepare_model = mocker.patch(
+        "atomforge.backend.subprocess.backend.SubprocessBackend._retrieve_prepared_model_session"
+    )
+
+    class MockResponse:
+        operation = "task"
+        task_kind = "fake-task-only"
+        request_id = "1"
+        result_payload = {
+            "kind": "fake-task-only",
+            "doubled_value": 18,
+            "used_model": False,
+            "resource_accelerator": None,
+        }
+
+    mocker.patch(
+        "atomforge.backend.subprocess.backend.SubprocessBackend._send_request_and_get_response",
+        return_value=MockResponse(),
+    )
+
+    result = backend.execute(task)
+
+    prepare_model.assert_not_called()
+    assert result.doubled_value == 18
+
+
+def test_execute_model_free_rejects_model_argument(backend):
+    task = TaskOnlySpec(value=9)
+
+    with pytest.raises(ValueError, match="model-free"):
+        backend.execute(task, model=object())

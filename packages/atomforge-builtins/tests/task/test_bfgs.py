@@ -4,6 +4,7 @@ from atomforge_builtins.task.bfgs import BFGS, BFGSResult
 from atomforge_builtins.task.bfgs.executor import BFGSExecutor
 from atomforge_core.property import Property
 from atomforge_core.structure import StructureData
+from atomforge_core.task.executor import TaskExecutionContext
 
 
 @pytest.fixture
@@ -18,7 +19,9 @@ def bfgs_executor() -> BFGSExecutor:
 
 @pytest.fixture
 def bfgs_result(bfgs_task, bfgs_executor, model_executor) -> BFGSResult:
-    return bfgs_executor.execute(bfgs_task, model_executor)
+    return bfgs_executor.execute(
+        bfgs_task, TaskExecutionContext(model_executor=model_executor)
+    )
 
 
 def test_bfgs_kind(bfgs_task):

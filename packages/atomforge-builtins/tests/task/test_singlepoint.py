@@ -6,6 +6,7 @@ from atomforge_builtins.task.single_point.executor import SinglePointExecutor
 from atomforge_core.property import Property
 from atomforge_core.resources.resource_models import ResolvedResources
 from atomforge_core.structure import StructureData
+from atomforge_core.task.executor import TaskExecutionContext
 
 
 @pytest.fixture
@@ -76,7 +77,9 @@ def test_single_point_executor(nodep_executor, example_structure):
     task = SinglePoint(
         structure=example_structure, properties=[Property.ENERGY, Property.FORCES]
     )
-    result = SinglePointExecutor().execute(task, nodep_executor)
+    result = SinglePointExecutor().execute(
+        task, TaskExecutionContext(model_executor=nodep_executor)
+    )
     assert result.kind == "single_point"
     assert isinstance(result.energy, float)
     assert isinstance(result.forces, list) and all(

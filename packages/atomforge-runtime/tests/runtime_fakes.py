@@ -16,6 +16,7 @@ from atomforge_core.resources.resource_probes import ProbeResult
 from atomforge_core.structure import StructureData
 from atomforge_core.task.capability import TaskCapabilitySpec
 from atomforge_core.task.executability import CompatibilityCheck
+from atomforge_core.task.executor import TaskExecutionContext
 from atomforge_core.task.result import TaskResult
 from atomforge_core.task.spec import TaskSpec
 from atomforge_runtime.registry.model.model_registration import ModelRegistration
@@ -72,10 +73,26 @@ class FakeTaskResult(TaskResult):
     forces: list[list[float]] | None
 
 
+class FakeTaskOnly(TaskSpec):
+    requires_model = False
+    kind: Literal["fake-task-only"] = "fake-task-only"
+    value: int = 1
+
+    def required_model_properties(self) -> frozenset[Property]:
+        return frozenset()
+
+
+class FakeTaskOnlyResult(TaskResult):
+    kind: Literal["fake-task-only"] = "fake-task-only"
+    doubled_value: int
+    used_model: bool
+    resource_accelerator: str | None
+
+
 class FakeTaskExecutor:
     @classmethod
     def check_compatibility(
-        cls, spec: FakeTask, model_executor: ModelExecutor
+        cls, spec: FakeTask, context: TaskExecutionContext
     ) -> CompatibilityCheck:
         if not spec.allow_execution:
             return CompatibilityCheck(
@@ -85,8 +102,11 @@ class FakeTaskExecutor:
         return CompatibilityCheck(ok=True)
 
     def execute(
-        self, spec: FakeTask, model_executor: ModelExecutor
+        self, spec: FakeTask, context: TaskExecutionContext
     ) -> FakeTaskResult:
+        if context.model_executor is None:
+            raise ValueError("FakeTask requires a model executor")
+        model_executor = context.model_executor
         result = model_executor.compute(
             spec.structure,
             frozenset({Property.ENERGY, Property.FORCES}),
@@ -97,8 +117,14 @@ class FakeTaskExecutor:
 class FakeOverrideTaskExecutor(FakeTaskExecutor):
     @classmethod
     def check_compatibility(
-        cls, spec: FakeTask, model_executor: ModelExecutor
+        cls, spec: FakeTask, context: TaskExecutionContext
     ) -> CompatibilityCheck:
+        model_executor = context.model_executor
+        if model_executor is None:  # Defensive; worker_checks should prevent this path.
+            return CompatibilityCheck(
+                ok=False,
+                reason="FakeOverrideTaskExecutor requires a model executor",
+            )
         if model_executor.spec.scale < spec.minimum_override_scale:
             return CompatibilityCheck(
                 ok=False,
@@ -110,10 +136,40 @@ class FakeOverrideTaskExecutor(FakeTaskExecutor):
         return CompatibilityCheck(ok=True)
 
 
+class FakeTaskOnlyExecutor:
+    @classmethod
+    def check_compatibility(
+        cls, spec: FakeTaskOnly, context: TaskExecutionContext
+    ) -> CompatibilityCheck:
+        if context.model_executor is not None:
+            return CompatibilityCheck(
+                ok=False,
+                reason="FakeTaskOnlyExecutor does not expect a model executor",
+            )
+        return CompatibilityCheck(ok=True)
+
+    def execute(
+        self, spec: FakeTaskOnly, context: TaskExecutionContext
+    ) -> FakeTaskOnlyResult:
+        return FakeTaskOnlyResult(
+            doubled_value=spec.value * 2,
+            used_model=context.model_executor is not None,
+            resource_accelerator=(
+                None
+                if context.resolved_resources is None
+                else context.resolved_resources.accelerator
+            ),
+        )
+
+
 FakeSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
 EmptySupportedProperties = frozenset()
 FakeCapabilitySpec = TaskCapabilitySpec(
     required=frozenset({Property.ENERGY, Property.FORCES}),
+    optional=frozenset(),
+)
+FakeTaskOnlyCapabilitySpec = TaskCapabilitySpec(
+    required=frozenset(),
     optional=frozenset(),
 )
 FakeMetadata = ModelMetadata(
@@ -163,6 +219,20 @@ def build_task_registration() -> TaskRegistration:
     )
 
 
+def build_task_only_registration() -> TaskRegistration:
+    from atomforge_core.registry.symbol_path import SymbolPath
+
+    return TaskRegistration(
+        kind="fake-task-only",
+        spec_model=FakeTaskOnly,
+        result_model_path=SymbolPath("runtime_fakes:FakeTaskOnlyResult"),
+        executor_class_path=SymbolPath("runtime_fakes:FakeTaskOnlyExecutor"),
+        capability_spec_path=SymbolPath("runtime_fakes:FakeTaskOnlyCapabilitySpec"),
+        environment_factory_path=SymbolPath("runtime_fakes:FakeEnvironmentFactory"),
+        source=["runtime-test-plugin"],
+    )
+
+
 def build_model_registry() -> ModelRegistry:
     registry = ModelRegistry()
     registration = build_model_registration()
@@ -172,8 +242,8 @@ def build_model_registry() -> ModelRegistry:
 
 def build_task_registry() -> TaskRegistry:
     registry = TaskRegistry()
-    registration = build_task_registration()
-    registry._register(registration, registration.kind)
+    for registration in (build_task_registration(), build_task_only_registration()):
+        registry._register(registration, registration.kind)
     return registry
 
 

@@ -9,6 +9,7 @@ from atomforge_runtime.registry.model.model_registry import ModelRegistry
 from atomforge_runtime.registry.task.task_registry import TaskRegistry
 from atomforge.settings.settings import AtomforgeSettings
 from atomforge_core.resources.resource_models import ExecutionResources, ResolvedResources
+from atomforge_core.task.execution_policy import ExecutionPolicy
 from atomforge_core.task.result import TaskResult
 from atomforge_core.task.spec import TaskSpec
 
@@ -73,18 +74,15 @@ class SubprocessBackend:
         self._settings = settings
 
     def setup_environment(
-        self, model_spec: ModelSpec, task_env_spec: EnvironmentSpec
+        self, model_spec: ModelSpec | None, task_env_spec: EnvironmentSpec
     ) -> EnvironmentSpec:
+        if model_spec is None:
+            return task_env_spec
 
-        # For now, we just use the default environment spec from the model,
-        # but in the future we could allow tasks to specify their own environment requirements
         model_env_spec = self._model_registry.get(model_spec.kind).load_environment_factory()(
             model_spec
         )
-        # Get the subprocess for the environment
-        env_spec = model_env_spec + task_env_spec
-
-        return env_spec
+        return model_env_spec + task_env_spec
 
     def get_subprocess(self, env_spec: EnvironmentSpec) -> EnvSubprocess:
         env_key = self._environment_provider.environment_key(env_spec)
@@ -115,10 +113,12 @@ class SubprocessBackend:
         return response
 
     def _validate_task_executability(
-        self, model_spec: ModelSpec, task_spec: TaskSpec
+        self, model_spec: ModelSpec | None, task_spec: TaskSpec
     ) -> None:
         task_registration = self._task_registry.get(task_spec.kind)
-        model_registration = self._model_registry.get(model_spec.kind)
+        model_registration = (
+            self._model_registry.get(model_spec.kind) if model_spec is not None else None
+        )
         report = resolve_host_execution(
             task_spec,
             task_registration,
@@ -130,7 +130,7 @@ class SubprocessBackend:
     def _retrieve_environment_and_subprocess(
         self,
         task: TaskSpec,
-        model_spec: ModelSpec,
+        model_spec: ModelSpec | None,
     ) -> tuple[EnvironmentSpec, EnvSubprocess]:
         task_registration = self._task_registry.get(task.kind)
         task_env_spec = task_registration.load_environment_factory()(task)
@@ -207,12 +207,28 @@ class SubprocessBackend:
     def execute(
         self,
         task: TaskSpec,
-        model: ModelSpec,
+        model: ModelSpec | None = None,
         exec_resources: ExecutionResources | None = None,
     ) -> TaskResult:
 
         if exec_resources is None:
             exec_resources = ExecutionResources()
+
+        if task.requires_model and model is None:
+            raise ValueError(
+                f"Task of kind {task.kind} requires a model, but none was provided"
+            )
+        if not task.requires_model and model is not None:
+            raise ValueError(
+                f"Task of kind {task.kind} is model-free and must not be given a model"
+            )
+        if (
+            not task.requires_model
+            and task.execution_policy is ExecutionPolicy.REQUIRE_MODEL_OVERRIDE
+        ):
+            raise ValueError(
+                f"Task of kind {task.kind} is model-free and cannot require a model override"
+            )
 
         # Check that the model can support the task before starting the subprocess
         self._validate_task_executability(model, task)
@@ -224,15 +240,17 @@ class SubprocessBackend:
 
         # Check if we have already prepared this model with the same execution resources
         # in this subprocess, if not prepare it by sending an init_model_request.
-        prepared = self._retrieve_prepared_model_session(
-            model, task, exec_resources, env_spec, env_subprocess
-        )
+        prepared = None
+        if model is not None:
+            prepared = self._retrieve_prepared_model_session(
+                model, task, exec_resources, env_spec, env_subprocess
+            )
 
         # Convert to a TaskRequest
         request = TaskRequest(
             operation="task",
             request_id=str(env_subprocess.get_request_counter()),
-            model_session_id=prepared.model_session_id,
+            model_session_id=None if prepared is None else prepared.model_session_id,
             task_kind=task.kind,
             task_payload=task.model_dump(),
         )

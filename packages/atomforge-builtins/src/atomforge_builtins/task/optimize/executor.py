@@ -1,8 +1,11 @@
 from typing import TYPE_CHECKING
 
-from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.task.executability import CompatibilityCheck
-from atomforge_core.task.executor import TaskExecutor
+from atomforge_core.task.executor import (
+    TaskExecutionContext,
+    TaskExecutor,
+    require_model_executor,
+)
 
 from atomforge_builtins.task.bfgs.adapters import (
     ModelCalculatorAdapter,
@@ -50,13 +53,14 @@ def constraint_to_ase(constraint: OptimizeConstraint):
 class OptimizeExecutor(TaskExecutor[Optimize, OptimizeResult]):
     @classmethod
     def check_compatibility(
-        cls, spec: Optimize, model_executor: ModelExecutor
+        cls, spec: Optimize, context: TaskExecutionContext
     ) -> CompatibilityCheck:
         return CompatibilityCheck(ok=True)
 
-    def execute(self, spec: Optimize, model_executor: ModelExecutor) -> OptimizeResult:
+    def execute(self, spec: Optimize, context: TaskExecutionContext) -> OptimizeResult:
         optimizer_cls = optimizer_class_for(spec.optimizer)
 
+        model_executor = require_model_executor(context, task_kind=spec.kind)
         atoms = convert_to_atoms(spec.structure)
         atoms.calc = ModelCalculatorAdapter(model_executor)
         if spec.constraints:

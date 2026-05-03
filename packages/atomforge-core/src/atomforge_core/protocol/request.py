@@ -25,7 +25,7 @@ class TaskRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     operation: Literal["task"] = "task"
     request_id: str
-    model_session_id: str
+    model_session_id: str | None = None
     task_kind: str
     task_payload: dict[str, Any]
 

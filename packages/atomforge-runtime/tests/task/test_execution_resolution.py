@@ -1,6 +1,7 @@
 from atomforge_core.registry.symbol_path import SymbolPath
 from atomforge_core.resources.resource_models import ResolvedResources
 from atomforge_core.task.executability import HostExecutabilityReport
+from atomforge_core.task.executor import TaskExecutionContext
 from atomforge_core.task.execution_policy import ExecutionPolicy
 from atomforge_runtime.task.host_checks import check_host_executability, check_required_properties
 from atomforge_runtime.task.resolution import resolve_worker_execution
@@ -8,10 +9,12 @@ from runtime_fakes import (
     FakeModel,
     FakeModelExecutor,
     FakeTask,
+    FakeTaskOnly,
     build_broken_model_registration,
     build_broken_task_registration,
     build_model_registration,
     build_task_registration,
+    build_task_only_registration,
 )
 
 
@@ -127,7 +130,7 @@ def test_resolve_worker_execution_default_route(example_structure):
         task_spec,
         build_task_registration(),
         build_model_registration(),
-        build_model_executor(),
+        TaskExecutionContext(model_executor=build_model_executor()),
     )
 
     assert route.route_kind.value == "default_executor"
@@ -144,7 +147,7 @@ def test_resolve_worker_execution_prefer_override_uses_override(example_structur
         task_spec,
         build_task_registration(),
         build_model_registration(),
-        build_model_executor(),
+        TaskExecutionContext(model_executor=build_model_executor()),
     )
 
     assert route.route_kind.value == "model_override"
@@ -162,7 +165,7 @@ def test_resolve_worker_execution_prefer_override_falls_back_to_default(example_
         task_spec,
         build_task_registration(),
         build_model_registration(),
-        build_model_executor(scale=1.0),
+        TaskExecutionContext(model_executor=build_model_executor(scale=1.0)),
     )
 
     assert route.route_kind.value == "default_executor"
@@ -183,7 +186,7 @@ def test_resolve_worker_execution_require_override_incompatible_returns_incompat
         task_spec,
         build_task_registration(),
         build_model_registration(),
-        build_model_executor(scale=1.0),
+        TaskExecutionContext(model_executor=build_model_executor(scale=1.0)),
     )
 
     assert route.route_kind.value == "model_override"
@@ -203,9 +206,72 @@ def test_resolve_worker_execution_require_override_without_override_raises(examp
             task_spec,
             build_task_registration(),
             build_broken_model_registration(task_overrides={}),
-            build_model_executor(),
+            TaskExecutionContext(model_executor=build_model_executor()),
         )
     except ValueError as exc:
         assert "No policy-allowed executor route" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("Expected ValueError for missing required override")
+
+
+def test_model_free_required_properties_success():
+    report = check_required_properties(
+        FakeTaskOnly(value=3),
+        None,
+    )
+
+    assert isinstance(report, HostExecutabilityReport)
+    assert report.ok is True
+
+
+def test_model_free_host_executability_uses_default_route():
+    task_spec = FakeTaskOnly(value=4)
+    report = check_host_executability(
+        task_spec,
+        build_task_only_registration(),
+        None,
+    )
+
+    assert report.ok is True
+    assert report.selected_route is not None
+    assert report.selected_route.route_kind.value == "default_executor"
+
+
+def test_model_free_require_override_is_rejected():
+    task_spec = FakeTaskOnly(
+        value=4,
+        execution_policy=ExecutionPolicy.REQUIRE_MODEL_OVERRIDE,
+    )
+    report = check_host_executability(
+        task_spec,
+        build_task_only_registration(),
+        None,
+    )
+
+    assert report.ok is False
+    assert "model-free" in report.reason
+
+
+def test_resolve_worker_execution_model_free_route():
+    task_spec = FakeTaskOnly(value=5)
+    route, executor_cls, compatibility = resolve_worker_execution(
+        task_spec,
+        build_task_only_registration(),
+        None,
+        TaskExecutionContext(model_executor=None, resolved_resources=None),
+    )
+
+    assert route.route_kind.value == "default_executor"
+    assert executor_cls.__name__ == "FakeTaskOnlyExecutor"
+    assert compatibility.ok is True
+
+
+def test_model_backed_task_without_model_fails(example_structure):
+    report = check_host_executability(
+        FakeTask(structure=example_structure),
+        build_task_registration(),
+        None,
+    )
+
+    assert report.ok is False
+    assert "requires a model" in report.reason

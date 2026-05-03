@@ -1,6 +1,9 @@
-from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.task.executability import CompatibilityCheck
-from atomforge_core.task.executor import TaskExecutor
+from atomforge_core.task.executor import (
+    TaskExecutionContext,
+    TaskExecutor,
+    require_model_executor,
+)
 
 from atomforge_builtins.task.bfgs.adapters import (
     ModelCalculatorAdapter,
@@ -14,13 +17,14 @@ from atomforge_builtins.task.bfgs.spec import BFGS
 class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
     @classmethod
     def check_compatibility(
-        cls, spec: BFGS, model_executor: ModelExecutor
+        cls, spec: BFGS, context: TaskExecutionContext
     ) -> CompatibilityCheck:
         return CompatibilityCheck(ok=True)
 
-    def execute(self, spec: BFGS, model_executor: ModelExecutor) -> BFGSResult:
+    def execute(self, spec: BFGS, context: TaskExecutionContext) -> BFGSResult:
         from ase.optimize import BFGS as BFGSOptimizer
 
+        model_executor = require_model_executor(context, task_kind=spec.kind)
         atoms = convert_to_atoms(spec.structure)
         atoms.calc = ModelCalculatorAdapter(model_executor)
         optimizer = BFGSOptimizer(atoms)
