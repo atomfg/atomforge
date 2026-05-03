@@ -19,4 +19,5 @@ dev
 AGENTS.md
 .codex/
 
-
+# Temporary plugin symbolic links
+plugins/*
