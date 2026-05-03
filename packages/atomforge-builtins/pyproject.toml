@@ -15,6 +15,7 @@ dependencies = [
 single_point = "atomforge_builtins.task.single_point.manifest:single_point_manifest"
 bfgs = "atomforge_builtins.task.bfgs.manifest:bfgs_manifest"
 optimize = "atomforge_builtins.task.optimize.manifest:optimize_manifest"
+analyze_symmetry = "atomforge_builtins.task.analyze_symmetry.manifest:analyze_symmetry_manifest"
 atomic_descriptor = "atomforge_builtins.task.atomic_descriptor.manifest:atomic_descriptor_manifest"
 
 [project.entry-points.'atomforge.model']
