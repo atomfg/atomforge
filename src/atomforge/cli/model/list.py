@@ -2,7 +2,7 @@ import rich_click as click
 from rich.console import Console
 from rich.table import Table
 
-from atomforge.cli.model.main import model
+from atomforge.cli.model.main import model_cli
 from enum import Enum
 
 
@@ -149,7 +149,7 @@ class TableWriter:
         self.table.add_row(*row)
 
 
-@model.command(
+@model_cli.command(
     name="list",
     help="List all registered models with optional filtering and column selection.",
 )

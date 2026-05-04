@@ -1,4 +1,4 @@
-from atomforge.cli.model.main import model
+from atomforge.cli.model.main import model_cli
 import rich_click as click
 from rich.console import Console
 from rich.panel import Panel
@@ -102,7 +102,7 @@ def get_basic_info(model_registration):
     return basic_info
 
 
-@model.command(
+@model_cli.command(
     name="info", help="Show detailed information about a specific model kind."
 )
 @click.argument("model_kind")

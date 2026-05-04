@@ -1,0 +1,1 @@
+from atomforge.cli.plugin.main import plugin_cli

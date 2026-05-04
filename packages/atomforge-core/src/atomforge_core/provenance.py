@@ -101,11 +101,13 @@ class ExecutionProvenance(BaseModel):
 class Provenance(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    task: TaskProvenance
-    model: ModelProvenance | None = None
-    environment: EnvironmentProvenance
-    resources: ResourceProvenance
-    execution: ExecutionProvenance
+    task: TaskProvenance = Field(..., description="Provenance of the executed task")
+    model: ModelProvenance | None = Field(
+        None, description="Provenance of the model used for execution"
+    )
+    environment: EnvironmentProvenance = Field(..., description="Provenance of the execution environment")
+    resources: ResourceProvenance = Field(..., description="Provenance of the resources used for execution")
+    execution: ExecutionProvenance = Field(..., description="Provenance of the execution itself")
 
 
 class PartialProvenance(BaseModel):
