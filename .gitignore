@@ -14,9 +14,6 @@ wheels/
 
 # Development playground
 dev
-# pixi environments
-.pixi/*
-!.pixi/config.toml
 
 # AI tooling
 AGENTS.md
