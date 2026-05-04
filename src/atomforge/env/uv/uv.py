@@ -6,7 +6,7 @@ from atomforge_core.env.env import EnvironmentSpec
 
 from atomforge.env.base.handle import EnvironmentHandle
 from atomforge.env.base.info import EnvironmentInfo
-from atomforge.env.base.provider import EnvironmentProvider
+from atomforge.env.base.provider import EnvironmentProvider, file_sha256
 from atomforge.env.uv.uv_pyproject_writer import UVPyprojectWriter
 from atomforge.env.base.dependency import ResolvedDependency
 import hashlib
@@ -84,6 +84,22 @@ class UVEnvironmentProvider(EnvironmentProvider):
             path=env_path,
             python_executable=python_executable if exists else None,
             exists=exists,
+        )
+
+    def build_provenance(
+        self,
+        spec: EnvironmentSpec,
+        handle: EnvironmentHandle | None = None,
+    ):
+        provenance = super().build_provenance(spec, handle)
+        if handle is None:
+            return provenance
+
+        return provenance.model_copy(
+            update={
+                "pyproject_hash": file_sha256(handle.path / "pyproject.toml"),
+                "lockfile_hash": file_sha256(handle.path / "uv.lock"),
+            }
         )
 
     def remove_environment(self, handle: EnvironmentHandle) -> None:

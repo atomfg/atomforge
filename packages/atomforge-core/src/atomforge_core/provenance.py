@@ -78,6 +78,8 @@ class EnvironmentProvenance(BaseModel):
     python: str | None = None
     requirements: tuple[str, ...] = Field(default_factory=tuple)
     provider_requirements: tuple[str, ...] = Field(default_factory=tuple)
+    pyproject_hash: str | None = None
+    lockfile_hash: str | None = None
 
 
 class ResourceProvenance(BaseModel):

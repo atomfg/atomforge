@@ -1,9 +1,23 @@
 from abc import ABC, abstractmethod
+import hashlib
+
 from atomforge_core.env.env import EnvironmentSpec
+from atomforge_core.provenance import EnvironmentProvenance
 from atomforge.env.base.handle import EnvironmentHandle
 from atomforge.env.base.info import EnvironmentInfo
 
 from pathlib import Path
+
+
+def file_sha256(path: Path) -> str | None:
+    if not path.exists():
+        return None
+
+    hasher = hashlib.sha256()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 class EnvironmentProvider(ABC):
@@ -41,6 +55,20 @@ class EnvironmentProvider(ABC):
     @abstractmethod
     def inspect_environment(self, handle: EnvironmentHandle) -> EnvironmentInfo:
         raise NotImplementedError
+
+    def build_provenance(
+        self,
+        spec: EnvironmentSpec,
+        handle: EnvironmentHandle | None = None,
+    ) -> EnvironmentProvenance:
+        return EnvironmentProvenance(
+            provider=self.provider_name,
+            key=self.environment_key(spec),
+            spec_hash=spec.hash(),
+            python=spec.python,
+            requirements=spec.requirements,
+            provider_requirements=spec.provider_requirements,
+        )
 
     @abstractmethod
     def remove_environment(self, handle: EnvironmentHandle) -> None:

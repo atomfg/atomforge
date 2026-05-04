@@ -13,7 +13,6 @@ from atomforge_runtime.registry.task.task_registry import TaskRegistry
 from atomforge.settings.settings import AtomforgeSettings
 from atomforge_core.resources.resource_models import ExecutionResources, ResolvedResources
 from atomforge_core.provenance import (
-    EnvironmentProvenance,
     ExecutionProvenance,
     ModelProvenance,
     Provenance,
@@ -41,6 +40,14 @@ class PreparedModelSession:
     execution_resources: ExecutionResources
     resolved_resources: ResolvedResources
     process_uuid: str
+
+
+@dataclass
+class PreparedEnvironmentSession:
+    env_spec: EnvironmentSpec
+    env_key: str
+    env_subprocess: "EnvSubprocess"
+    environment_provenance: object
 
 
 class EnvSubprocess:
@@ -79,6 +86,7 @@ class SubprocessBackend:
             )
 
         self.env_subprocesses: dict[str, EnvSubprocess] = {}
+        self.prepared_environments: dict[str, PreparedEnvironmentSession] = {}
         self.prepared_models: dict[tuple[str, str], PreparedModelSession] = {}
 
         self._task_registry = TaskRegistry.default()
@@ -96,17 +104,34 @@ class SubprocessBackend:
         )
         return model_env_spec + task_env_spec
 
-    def get_subprocess(self, env_spec: EnvironmentSpec) -> EnvSubprocess:
+    def get_environment_session(
+        self, env_spec: EnvironmentSpec
+    ) -> PreparedEnvironmentSession:
         env_key = self._environment_provider.environment_key(env_spec)
 
-        if env_key not in self.env_subprocesses:
-            handle = self._environment_provider.ensure_environment(env_spec)
-            info = self._environment_provider.inspect_environment(handle)
-            self.env_subprocesses[env_key] = EnvSubprocess(
-                info.python_executable, name=env_key
-            )
+        prepared = self.prepared_environments.get(env_key)
+        if prepared is not None:
+            return prepared
 
-        return self.env_subprocesses[env_key]
+        handle = self._environment_provider.ensure_environment(env_spec)
+        info = self._environment_provider.inspect_environment(handle)
+        env_subprocess = EnvSubprocess(info.python_executable, name=env_key)
+        environment_provenance = self._environment_provider.build_provenance(
+            env_spec,
+            handle,
+        )
+        prepared = PreparedEnvironmentSession(
+            env_spec=env_spec,
+            env_key=env_key,
+            env_subprocess=env_subprocess,
+            environment_provenance=environment_provenance,
+        )
+        self.prepared_environments[env_key] = prepared
+        self.env_subprocesses[env_key] = env_subprocess
+        return prepared
+
+    def get_subprocess(self, env_spec: EnvironmentSpec) -> EnvSubprocess:
+        return self.get_environment_session(env_spec).env_subprocess
 
     def _ensure_matching_response(
         self, request: RequestMessage, response: ResponseMessage
@@ -153,15 +178,13 @@ class SubprocessBackend:
         *,
         task: TaskSpec,
         model: ModelSpec | None,
-        env_spec: EnvironmentSpec,
+        environment_provenance,
         exec_resources: ExecutionResources,
         resolved_resources: ResolvedResources | None,
         started_at: datetime,
         ended_at: datetime,
         wall_time_s: float,
     ) -> Provenance:
-        env_key = self._environment_provider.environment_key(env_spec)
-
         model_provenance = None
         if model is not None:
             model_registration = self._model_registry.get(model.kind)
@@ -179,14 +202,7 @@ class SubprocessBackend:
                 payload_hash=payload_hash(task),
             ),
             model=model_provenance,
-            environment=EnvironmentProvenance(
-                provider=self._environment_provider.provider_name,
-                key=env_key,
-                spec_hash=env_spec.hash(),
-                python=env_spec.python,
-                requirements=env_spec.requirements,
-                provider_requirements=env_spec.provider_requirements,
-            ),
+            environment=environment_provenance,
             resources=ResourceProvenance(
                 requested=exec_resources,
                 resolved=resolved_resources,
@@ -207,32 +223,33 @@ class SubprocessBackend:
         setattr(result, "provenance", provenance)
         return result
 
-    def _retrieve_environment_and_subprocess(
+    def _retrieve_environment_session(
         self,
         task: TaskSpec,
         model_spec: ModelSpec | None,
-    ) -> tuple[EnvironmentSpec, EnvSubprocess]:
+    ) -> PreparedEnvironmentSession:
         task_registration = self._task_registry.get(task.kind)
         task_env_spec = task_registration.load_environment_factory()(task)
         env_spec = self.setup_environment(model_spec, task_env_spec)
-        env_subprocess = self.get_subprocess(env_spec)
-        return env_spec, env_subprocess
+        return self.get_environment_session(env_spec)
 
     def _retrieve_prepared_model_session(
         self,
         model_spec: ModelSpec,
         task: TaskSpec,
         exec_resources: ExecutionResources,
-        env_spec: EnvironmentSpec,
-        env_subprocess: EnvSubprocess,
+        env_session: PreparedEnvironmentSession,
     ) -> PreparedModelSession:
         # Check if we have already prepared this model with the same execution resources
         # in this subprocess, if not prepare it by sending an init_model_request.
         model_cache_key = model_session_key(model_spec, exec_resources)
-        env_cache_key = self._environment_provider.environment_key(env_spec)
+        env_cache_key = env_session.env_key
         prepared = self.prepared_models.get((model_cache_key, env_cache_key))
 
-        if prepared is None or prepared.process_uuid != env_subprocess.process_uuid:
+        if (
+            prepared is None
+            or prepared.process_uuid != env_session.env_subprocess.process_uuid
+        ):
             self.prepared_models.pop((model_cache_key, env_cache_key), None)
             self.prepare_model(model_spec, task, exec_resources)
             prepared = self.prepared_models[(model_cache_key, env_cache_key)]
@@ -259,29 +276,31 @@ class SubprocessBackend:
     ) -> None:
 
         # Get the environment and subprocess for this model and task
-        env_spec, env_subprocess = self._retrieve_environment_and_subprocess(
-            task_spec, model_spec
-        )
+        env_session = self._retrieve_environment_session(task_spec, model_spec)
 
         request = self._prepare_init_model_request(
-            model_spec, exec_resources, env_subprocess
+            model_spec, exec_resources, env_session.env_subprocess
         )
 
-        response = self._send_request_and_get_response(env_subprocess, request)
+        response = self._send_request_and_get_response(
+            env_session.env_subprocess,
+            request,
+        )
 
         if response.operation == "error":
             raise RuntimeError(response.error or "Worker returned an unknown error")
 
         model_session_id = response.model_session_id
         model_cache_key = model_session_key(model_spec, exec_resources)
-        env_cache_key = self._environment_provider.environment_key(env_spec)
 
-        self.prepared_models[(model_cache_key, env_cache_key)] = PreparedModelSession(
-            model_spec=model_spec,
-            model_session_id=model_session_id,
-            execution_resources=exec_resources,
-            resolved_resources=response.resolved_resources,
-            process_uuid=env_subprocess.process_uuid,
+        self.prepared_models[(model_cache_key, env_session.env_key)] = (
+            PreparedModelSession(
+                model_spec=model_spec,
+                model_session_id=model_session_id,
+                execution_resources=exec_resources,
+                resolved_resources=response.resolved_resources,
+                process_uuid=env_session.env_subprocess.process_uuid,
+            )
         )
 
     def execute(
@@ -314,22 +333,20 @@ class SubprocessBackend:
         self._validate_task_executability(model, task)
 
         # Setup / Retrieve the environment and subprocess for this task
-        env_spec, env_subprocess = self._retrieve_environment_and_subprocess(
-            task, model
-        )
+        env_session = self._retrieve_environment_session(task, model)
 
         # Check if we have already prepared this model with the same execution resources
         # in this subprocess, if not prepare it by sending an init_model_request.
         prepared = None
         if model is not None:
             prepared = self._retrieve_prepared_model_session(
-                model, task, exec_resources, env_spec, env_subprocess
+                model, task, exec_resources, env_session
             )
 
         # Convert to a TaskRequest
         request = TaskRequest(
             operation="task",
-            request_id=str(env_subprocess.get_request_counter()),
+            request_id=str(env_session.env_subprocess.get_request_counter()),
             model_session_id=None if prepared is None else prepared.model_session_id,
             task_kind=task.kind,
             task_payload=task.model_dump(),
@@ -338,7 +355,10 @@ class SubprocessBackend:
         # Send the request to the subprocess
         started_at = datetime.now(timezone.utc)
         started_perf = time.perf_counter()
-        response = self._send_request_and_get_response(env_subprocess, request)
+        response = self._send_request_and_get_response(
+            env_session.env_subprocess,
+            request,
+        )
         ended_at = datetime.now(timezone.utc)
         wall_time_s = time.perf_counter() - started_perf
 
@@ -351,13 +371,13 @@ class SubprocessBackend:
         registration = self._task_registry.get(response.task_kind)
         result = registration.load_result_model().model_validate(response.result_payload)
 
-        if not isinstance(result, TaskResult) or not isinstance(env_spec, EnvironmentSpec):
+        if not isinstance(result, TaskResult):
             return result
 
         provenance = self._build_provenance(
             task=task,
             model=model,
-            env_spec=env_spec,
+            environment_provenance=env_session.environment_provenance,
             exec_resources=exec_resources,
             resolved_resources=None if prepared is None else prepared.resolved_resources,
             started_at=started_at,
@@ -394,6 +414,7 @@ class SubprocessBackend:
                 )
             env_subprocess._process.wait()
             del self.env_subprocesses[env_key]
+            self.prepared_environments.pop(env_key, None)
 
             # Delete any prepared model sessions associated with this subprocess
             to_delete = []

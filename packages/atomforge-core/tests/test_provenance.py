@@ -56,6 +56,8 @@ def test_provenance_validates_with_minimal_fields():
 
     assert provenance.task.kind == "example"
     assert provenance.model is None
+    assert provenance.environment.pyproject_hash is None
+    assert provenance.environment.lockfile_hash is None
 
 
 def test_task_result_accepts_no_provenance():
