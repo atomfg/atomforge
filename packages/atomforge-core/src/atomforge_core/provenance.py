@@ -5,9 +5,9 @@ import json
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from atomforge_core.resources.resource_models import (
     ExecutionResources,
@@ -106,3 +106,72 @@ class Provenance(BaseModel):
     environment: EnvironmentProvenance
     resources: ResourceProvenance
     execution: ExecutionProvenance
+
+
+class PartialProvenance(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    task: TaskProvenance
+    model: ModelProvenance | None = None
+    resources: ResourceProvenance
+    execution: ExecutionProvenance
+    environment_provider: str | None = None
+    environment_key: str | None = None
+    environment_spec_hash: str | None = None
+
+
+class ExecutionErrorRecord(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    error_type: str
+    message: str
+    worker_traceback: str | None = None
+
+
+class ExecutionRecord(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", arbitrary_types_allowed=True)
+
+    status: Literal["success", "error", "incompatibility"]
+    phase: Literal[
+        "input_validation",
+        "environment_preparation",
+        "model_preparation",
+        "task_execution",
+        "result_validation",
+    ]
+    result: BaseModel | None = None
+    provenance: Provenance | None = None
+    partial_provenance: PartialProvenance | None = None
+    error: ExecutionErrorRecord | None = None
+
+    @field_validator("result")
+    @classmethod
+    def _validate_result(cls, value: BaseModel | None) -> BaseModel | None:
+        if value is None:
+            return value
+
+        from atomforge_core.task.result import TaskResult
+
+        if not isinstance(value, TaskResult):
+            raise TypeError("ExecutionRecord.result must be a TaskResult")
+        return value
+
+    @model_validator(mode="after")
+    def _validate_record_shape(self) -> "ExecutionRecord":
+        if self.status == "success":
+            if self.result is None:
+                raise ValueError("Successful ExecutionRecord requires result")
+            if self.provenance is None:
+                raise ValueError("Successful ExecutionRecord requires provenance")
+            if self.error is not None:
+                raise ValueError("Successful ExecutionRecord must not include error")
+        else:
+            if self.error is None:
+                raise ValueError("Unsuccessful ExecutionRecord requires error")
+            if self.result is not None:
+                raise ValueError("Unsuccessful ExecutionRecord must not include result")
+            if self.provenance is None and self.partial_provenance is None:
+                raise ValueError(
+                    "Unsuccessful ExecutionRecord requires provenance or partial_provenance"
+                )
+        return self
