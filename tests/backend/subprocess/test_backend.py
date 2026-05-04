@@ -1,8 +1,14 @@
 import pytest
 from unittest.mock import Mock
 from atomforge.backend.subprocess.backend import SubprocessBackend
+from atomforge.backend.subprocess.backend import PreparedModelSession
+from atomforge_core.env.env import EnvironmentSpec
+from atomforge_core.model.spec import ModelSpec
 from atomforge_core.protocol.response import ShutdownResponse
 from atomforge_core.protocol.request import ShutdownRequest
+from atomforge_core.provenance import payload_hash
+from atomforge_core.resources.resource_models import ExecutionResources, ResolvedResources
+from atomforge_core.task.result import TaskResult
 from atomforge_core.task.spec import TaskSpec
 
 
@@ -15,15 +21,28 @@ class TaskOnlySpec(TaskSpec):
         return frozenset()
 
 
-class TaskOnlyResult:
-    @classmethod
-    def model_validate(cls, payload):
-        result = cls()
-        result.kind = payload["kind"]
-        result.doubled_value = payload["doubled_value"]
-        result.used_model = payload["used_model"]
-        result.resource_accelerator = payload["resource_accelerator"]
-        return result
+class TaskOnlyResult(TaskResult):
+    kind: str
+    doubled_value: int
+    used_model: bool
+    resource_accelerator: str | None
+
+
+class ModelTaskSpec(TaskSpec):
+    kind: str = "model-task"
+    value: int = 1
+
+    def required_model_properties(self):
+        return frozenset()
+
+
+class ModelTaskResult(TaskResult):
+    kind: str
+    value: int
+
+
+class FakeModel(ModelSpec):
+    kind: str = "fake-model"
 
 @pytest.fixture
 def backend():
@@ -146,6 +165,124 @@ def test_execute_model_free_does_not_prepare_model(backend, mocker):
 
     prepare_model.assert_not_called()
     assert result.doubled_value == 18
+
+
+def test_execute_model_free_attaches_provenance(backend, mocker):
+    task = TaskOnlySpec(value=9)
+    env_spec = EnvironmentSpec(
+        name="task-only-env",
+        python="3.12",
+        requirements=["fake-base"],
+        provider_requirements=["runtime-test-plugin"],
+    )
+
+    mock_env_subprocess = mocker.Mock()
+    mock_env_subprocess.get_request_counter.side_effect = [1]
+    registration = mocker.Mock()
+    registration.has_default_executor.return_value = True
+    registration.load_result_model.return_value = TaskOnlyResult
+    backend._task_registry.get = mocker.Mock(return_value=registration)
+    mocker.patch(
+        "atomforge.backend.subprocess.backend.SubprocessBackend._retrieve_environment_and_subprocess",
+        return_value=(env_spec, mock_env_subprocess),
+    )
+    mocker.patch(
+        "atomforge.backend.subprocess.backend.SubprocessBackend._retrieve_prepared_model_session"
+    )
+
+    class MockResponse:
+        operation = "task"
+        task_kind = "fake-task-only"
+        request_id = "1"
+        result_payload = {
+            "kind": "fake-task-only",
+            "doubled_value": 18,
+            "used_model": False,
+            "resource_accelerator": None,
+        }
+
+    mocker.patch(
+        "atomforge.backend.subprocess.backend.SubprocessBackend._send_request_and_get_response",
+        return_value=MockResponse(),
+    )
+
+    result = backend.execute(task)
+
+    assert result.provenance is not None
+    assert result.provenance.task.kind == task.kind
+    assert result.provenance.task.payload_hash == payload_hash(task)
+    assert result.provenance.model is None
+    assert result.provenance.environment.provider == "uv"
+    assert result.provenance.environment.key == (
+        backend._environment_provider.environment_key(env_spec)
+    )
+    assert result.provenance.environment.spec_hash == env_spec.hash()
+    assert result.provenance.resources.requested == ExecutionResources()
+    assert result.provenance.resources.resolved is None
+    assert result.provenance.execution.wall_time_s >= 0
+
+
+def test_execute_model_task_attaches_model_provenance(backend, mocker):
+    task = ModelTaskSpec(value=7)
+    model = FakeModel()
+    exec_resources = ExecutionResources(accelerator="cpu", precision="f64")
+    resolved_resources = ResolvedResources(accelerator="cpu", precision="f64")
+    env_spec = EnvironmentSpec(
+        name="model-env",
+        python="3.12",
+        requirements=["fake-base"],
+        provider_requirements=["runtime-test-plugin"],
+    )
+
+    mock_env_subprocess = mocker.Mock()
+    mock_env_subprocess.process_uuid = "process-uuid"
+    mock_env_subprocess.get_request_counter.side_effect = [1]
+    registration = mocker.Mock()
+    registration.load_result_model.return_value = ModelTaskResult
+    backend._task_registry.get = mocker.Mock(return_value=registration)
+    backend._model_registry.get = mocker.Mock(
+        return_value=Mock(source=["runtime-test-plugin"])
+    )
+    mocker.patch.object(backend, "_validate_task_executability")
+    mocker.patch(
+        "atomforge.backend.subprocess.backend.SubprocessBackend._retrieve_environment_and_subprocess",
+        return_value=(env_spec, mock_env_subprocess),
+    )
+    mocker.patch(
+        "atomforge.backend.subprocess.backend.SubprocessBackend._retrieve_prepared_model_session",
+        return_value=PreparedModelSession(
+            model_spec=model,
+            model_session_id="model-session",
+            execution_resources=exec_resources,
+            resolved_resources=resolved_resources,
+            process_uuid="process-uuid",
+        ),
+    )
+
+    class MockResponse:
+        operation = "task"
+        task_kind = "model-task"
+        request_id = "1"
+        result_payload = {"kind": "model-task", "value": 14}
+
+    mocker.patch(
+        "atomforge.backend.subprocess.backend.SubprocessBackend._send_request_and_get_response",
+        return_value=MockResponse(),
+    )
+
+    result = backend.execute(task, model=model, exec_resources=exec_resources)
+
+    assert result.provenance is not None
+    assert result.provenance.task.kind == task.kind
+    assert result.provenance.task.payload_hash == payload_hash(task)
+    assert result.provenance.model is not None
+    assert result.provenance.model.kind == model.kind
+    assert result.provenance.model.payload_hash == payload_hash(model)
+    assert result.provenance.model.distributions == ("runtime-test-plugin",)
+    assert result.provenance.model.versions == {}
+    assert result.provenance.resources.requested == exec_resources
+    assert result.provenance.resources.resolved == resolved_resources
+    assert result.provenance.execution.wall_time_s >= 0
 
 
 def test_execute_model_free_rejects_model_argument(backend):

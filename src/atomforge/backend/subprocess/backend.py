@@ -1,4 +1,7 @@
 import subprocess
+import time
+from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from atomforge_core.protocol.session import model_session_key
@@ -9,6 +12,15 @@ from atomforge_runtime.registry.model.model_registry import ModelRegistry
 from atomforge_runtime.registry.task.task_registry import TaskRegistry
 from atomforge.settings.settings import AtomforgeSettings
 from atomforge_core.resources.resource_models import ExecutionResources, ResolvedResources
+from atomforge_core.provenance import (
+    EnvironmentProvenance,
+    ExecutionProvenance,
+    ModelProvenance,
+    Provenance,
+    ResourceProvenance,
+    TaskProvenance,
+    payload_hash,
+)
 from atomforge_core.task.execution_policy import ExecutionPolicy
 from atomforge_core.task.result import TaskResult
 from atomforge_core.task.spec import TaskSpec
@@ -126,6 +138,74 @@ class SubprocessBackend:
         )
         if not report.ok:
             raise ValueError(report.reason or "Task is not executable")
+
+    def _distribution_versions(self, distributions: list[str]) -> dict[str, str]:
+        versions = {}
+        for distribution in distributions:
+            try:
+                versions[distribution] = version(distribution)
+            except PackageNotFoundError:
+                continue
+        return versions
+
+    def _build_provenance(
+        self,
+        *,
+        task: TaskSpec,
+        model: ModelSpec | None,
+        env_spec: EnvironmentSpec,
+        exec_resources: ExecutionResources,
+        resolved_resources: ResolvedResources | None,
+        started_at: datetime,
+        ended_at: datetime,
+        wall_time_s: float,
+    ) -> Provenance:
+        env_key = self._environment_provider.environment_key(env_spec)
+
+        model_provenance = None
+        if model is not None:
+            model_registration = self._model_registry.get(model.kind)
+            distributions = tuple(model_registration.source)
+            model_provenance = ModelProvenance(
+                kind=model.kind,
+                payload_hash=payload_hash(model),
+                distributions=distributions,
+                versions=self._distribution_versions(list(distributions)),
+            )
+
+        return Provenance(
+            task=TaskProvenance(
+                kind=task.kind,
+                payload_hash=payload_hash(task),
+            ),
+            model=model_provenance,
+            environment=EnvironmentProvenance(
+                provider=self._environment_provider.provider_name,
+                key=env_key,
+                spec_hash=env_spec.hash(),
+                python=env_spec.python,
+                requirements=env_spec.requirements,
+                provider_requirements=env_spec.provider_requirements,
+            ),
+            resources=ResourceProvenance(
+                requested=exec_resources,
+                resolved=resolved_resources,
+            ),
+            execution=ExecutionProvenance(
+                backend="subprocess",
+                started_at=started_at,
+                ended_at=ended_at,
+                wall_time_s=wall_time_s,
+            ),
+        )
+
+    def _attach_provenance(
+        self, result: TaskResult, provenance: Provenance
+    ) -> TaskResult:
+        if isinstance(result, TaskResult):
+            return result.model_copy(update={"provenance": provenance})
+        setattr(result, "provenance", provenance)
+        return result
 
     def _retrieve_environment_and_subprocess(
         self,
@@ -256,7 +336,11 @@ class SubprocessBackend:
         )
 
         # Send the request to the subprocess
+        started_at = datetime.now(timezone.utc)
+        started_perf = time.perf_counter()
         response = self._send_request_and_get_response(env_subprocess, request)
+        ended_at = datetime.now(timezone.utc)
+        wall_time_s = time.perf_counter() - started_perf
 
         if response.operation == "error":
             raise RuntimeError(response.error or "Worker returned an unknown error")
@@ -267,7 +351,21 @@ class SubprocessBackend:
         registration = self._task_registry.get(response.task_kind)
         result = registration.load_result_model().model_validate(response.result_payload)
 
-        return result
+        if not isinstance(result, TaskResult) or not isinstance(env_spec, EnvironmentSpec):
+            return result
+
+        provenance = self._build_provenance(
+            task=task,
+            model=model,
+            env_spec=env_spec,
+            exec_resources=exec_resources,
+            resolved_resources=None if prepared is None else prepared.resolved_resources,
+            started_at=started_at,
+            ended_at=ended_at,
+            wall_time_s=wall_time_s,
+        )
+
+        return self._attach_provenance(result, provenance)
 
     def send_shutdown(self, env_key: str) -> None:
         env_subprocess = self.env_subprocesses.get(env_key, None)
