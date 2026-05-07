@@ -1,17 +1,19 @@
 from typing import Any
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, field_validator, model_validator, Field
 
 class StructureData(BaseModel):
     """
     A Pydantic model for serializing and deserializing Structure data.
     """
 
-    positions: list[list[float]]
-    cell: list[list[float]]
-    numbers: list[int]    
-    pbc: list[bool, bool, bool]
+    positions: list[list[float]] = Field(..., description="List of atomic positions, where each position is a list of three floats. Coordinates are in Angstroms.")
+    cell: list[list[float]] = Field(..., description="List of three lattice vectors, each containing three floats. Coordinates are in Angstroms.")
+    numbers: list[int] = Field(..., description="List of atomic numbers corresponding to each position.")
+    pbc: list[bool, bool, bool] = Field(..., description="Periodic boundary conditions in each direction.")
 
+    spin_multiplicity: int | None = Field(None, description="Spin multiplicity of the structure, if applicable. Not all models will meaningfully use this field.")
+    charge: int | None = Field(None, description="Total charge of the structure, if applicable. Not all models will meaningfully use this field.")
 
     @field_validator('positions')
     def validate_positions(cls, value):
