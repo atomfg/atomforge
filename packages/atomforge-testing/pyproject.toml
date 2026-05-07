@@ -1,0 +1,39 @@
+[project]
+name = "atomforge-testing"
+version = "0.1.0"
+description = "Shared pytest contracts for AtomForge plugin packages"
+readme = "README.md"
+authors = [
+    { name = "Mads-Peter", email = "machri@phys.au.dk" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "atomforge-core",
+    "atomforge-runtime",
+    "pytest>=9.0.3",
+]
+
+[project.optional-dependencies]
+runtime = [
+    "atomforge",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "atomforge_runtime: opt-in AtomForge runtime execution contracts",
+]
+
+[tool.uv.sources]
+atomforge = { path="../..", editable=true }
+atomforge_core = { path="../atomforge-core", editable=true }
+atomforge_runtime = { path="../atomforge-runtime", editable=true }
