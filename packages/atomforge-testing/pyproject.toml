@@ -30,6 +30,7 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
+    "atomforge_environment: opt-in AtomForge environment resolver contracts",
     "atomforge_runtime: opt-in AtomForge runtime execution contracts",
 ]
 

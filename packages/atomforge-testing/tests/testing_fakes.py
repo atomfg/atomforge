@@ -8,7 +8,9 @@ from atomforge_core.model.result import ModelResult
 from atomforge_core.model.spec import ModelSpec
 from atomforge_core.property import Property
 from atomforge_core.resources.resource_caps import ResourceCapabilities
+from atomforge_core.resources.resource_probes import ProbeResult
 from atomforge_core.structure import StructureData
+from atomforge_core.task.executor import TaskExecutionContext, TaskExecutor
 
 
 class FakeModel(ModelSpec):
@@ -63,6 +65,30 @@ class BrokenEnvironmentFactory(EnvironmentFactory[object]):
             python="3.12",
             requirements=["undeclared-runtime-dependency"],
         )
+
+
+class NonDeterministicEnvironmentFactory(EnvironmentFactory[object]):
+    dependency_summary = DependencySummary(
+        base_requirements=(),
+        python="3.12",
+    )
+    counter = 0
+
+    def build(self, spec: object) -> EnvironmentSpec:
+        type(self).counter += 1
+        return EnvironmentSpec(
+            name=f"non-deterministic-env-{type(self).counter}",
+            python="3.12",
+        )
+
+
+class FakeTaskOverrideExecutor(TaskExecutor[object, object]):
+    def execute(self, spec: object, context: TaskExecutionContext) -> object:
+        return object()
+
+
+def fake_probe(spec: FakeModel) -> ProbeResult:
+    return ProbeResult()
 
 
 FakeSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
