@@ -22,7 +22,7 @@ wheels = [
 
 [[package]]
 name = "atomforge"
-version = "0.1.0"
+version = "0.1.0a1"
 source = { editable = "." }
 dependencies = [
     { name = "atomforge-builtins" },
@@ -69,7 +69,7 @@ dev = [
 
 [[package]]
 name = "atomforge-builtins"
-version = "0.1.0"
+version = "0.1.0a1"
 source = { editable = "packages/atomforge-builtins" }
 dependencies = [
     { name = "atomforge-core" },
@@ -87,7 +87,7 @@ dev = [
 
 [[package]]
 name = "atomforge-core"
-version = "0.1.0"
+version = "0.1.0a1"
 source = { editable = "packages/atomforge-core" }
 dependencies = [
     { name = "pydantic" },
@@ -104,7 +104,7 @@ dev = [
 
 [[package]]
 name = "atomforge-runtime"
-version = "0.1.0"
+version = "0.1.0a1"
 source = { editable = "packages/atomforge-runtime" }
 dependencies = [
     { name = "atomforge-core" },
