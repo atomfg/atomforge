@@ -1,7 +1,7 @@
 [project]
 name = "atomforge-core"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.1.0a1"
+description = "Atomforge core package, used in both runtime and atomforge."
 readme = "README.md"
 authors = [
     { name = "Mads-Peter", email = "machri@phys.au.dk" }

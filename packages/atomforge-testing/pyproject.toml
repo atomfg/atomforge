@@ -1,6 +1,6 @@
 [project]
 name = "atomforge-testing"
-version = "0.1.0"
+version = "0.1.0a1"
 description = "Shared pytest contracts for AtomForge plugin packages"
 readme = "README.md"
 authors = [

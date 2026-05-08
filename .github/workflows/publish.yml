@@ -1,0 +1,68 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: just sync
+
+      - name: Validate release tag
+        run: just validate-release-tag
+
+      - name: Build release artifacts
+        run: just build-release
+
+      - name: Smoke built artifacts
+        run: just smoke-release
+
+      - name: Select publishable files
+        id: select
+        shell: bash
+        run: |
+          just select-release-files > publish-files.txt
+          if [[ -s publish-files.txt ]]; then
+            echo "has_files=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_files=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        if: steps.select.outputs.has_files == 'true'
+        shell: bash
+        run: |
+          mapfile -t files < publish-files.txt
+          uv publish --trusted-publishing always "${files[@]}"
+
+      - name: No new package versions to publish
+        if: steps.select.outputs.has_files != 'true'
+        run: echo "All built package versions are already present on PyPI."
