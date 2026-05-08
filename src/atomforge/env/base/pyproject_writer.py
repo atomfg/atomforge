@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Mapping
 
 from atomforge.env.base.dependency import ResolvedDependency
 
@@ -27,10 +28,17 @@ def parse_python(python_str: str) -> tuple[str, str | None]:
 
 class PyprojectWriter:
 
-    def __init__(self, env_name: str, python_version: str | None, dependencies: list[ResolvedDependency]):
+    def __init__(
+        self,
+        env_name: str,
+        python_version: str | None,
+        dependencies: list[ResolvedDependency],
+        extras: Mapping[str, str] | None = None,
+    ):
         self.env_name = env_name
         self.python_version = python_version
         self.dependencies = dependencies
+        self.extras = extras or {}
 
     def _python_string(self) -> str:
         # Python

@@ -5,6 +5,7 @@ from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.provenance import EnvironmentProvenance
 from atomforge.env.base.handle import EnvironmentHandle
 from atomforge.env.base.info import EnvironmentInfo
+from atomforge.env.base.resolution import EnvironmentResolutionResult
 
 from pathlib import Path
 
@@ -49,6 +50,13 @@ class EnvironmentProvider(ABC):
         """
         Ensure that an environment matching the given specification exists, and return a handle to it.
         If the environment already exists, it should be reused. If it does not exist, it should be created.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def resolve_environment(self, spec: EnvironmentSpec) -> EnvironmentResolutionResult:
+        """
+        Resolve an environment specification without creating the environment.
         """
         raise NotImplementedError
 

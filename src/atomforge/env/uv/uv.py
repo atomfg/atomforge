@@ -1,5 +1,7 @@
 import json
+import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 from atomforge_core.env.env import EnvironmentSpec
@@ -7,6 +9,7 @@ from atomforge_core.env.env import EnvironmentSpec
 from atomforge.env.base.handle import EnvironmentHandle
 from atomforge.env.base.info import EnvironmentInfo
 from atomforge.env.base.provider import EnvironmentProvider, file_sha256
+from atomforge.env.base.resolution import EnvironmentResolutionResult
 from atomforge.env.uv.uv_pyproject_writer import UVPyprojectWriter
 from atomforge.env.base.dependency import ResolvedDependency
 import hashlib
@@ -64,6 +67,37 @@ class UVEnvironmentProvider(EnvironmentProvider):
         return EnvironmentHandle(
             path=project_path, name=spec.name, provider=self.provider_name
         )
+
+    def resolve_environment(self, spec: EnvironmentSpec) -> EnvironmentResolutionResult:
+        command = ("uv", "sync", "--dry-run", "--no-progress")
+        project_path = Path(
+            tempfile.mkdtemp(prefix="atomforge-env-resolve-", dir=self.install_path)
+        )
+        self._write_pyproject(spec, project_path / "pyproject.toml")
+        result = subprocess.run(
+            command,
+            check=False,
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+        )
+        success = result.returncode == 0
+        if success:
+            shutil.rmtree(project_path)
+
+        return EnvironmentResolutionResult(
+            provider=self.provider_name,
+            success=success,
+            message=(
+                None
+                if success
+                else f"uv dry-run resolution failed with exit code {result.returncode}"
+            ),
+            stdout=result.stdout,
+            stderr=result.stderr,
+            project_path=project_path,
+            command=command,
+        )
     
     def _check_environment(self, handle: EnvironmentHandle) -> bool:
         command = [
@@ -118,6 +152,7 @@ class UVEnvironmentProvider(EnvironmentProvider):
             env_name=spec.name,
             python_version=spec.python,
             dependencies=list(all_requirements),
+            extras=spec.extras,
         )
         writer.write(path)
 
