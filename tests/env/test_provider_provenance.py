@@ -1,6 +1,7 @@
 from atomforge.env.base.handle import EnvironmentHandle
 from atomforge.env.base.info import EnvironmentInfo
 from atomforge.env.base.provider import EnvironmentProvider, file_sha256
+from atomforge.env.base.resolution import EnvironmentResolutionResult
 from atomforge.env.uv.uv import UVEnvironmentProvider
 from atomforge_core.env.env import EnvironmentSpec
 
@@ -16,6 +17,13 @@ class FakeEnvironmentProvider(EnvironmentProvider):
             name=spec.name,
             provider=self.provider_name,
             path=self.install_path / self.provider_name,
+        )
+
+    def resolve_environment(self, spec: EnvironmentSpec) -> EnvironmentResolutionResult:
+        return EnvironmentResolutionResult(
+            provider=self.provider_name,
+            success=True,
+            message=None,
         )
 
     def inspect_environment(self, handle: EnvironmentHandle) -> EnvironmentInfo:
@@ -93,3 +101,86 @@ def test_uv_provider_missing_generated_files_do_not_raise(tmp_path):
 
     assert provenance.pyproject_hash is None
     assert provenance.lockfile_hash is None
+
+
+def test_fake_provider_implements_environment_resolution(tmp_path):
+    provider = FakeEnvironmentProvider(search_path=(tmp_path,), install_path=tmp_path)
+
+    result = provider.resolve_environment(EnvironmentSpec(name="fake-env"))
+
+    assert result.provider == "fake"
+    assert result.success is True
+
+
+def test_uv_provider_resolve_environment_uses_dry_run(tmp_path, monkeypatch):
+    provider = UVEnvironmentProvider(search_path=(tmp_path,), install_path=tmp_path)
+    calls = []
+
+    def fake_run(command, *, check, cwd, capture_output, text):
+        calls.append(
+            {
+                "command": command,
+                "check": check,
+                "cwd": cwd,
+                "capture_output": capture_output,
+                "text": text,
+                "venv_exists": (cwd / ".venv").exists(),
+                "pyproject_exists": (cwd / "pyproject.toml").exists(),
+            }
+        )
+
+        class Result:
+            returncode = 0
+            stdout = "resolved"
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr("atomforge.env.uv.uv.subprocess.run", fake_run)
+
+    result = provider.resolve_environment(EnvironmentSpec(name="uv-env"))
+
+    assert result.success is True
+    assert result.provider == "uv"
+    assert result.command == ("uv", "sync", "--dry-run", "--no-progress")
+    assert result.stdout == "resolved"
+    assert calls == [
+        {
+            "command": ("uv", "sync", "--dry-run", "--no-progress"),
+            "check": False,
+            "cwd": result.project_path,
+            "capture_output": True,
+            "text": True,
+            "venv_exists": False,
+            "pyproject_exists": True,
+        }
+    ]
+    assert not result.project_path.exists()
+
+
+def test_uv_provider_resolve_environment_returns_failure_details(
+    tmp_path,
+    monkeypatch,
+):
+    provider = UVEnvironmentProvider(search_path=(tmp_path,), install_path=tmp_path)
+
+    def fake_run(command, *, check, cwd, capture_output, text):
+        class Result:
+            returncode = 1
+            stdout = "stdout details"
+            stderr = "stderr details"
+
+        return Result()
+
+    monkeypatch.setattr("atomforge.env.uv.uv.subprocess.run", fake_run)
+
+    result = provider.resolve_environment(
+        EnvironmentSpec(name="uv-env", requirements=["definitely-impossible-package"])
+    )
+
+    assert result.success is False
+    assert result.message == "uv dry-run resolution failed with exit code 1"
+    assert result.stdout == "stdout details"
+    assert result.stderr == "stderr details"
+    assert result.project_path.exists()
+    assert not (result.project_path / ".venv").exists()
