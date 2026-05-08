@@ -11,7 +11,7 @@ from pathlib import Path
 
 PACKAGE_DIRS = [
     Path("packages/atomforge-core"),
-    # Path("packages/atomforge-runtime"),
+    Path("packages/atomforge-runtime"),
     # Path("packages/atomforge-builtins"),
     # Path("packages/atomforge-testing"),
     # Path("."),
