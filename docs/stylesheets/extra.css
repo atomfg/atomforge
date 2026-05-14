@@ -1,0 +1,29 @@
+/* Make Mermaid diagrams use more of the documentation content area. */
+.md-typeset .mermaid {
+  display: block;
+  width: 120%;
+  overflow-x: auto;
+  margin: 2rem 0;
+  text-align: center;
+}
+
+/* Zensical/Material may keep Mermaid inside pre.mermaid before rendering. */
+.md-typeset pre.mermaid {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* Enlarge the rendered SVG. */
+.md-typeset .mermaid svg {
+  width: 100%;
+  min-width: 860px;
+  max-width: none;
+  height: auto;
+}
+
+/* Nudge Mermaid text larger after rendering. */
+.md-typeset .mermaid svg text {
+  font-size: 16px !important;
+}
