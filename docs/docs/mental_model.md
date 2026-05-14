@@ -1,4 +1,8 @@
-# What is Atomforge? 
+---
+icon: lucide/arrow-down-to-dot
+---
+
+# Introduction
 
 ## TL;DR
 

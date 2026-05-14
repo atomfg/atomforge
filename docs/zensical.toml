@@ -30,7 +30,7 @@ Copyright &copy; 2026 Mads-Peter V. Christiansen. All rights reserved.
 # Read more: https://zensical.org/docs/setup/navigation/
 nav = [
   { "Get started" = "index.md" },
-  { "What is Atomforge?" = "mental_model.md" },
+  { "Introduction" = "mental_model.md" },
   { "Installation" = "installation.md" },
   { "Tutorials" = [
     { "Overview" = "tutorials/index.md" },
