@@ -6,7 +6,7 @@ icon: lucide/rocket
 
 <div class="grid cards" markdown>
 
--   :material-clock-fast:{ .lg .middle } __Set up in 5 minutes__
+-   :lucide-cog:{ .lg .middle } __Easy installation__
 
     ---
 

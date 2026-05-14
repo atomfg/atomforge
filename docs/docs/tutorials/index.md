@@ -1,3 +1,7 @@
+---
+icon: octicons/mortar-board-24
+---
+
 # Tutorials
 
 These tutorials are executable documents. The documentation pages are rendered from Quarto sources, and notebook versions are available for interactive use.

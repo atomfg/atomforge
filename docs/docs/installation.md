@@ -1,1 +1,4 @@
+---
+icon: lucide/cog
+---
 # Installation
