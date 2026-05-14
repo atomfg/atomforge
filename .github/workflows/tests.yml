@@ -3,6 +3,14 @@ name: Run Tests
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
+      - "packages/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "justfile"
+      - ".github/workflows/tests.yml"
   workflow_dispatch:
 
 permissions:
