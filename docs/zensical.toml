@@ -29,13 +29,24 @@ Copyright &copy; 2026 Mads-Peter V. Christiansen. All rights reserved.
 #
 # Read more: https://zensical.org/docs/setup/navigation/
 nav = [
-  { "Get started" = "index.md" },
+  { "Home" = [
+  { "Get started" = "index.md" }] }, 
+
+  { "Getting started" = [
   { "Introduction" = "mental_model.md" },
   { "Installation" = "installation.md" },
   { "Tutorials" = [
     { "Overview" = "tutorials/index.md" },
     { "First calculation" = "tutorials/first_calculation.md" },
-  ] },
+  ] },  
+  ]},
+  { "Concepts" = [
+    { "Overview" = "concepts/index.md" },
+    { "Models" = "concepts/models.md" },
+    { "Tasks" = "concepts/tasks.md" },
+    { "Registries" = "concepts/registries.md" },
+    { "Backend" = "concepts/backends.md" },
+  ]}
 ]
 
 # With the "extra_css" option you can add your own CSS styling to customize
@@ -72,7 +83,7 @@ features = [
     "content.code.select",
 
     "content.footnote.tooltips",
-    "content.tabs.link",
+    "content.tabs.link",  
     "content.tooltips",
 
     "header.autohide",
@@ -81,6 +92,7 @@ features = [
     "navigation.instant",
     "navigation.instant.prefetch",
     "navigation.path",
+    "navigation.tabs",
     "navigation.sections",
     "navigation.top",
     "navigation.tracking",
@@ -147,4 +159,3 @@ combine_header_slug = true
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
 [project.markdown_extensions.pymdownx.tilde]
-
