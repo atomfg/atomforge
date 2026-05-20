@@ -29,11 +29,6 @@ def render_tutorial(tutorial_path):
         "quarto",
         "render",
         str(tutorial_path.name),
-        "--to",
-        "gfm",
-        # "--output",
-        # str(tutorial_path.with_suffix(".md").name),
-        # "--quiet",
     ]
 
     try:

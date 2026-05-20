@@ -1,8 +1,5 @@
 ---
 title: "Tutorial: First Calculation"
-format: 
-    gfm: default
-    ipynb: default
 ---
 
 ::: {.content-visible when-format="gfm"}
