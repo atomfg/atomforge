@@ -11,9 +11,10 @@ class EnvSubprocess:
     def __init__(self, executeable: Path, name: str) -> None:
         self.process_uuid = str(uuid4())
         self._request_counter = 0
+        self._executeable = executeable.as_posix()
         self._process = subprocess.Popen(
             [
-                executeable.as_posix(),
+                self._executeable,
                 "-m",
                 "atomforge_runtime.backend.subprocess.worker",
                 name,

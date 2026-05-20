@@ -38,6 +38,7 @@ nav = [
   { "Tutorials" = [
     { "Overview" = "tutorials/index.md" },
     { "First calculation" = "tutorials/first_calculation.md" },
+    { "Different models" = "tutorials/different_models.md" },
   ] },  
   ]},
   { "Concepts" = [

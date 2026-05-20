@@ -72,6 +72,7 @@ class EnvironmentProvider(ABC):
         return EnvironmentProvenance(
             provider=self.provider_name,
             key=self.environment_key(spec),
+            path=handle.path.as_posix() if handle and handle.path else None,
             spec_hash=spec.hash(),
             python=spec.python,
             requirements=spec.requirements,

@@ -75,6 +75,7 @@ class EnvironmentProvenance(BaseModel):
     provider: str
     key: str
     spec_hash: str
+    path: str | None = None
     python: str | None = None
     requirements: tuple[str, ...] = Field(default_factory=tuple)
     provider_requirements: tuple[str, ...] = Field(default_factory=tuple)

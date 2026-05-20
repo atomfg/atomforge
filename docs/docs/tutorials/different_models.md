@@ -1,0 +1,61 @@
+# Using different models
+
+
+This tutorial shows how `atomforge` enables the use of different models
+all running in isolated environments.
+
+``` python
+from atomforge.backend.subprocess.backend import SubprocessBackend
+from atomforge_builtins.task.single_point import SinglePoint
+from atomforge_core.structure import StructureData
+
+# Importing different ModelSpecs for four different models.
+from atomforge_chgnet import CHGNet
+from atomforge_orb import OrbV2, OrbV3
+from atomforge_sevennet import SevenNet
+```
+
+We create a `StructureData` instance
+
+``` python
+positions = [[0, 0, 0], [1, 0, 0]]
+
+cell = [[5, 0, 0], 
+    [0, 5, 0], 
+    [0, 0, 5]]
+
+pbc = [False, False, False]
+numbers = [1, 1]
+
+structure = StructureData(positions=positions, numbers=numbers, cell=cell, pbc=pbc)
+```
+
+``` python
+task = SinglePoint(structure=structure, properties=["energy", "forces"])
+models = [OrbV2(), OrbV3(), SevenNet()]
+
+with SubprocessBackend() as backend:
+    for model in models:
+        result = backend.execute(task, model)
+        print(f"{model.kind = }")
+        print(f"\t{result.energy = }")
+        print(f"\t{result.provenance.environment.path = }\n")
+```
+
+    model.kind = 'orb-v2'
+        result.energy = 1.541972149771702
+        result.provenance.environment.path = '/Users/au616397/.atomforge/envs/uv/31484e1f41b2f098'
+
+    model.kind = 'orb-v3'
+        result.energy = 1.2830578326240576
+        result.provenance.environment.path = '/Users/au616397/.atomforge/envs/uv/31484e1f41b2f098'
+
+    model.kind = 'sevennet'
+        result.energy = -5.866032600402832
+        result.provenance.environment.path = '/Users/au616397/.atomforge/envs/uv/0d046fbef2394841'
+
+This performs the `SinglePoint`-task for each of the three models and
+prints the predicted energy and the path to the environment in which the
+calculation was done. The two `OrbVX`-models end up using the same
+environment because their dependencies are identical whereas `SevenNet`
+runs in a seperate environment.
