@@ -117,7 +117,6 @@ class UVEnvironmentProvider(EnvironmentProvider):
             handle=handle,
             path=env_path,
             python_executable=python_executable if exists else None,
-            exists=exists,
         )
 
     def build_provenance(
