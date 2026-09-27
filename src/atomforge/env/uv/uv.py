@@ -20,8 +20,12 @@ class UVEnvironmentProvider(EnvironmentProvider):
 
     def __init__(self, search_path: tuple[Path, ...], install_path: Path):
         super().__init__(search_path, install_path)
-        self._core_resolved = ResolvedDependency(requirement="atomforge-core", exact=True)
-        self._runtime_resolved = ResolvedDependency(requirement="atomforge-runtime", exact=True)
+        self._core_resolved = ResolvedDependency(
+            requirement="atomforge-core", exact=True
+        )
+        self._runtime_resolved = ResolvedDependency(
+            requirement="atomforge-runtime", exact=True
+        )
         self._internal_package_fingerprint = (
             self._core_resolved.fingerprint + self._runtime_resolved.fingerprint
         )
@@ -98,7 +102,7 @@ class UVEnvironmentProvider(EnvironmentProvider):
             project_path=project_path,
             command=command,
         )
-    
+
     def _check_environment(self, handle: EnvironmentHandle) -> bool:
         command = [
             "uv",
@@ -106,7 +110,9 @@ class UVEnvironmentProvider(EnvironmentProvider):
             "sync",
             "--check",
         ]
-        result = subprocess.run(command, check=False, capture_output=True, text=True, cwd=handle.path)
+        result = subprocess.run(
+            command, check=False, capture_output=True, text=True, cwd=handle.path
+        )
         return result.returncode == 0
 
     def inspect_environment(self, handle: EnvironmentHandle) -> EnvironmentInfo:
@@ -143,10 +149,16 @@ class UVEnvironmentProvider(EnvironmentProvider):
                 raise RuntimeError(f"Failed to remove environment: {result}")
 
     def _write_pyproject(self, spec: EnvironmentSpec, path: Path) -> None:
-        provider_requirements = [ResolvedDependency(req, exact=True) for req in spec.provider_requirements]
+        provider_requirements = [
+            ResolvedDependency(req, exact=True) for req in spec.provider_requirements
+        ]
         atomforge_requirements = [self._runtime_resolved, self._core_resolved]
-        spec_requirements = [ResolvedDependency(req, exact=False) for req in spec.requirements]
-        all_requirements = provider_requirements + atomforge_requirements + spec_requirements
+        spec_requirements = [
+            ResolvedDependency(req, exact=False) for req in spec.requirements
+        ]
+        all_requirements = (
+            provider_requirements + atomforge_requirements + spec_requirements
+        )
         writer = UVPyprojectWriter(
             env_name=spec.name,
             python_version=spec.python,

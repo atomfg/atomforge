@@ -101,9 +101,7 @@ class FakeTaskExecutor:
             )
         return CompatibilityCheck(ok=True)
 
-    def execute(
-        self, spec: FakeTask, context: TaskExecutionContext
-    ) -> FakeTaskResult:
+    def execute(self, spec: FakeTask, context: TaskExecutionContext) -> FakeTaskResult:
         if context.model_executor is None:
             raise ValueError("FakeTask requires a model executor")
         model_executor = context.model_executor
@@ -200,7 +198,9 @@ def build_model_registration() -> ModelRegistration:
         environment_factory_path=SymbolPath("runtime_fakes:FakeEnvironmentFactory"),
         resource_capabilities_path=SymbolPath("runtime_fakes:FakeResourceCapabilities"),
         probe_path=SymbolPath("runtime_fakes:fake_probe"),
-        task_overrides={"fake-task": SymbolPath("runtime_fakes:FakeOverrideTaskExecutor")},
+        task_overrides={
+            "fake-task": SymbolPath("runtime_fakes:FakeOverrideTaskExecutor")
+        },
         source=["runtime-test-plugin"],
     )
 

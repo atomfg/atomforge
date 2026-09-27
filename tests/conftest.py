@@ -2,6 +2,7 @@ import pytest
 
 from atomforge_core.structure import StructureData
 
+
 @pytest.fixture
 def example_structure():
     return StructureData(

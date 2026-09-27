@@ -60,6 +60,7 @@ def test_single_point_creation_with_mixed_properties(example_structure):
             properties=[Property.ENERGY, "forces", "invalid_property"],
         )
 
+
 def test_single_point_creation_with_duplicate_properties(example_structure):
     task = SinglePoint(
         structure=example_structure, properties=[Property.ENERGY, Property.ENERGY]

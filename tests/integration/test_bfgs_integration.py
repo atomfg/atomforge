@@ -5,7 +5,7 @@ from atomforge_core.structure import StructureData
 
 
 @pytest.fixture(scope="module")
-def bfgs_task():    
+def bfgs_task():
     structure = StructureData(
         positions=[[4.5, 0, 0], [5.5, 0, 0]],
         cell=[[10, 0, 0], [0, 10, 0], [0, 0, 10]],

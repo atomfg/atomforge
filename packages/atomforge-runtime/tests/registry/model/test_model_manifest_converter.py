@@ -187,4 +187,3 @@ def test_converter_leaves_lazy_fields_as_symbol_paths():
     assert registration.supported_properties_path == SymbolPath(
         manifest.supported_properties.raw
     )
-

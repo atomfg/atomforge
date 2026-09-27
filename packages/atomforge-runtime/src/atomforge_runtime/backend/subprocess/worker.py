@@ -167,7 +167,7 @@ class SubprocessWorker:
         model_spec = self._get_model_spec(request)
         model_session_id = model_session_key(model_spec, request.exec_resources)
         return model_session_id
-    
+
     def _get_model_session(self, model_session_id: str) -> ModelSession:
         model_session = self._model_sessions.get(model_session_id)
         if model_session is None:
@@ -264,8 +264,8 @@ class SubprocessWorker:
         self, request: TaskRequest
     ) -> TaskResponse | IncompatibilityResponse:
 
-        task_spec, context, route, task_executor_cls, compatibility = self._resolve_task(
-            request
+        task_spec, context, route, task_executor_cls, compatibility = (
+            self._resolve_task(request)
         )
         if not compatibility.ok:
             return IncompatibilityResponse(

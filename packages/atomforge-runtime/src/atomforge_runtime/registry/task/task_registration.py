@@ -17,6 +17,7 @@ from atomforge_runtime.registry.loading import (
 
 _UNSET = object()  # Sentinel for unset values
 
+
 @dataclass(frozen=True)
 class TaskRegistration(Generic[TaskSpecT, TaskResultT]):
     kind: str
@@ -28,7 +29,9 @@ class TaskRegistration(Generic[TaskSpecT, TaskResultT]):
     source: list[str]
 
     _result_model: object = field(default=_UNSET, init=False, repr=False, compare=False)
-    _executor_class: object = field(default=_UNSET, init=False, repr=False, compare=False)
+    _executor_class: object = field(
+        default=_UNSET, init=False, repr=False, compare=False
+    )
     _capability_spec: object = field(
         default=_UNSET, init=False, repr=False, compare=False
     )
@@ -68,7 +71,7 @@ class TaskRegistration(Generic[TaskSpecT, TaskResultT]):
                 ),
             )
         return self._executor_class
-    
+
     def has_default_executor(self) -> bool:
         return self.executor_class_path is not None
 

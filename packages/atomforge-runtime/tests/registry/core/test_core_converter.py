@@ -3,7 +3,9 @@ import pytest
 from atomforge_core.env.factory import EnvironmentFactory
 from atomforge_core.registry.errors import RegistryCoreError
 from atomforge_core.registry.symbol_path import SymbolPath
-from atomforge_runtime.registry.base_converter import ManifestToRegistrationConverterBase
+from atomforge_runtime.registry.base_converter import (
+    ManifestToRegistrationConverterBase,
+)
 
 from runtime_fakes import FakeEnvironmentFactory
 
@@ -82,4 +84,3 @@ def test_base_converter_no_longer_exposes_generic_lazy_loading_helpers():
     assert not hasattr(ManifestToRegistrationConverterBase, "load_instance_path")
     assert not hasattr(ManifestToRegistrationConverterBase, "load_callable_path")
     assert not hasattr(ManifestToRegistrationConverterBase, "build_environment_factory")
-

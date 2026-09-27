@@ -1,6 +1,7 @@
 from atomforge_core.model.spec import ModelSpecT
 from atomforge_core.resources.resource_probes import Accelerator, ProbeResult
 
+
 def torch_probe(model_spec: ModelSpecT) -> ProbeResult:
     try:
         import torch

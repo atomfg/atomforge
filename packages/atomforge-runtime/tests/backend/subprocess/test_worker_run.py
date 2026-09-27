@@ -20,4 +20,3 @@ def test_worker_run_shutdown(run_worker):
     assert exit_code == 0
     response = ShutdownResponse.model_validate_json(stdout)
     assert response.request_id == "test_request_id"
-

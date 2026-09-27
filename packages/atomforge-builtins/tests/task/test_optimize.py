@@ -139,7 +139,9 @@ def test_optimize_result_fields(optimize_task, optimize_executor, model_executor
 
 
 @pytest.mark.skipif(not HAS_ASE, reason="Requires ASE installation")
-def test_optimize_max_steps_forwarding(example_structure, optimize_executor, model_executor):
+def test_optimize_max_steps_forwarding(
+    example_structure, optimize_executor, model_executor
+):
     result = optimize_executor.execute(
         Optimize(structure=example_structure, fmax=0.5, max_steps=1),
         TaskExecutionContext(model_executor=model_executor),

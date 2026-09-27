@@ -2,6 +2,7 @@ from atomforge.cli.task.main import task_cli
 from rich import print
 from rich.table import Table
 
+
 @task_cli.command("list")
 def list_command():
     """List all tasks."""
@@ -16,7 +17,6 @@ def list_command():
     table.add_column("Plugin Source", style="green")
     table.add_column("Dependencies", style="red")
 
-
     none_renderable = "[italic red]None[/]"
 
     for _, task_handle in task_registry:
@@ -27,7 +27,7 @@ def list_command():
         if len(capability_spec.optional) == 0:
             optional_properties = none_renderable
         else:
-            optional_properties = ", ".join(capability_spec.optional)   
+            optional_properties = ", ".join(capability_spec.optional)
 
         if len(capability_spec.required) == 0:
             required_properties = none_renderable
@@ -36,18 +36,22 @@ def list_command():
 
         plugin_source = ", ".join(task_handle.source)
 
-
         env_factory = task_handle.load_environment_factory()
         dep_summary = env_factory.dependency_summary
-        combined_reqs = list(dep_summary.base_requirements) + list(dep_summary.possible_requirements)
+        combined_reqs = list(dep_summary.base_requirements) + list(
+            dep_summary.possible_requirements
+        )
         if len(combined_reqs) == 0:
             dependencies = none_renderable
         else:
             dependencies = ", ".join(combined_reqs)
 
-
-
-        table.add_row(spec_name, required_properties, optional_properties, plugin_source, dependencies)
+        table.add_row(
+            spec_name,
+            required_properties,
+            optional_properties,
+            plugin_source,
+            dependencies,
+        )
 
     print(table)
-

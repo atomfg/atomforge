@@ -3,7 +3,10 @@ from atomforge_core.resources.resource_models import ResolvedResources
 from atomforge_core.task.executability import HostExecutabilityReport
 from atomforge_core.task.executor import TaskExecutionContext
 from atomforge_core.task.execution_policy import ExecutionPolicy
-from atomforge_runtime.task.host_checks import check_host_executability, check_required_properties
+from atomforge_runtime.task.host_checks import (
+    check_host_executability,
+    check_required_properties,
+)
 from atomforge_runtime.task.resolution import resolve_worker_execution
 from runtime_fakes import (
     FakeModel,
@@ -155,7 +158,9 @@ def test_resolve_worker_execution_prefer_override_uses_override(example_structur
     assert compatibility.ok is True
 
 
-def test_resolve_worker_execution_prefer_override_falls_back_to_default(example_structure):
+def test_resolve_worker_execution_prefer_override_falls_back_to_default(
+    example_structure,
+):
     task_spec = FakeTask(
         structure=example_structure,
         execution_policy=ExecutionPolicy.PREFER_MODEL_OVERRIDE,
@@ -195,7 +200,9 @@ def test_resolve_worker_execution_require_override_incompatible_returns_incompat
     assert "requires model scale >=" in compatibility.reason
 
 
-def test_resolve_worker_execution_require_override_without_override_raises(example_structure):
+def test_resolve_worker_execution_require_override_without_override_raises(
+    example_structure,
+):
     task_spec = FakeTask(
         structure=example_structure,
         execution_policy=ExecutionPolicy.REQUIRE_MODEL_OVERRIDE,

@@ -1,4 +1,7 @@
-from atomforge_core.resources.resource_models import ExecutionResources, ResolvedResources
+from atomforge_core.resources.resource_models import (
+    ExecutionResources,
+    ResolvedResources,
+)
 
 
 def test_resolved_resources_init():
@@ -20,4 +23,3 @@ def test_resolved_resources_attributes():
         assert attribute in ResolvedResources.model_fields.keys(), (
             f"Expected attribute '{attribute}' not found in ResolvedResources"
         )
-

@@ -58,9 +58,13 @@ class SymbolPath:
         # Allow dotted attribute access like "Outer.Inner" if you want nested attrs.
         attr_parts = attribute_name.split(".")
         if any(not part for part in attr_parts):
-            raise ValueError(f"Invalid attribute path in SymbolPath: {attribute_name!r}")
+            raise ValueError(
+                f"Invalid attribute path in SymbolPath: {attribute_name!r}"
+            )
         if any(not part.isidentifier() for part in attr_parts):
-            raise ValueError(f"Invalid attribute path in SymbolPath: {attribute_name!r}")
+            raise ValueError(
+                f"Invalid attribute path in SymbolPath: {attribute_name!r}"
+            )
 
         return module_path, attribute_name
 

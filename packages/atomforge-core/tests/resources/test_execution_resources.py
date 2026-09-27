@@ -19,4 +19,3 @@ def test_execution_resources_attributes():
         assert hasattr(resources, attribute), (
             f"Expected attribute '{attribute}' not found in ExecutionResources"
         )
-

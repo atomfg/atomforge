@@ -1,4 +1,6 @@
-from atomforge_runtime.registry.base_converter import ManifestToRegistrationConverterBase
+from atomforge_runtime.registry.base_converter import (
+    ManifestToRegistrationConverterBase,
+)
 from atomforge_core.registry.errors import RegistryCoreError
 from atomforge_core.registry.task_manifest import TaskManifest
 from atomforge_runtime.registry.task.task_registration import TaskRegistration

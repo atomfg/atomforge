@@ -51,4 +51,3 @@ def test_model_manifest_resource_capabilities_improper_dotted_path(manifest_fact
 def test_model_manifest_probe_improper_dotted_path(manifest_factory):
     with pytest.raises(Exception):
         manifest_factory(probe="not_a_dotted_path")
-

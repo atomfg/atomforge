@@ -13,7 +13,10 @@ from atomforge.backend.subprocess._provenance import (
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.model.spec import ModelSpec
 from atomforge_core.provenance import ExecutionErrorRecord, ExecutionRecord
-from atomforge_core.resources.resource_models import ExecutionResources, ResolvedResources
+from atomforge_core.resources.resource_models import (
+    ExecutionResources,
+    ResolvedResources,
+)
 from atomforge_core.task.result import TaskResult
 from atomforge_core.task.spec import TaskSpec
 

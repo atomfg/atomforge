@@ -39,4 +39,3 @@ def test_resolve_precision_unsupported_strict():
 
     with pytest.raises(ValueError):
         resolve_precision(exec_resources, resource_caps, messages={})
-

@@ -1,6 +1,10 @@
 import pytest
 
-from atomforge_core.protocol.request import InitModelRequest, ShutdownRequest, TaskRequest
+from atomforge_core.protocol.request import (
+    InitModelRequest,
+    ShutdownRequest,
+    TaskRequest,
+)
 from atomforge_core.protocol.response import (
     ErrorResponse,
     InitModelResponse,

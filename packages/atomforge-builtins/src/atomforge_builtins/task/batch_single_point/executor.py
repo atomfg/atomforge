@@ -10,9 +10,7 @@ from atomforge_builtins.task.batch_single_point.result import BatchSinglePointRe
 from atomforge_builtins.task.batch_single_point.spec import BatchSinglePoint
 
 
-class BatchSinglePointExecutor(
-    TaskExecutor[BatchSinglePoint, BatchSinglePointResult]
-):
+class BatchSinglePointExecutor(TaskExecutor[BatchSinglePoint, BatchSinglePointResult]):
     @classmethod
     def check_compatibility(
         cls, spec: BatchSinglePoint, context: TaskExecutionContext

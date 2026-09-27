@@ -5,6 +5,8 @@ from atomforge_core.env.factory import (
 )
 
 AnalyzeSymmetryEnvironmentFactory = environment_factory_from_callable(
-    lambda spec: EnvironmentSpec(name="analyze_symmetry", requirements=["ase", "pymatgen"]),
+    lambda spec: EnvironmentSpec(
+        name="analyze_symmetry", requirements=["ase", "pymatgen"]
+    ),
     DependencySummary(base_requirements=["ase", "pymatgen"]),
 )

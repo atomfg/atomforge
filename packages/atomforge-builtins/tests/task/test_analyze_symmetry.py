@@ -2,7 +2,10 @@ from importlib.util import find_spec
 
 import pytest
 
-from atomforge_builtins.task.analyze_symmetry import AnalyzeSymmetry, AnalyzeSymmetryResult
+from atomforge_builtins.task.analyze_symmetry import (
+    AnalyzeSymmetry,
+    AnalyzeSymmetryResult,
+)
 from atomforge_builtins.task.analyze_symmetry.executor import AnalyzeSymmetryExecutor
 from atomforge_core.structure import StructureData
 from atomforge_core.task.executor import TaskExecutionContext

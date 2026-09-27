@@ -86,13 +86,14 @@ class TableWriter:
         return ", ".join(accelerators) if accelerators else "N/A"
 
     def _dependencies_to_str(self, model_registration):
-        dependencies = model_registration.load_environment_factory().dependency_summary
-        dep_str = (
-            ", ".join(dependencies.base_requirements)
-            if dependencies and dependencies.base_requirements
-            else "N/A"
+        summary = model_registration.load_environment_factory().dependency_summary
+        if not summary:
+            return "N/A"
+
+        requirements = dict.fromkeys(
+            (*summary.base_requirements, *summary.possible_requirements)
         )
-        return dep_str
+        return ", ".join(requirements) if requirements else "N/A"
 
     def _plugin_source_to_str(self, model_registration):
         sources = model_registration.source
@@ -125,26 +126,36 @@ class TableWriter:
                     continue
                 case TableColumn.SUPPORTED_PROPERTIES.value:
                     if strict_failed:
-                        row.append(self._failed_value_for_column(column, model_registration))
+                        row.append(
+                            self._failed_value_for_column(column, model_registration)
+                        )
                         continue
                     row.append(self._supported_properties_to_str(model_registration))
                 case TableColumn.FAMILY.value:
                     if strict_failed:
-                        row.append(self._failed_value_for_column(column, model_registration))
+                        row.append(
+                            self._failed_value_for_column(column, model_registration)
+                        )
                         continue
                     row.append(self._family_to_str(model_registration))
                 case TableColumn.ACCELERATOR.value:
                     if strict_failed:
-                        row.append(self._failed_value_for_column(column, model_registration))
+                        row.append(
+                            self._failed_value_for_column(column, model_registration)
+                        )
                         continue
                     row.append(self._accelerator_to_str(model_registration))
                 case TableColumn.DEPENDENCIES.value:
                     if strict_failed:
-                        row.append(self._failed_value_for_column(column, model_registration))
+                        row.append(
+                            self._failed_value_for_column(column, model_registration)
+                        )
                         continue
                     row.append(self._dependencies_to_str(model_registration))
                 case TableColumn.PLUGIN_SOURCE.value:
-                    row.append(self._failed_value_for_column(column, model_registration))
+                    row.append(
+                        self._failed_value_for_column(column, model_registration)
+                    )
 
         self.table.add_row(*row)
 

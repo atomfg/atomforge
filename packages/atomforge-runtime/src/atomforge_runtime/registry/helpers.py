@@ -25,6 +25,7 @@ def resolve_distribution(name: str) -> str:
         return f"{name} @ {url}"
     return f"{dist.metadata['Name']}=={dist.version}"
 
+
 def load_symbol(dotted_path: str | SymbolPath):
     if isinstance(dotted_path, SymbolPath):
         return dotted_path.load_symbol()

@@ -35,7 +35,7 @@ def resolve_dependency(requirement_name: str):
         raise RuntimeError(
             f"Required distribution is not installed: {requirement_name}"
         ) from exc
-    
+
     editable, url = _check_if_editable(dist)
 
     if editable:
@@ -44,17 +44,17 @@ def resolve_dependency(requirement_name: str):
         path = _file_url_to_path(url)
         resolved_requirement = f"{requirement_name} @ file://{path}"
 
-
-    else: # Add the version of the locally installed package as a specifier (e.g., "atomforge @ file:///path/to/atomforge" becomes "atomforge==1.2.3")
+    else:  # Add the version of the locally installed package as a specifier (e.g., "atomforge @ file:///path/to/atomforge" becomes "atomforge==1.2.3")
         path = None
         version = dist.version
         resolved_requirement = f"{requirement_name}=={version}"
 
     return resolved_requirement
 
+
 class ResolvedDependency(Requirement):
-    def __init__(self, requirement: str, exact: bool = False):        
-        if exact:                
+    def __init__(self, requirement: str, exact: bool = False):
+        if exact:
             requirement = resolve_dependency(requirement)
         super().__init__(requirement)
         self.exact = exact

@@ -1,4 +1,6 @@
-from atomforge_runtime.registry.base_converter import ManifestToRegistrationConverterBase
+from atomforge_runtime.registry.base_converter import (
+    ManifestToRegistrationConverterBase,
+)
 from atomforge_core.registry.errors import RegistryCoreError
 from atomforge_core.model.spec import ModelSpec
 from atomforge_core.registry.model_manifest import ModelManifest

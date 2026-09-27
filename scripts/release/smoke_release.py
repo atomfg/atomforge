@@ -40,7 +40,9 @@ def built_wheels() -> list[Path]:
     for pattern in WHEEL_PATTERNS:
         matches = sorted(Path().glob(pattern))
         if len(matches) != 1:
-            raise SystemExit(f"Expected exactly one built wheel for {pattern}, found {len(matches)}.")
+            raise SystemExit(
+                f"Expected exactly one built wheel for {pattern}, found {len(matches)}."
+            )
         wheels.extend(matches)
     return wheels
 
@@ -60,7 +62,16 @@ def main() -> int:
         run([uv, "venv", "--python", "3.13", str(venv)])
         python = venv / "bin" / "python"
         atomforge = venv / "bin" / "atomforge"
-        run([uv, "pip", "install", "--python", str(python), *(str(wheel) for wheel in wheels)])
+        run(
+            [
+                uv,
+                "pip",
+                "install",
+                "--python",
+                str(python),
+                *(str(wheel) for wheel in wheels),
+            ]
+        )
         run([str(atomforge), "--help"])
         run([str(python), "-c", SMOKE_IMPORTS])
 

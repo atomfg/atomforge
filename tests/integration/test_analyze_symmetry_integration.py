@@ -2,7 +2,10 @@ from importlib.util import find_spec
 
 import pytest
 
-from atomforge_builtins.task.analyze_symmetry import AnalyzeSymmetry, AnalyzeSymmetryResult
+from atomforge_builtins.task.analyze_symmetry import (
+    AnalyzeSymmetry,
+    AnalyzeSymmetryResult,
+)
 from atomforge_core.structure import StructureData
 
 HAS_PYMATGEN = find_spec("pymatgen") is not None and find_spec("ase") is not None

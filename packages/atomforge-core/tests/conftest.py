@@ -11,4 +11,3 @@ def example_structure():
         numbers=[1, 8],
         pbc=[False, False, False],
     )
-

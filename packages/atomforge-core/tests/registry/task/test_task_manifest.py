@@ -41,4 +41,3 @@ def test_task_manifest_capability_spec_improper_dotted_path(manifest_factory):
 def test_task_manifest_environment_factory_improper_dotted_path(manifest_factory):
     with pytest.raises(Exception):
         manifest_factory(environment_factory_cls="not_a_dotted_path")
-

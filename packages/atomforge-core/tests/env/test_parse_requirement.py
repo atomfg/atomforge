@@ -26,4 +26,3 @@ def test_parse_requirement(requirement):
     package, version = parse_requirement(requirement[0])
     assert package == requirement[1]
     assert version == requirement[2]
-

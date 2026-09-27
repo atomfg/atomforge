@@ -172,7 +172,7 @@ class ModelRegistration(Generic[ModelSpecT]):
                 },
             )
         return self._task_override_executors.get(task_kind, None)
-    
+
     def load_all_task_override_executors(self) -> dict[str, type[TaskExecutor]]:
         executors = {}
         for task_kind in self.task_overrides.keys():

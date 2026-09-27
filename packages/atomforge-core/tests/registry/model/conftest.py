@@ -29,4 +29,3 @@ def manifest_factory():
         )
 
     return factory
-

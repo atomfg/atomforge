@@ -20,4 +20,5 @@ class TaskSpec(BaseModel):
     def required_model_properties(self) -> frozenset[Property]:
         raise NotImplementedError
 
+
 TaskSpecT = TypeVar("TaskSpecT", bound=TaskSpec)

@@ -208,7 +208,9 @@ def test_entry_point_parsing_fails_for_missing_entry_point(tmp_path):
     contract = FakeManifestContract()
     contract.manifest_case = build_case(
         tmp_path,
-        pyproject_path=write_pyproject(tmp_path, {"other": "testing_fakes:fake_manifest"}),
+        pyproject_path=write_pyproject(
+            tmp_path, {"other": "testing_fakes:fake_manifest"}
+        ),
     )
 
     with pytest.raises(AssertionError):
@@ -517,9 +519,7 @@ def test_registry_contract_fails_for_wrong_source(tmp_path, monkeypatch):
     contract.manifest_case = build_case(tmp_path)
     patch_default_model_registry(
         monkeypatch,
-        FakeRegistry(
-            {"fake-model": registration_factory(source=["different-plugin"])}
-        ),
+        FakeRegistry({"fake-model": registration_factory(source=["different-plugin"])}),
     )
 
     with pytest.raises(AssertionError):

@@ -5,7 +5,10 @@ import platform
 from atomforge_runtime.resources.shared import SystemResources, Availability
 from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.resources.resource_probes import ProbeResult
-from atomforge_core.resources.resource_models import ExecutionResources, ResolvedResources
+from atomforge_core.resources.resource_models import (
+    ExecutionResources,
+    ResolvedResources,
+)
 
 
 from atomforge_runtime.resources.accelerator import resolve_accelerator

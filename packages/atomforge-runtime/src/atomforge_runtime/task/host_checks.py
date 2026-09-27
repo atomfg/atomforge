@@ -74,4 +74,6 @@ def check_host_executability(
             )
         )
 
-    return HostExecutabilityReport.success_with_routes(candidate_routes=candidate_routes)
+    return HostExecutabilityReport.success_with_routes(
+        candidate_routes=candidate_routes
+    )

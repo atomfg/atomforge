@@ -41,7 +41,9 @@ class HostExecutabilityReport:
         candidate_routes: tuple[ExecutionRoute, ...],
     ) -> "HostExecutabilityReport":
         if not candidate_routes:
-            raise ValueError("Successful host executability requires at least one route")
+            raise ValueError(
+                "Successful host executability requires at least one route"
+            )
         return cls(
             ok=True,
             selected_route=candidate_routes[0],

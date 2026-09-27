@@ -92,7 +92,9 @@ class EntryPointRegistryBase:
         instance = cls.default()
         failures = []
         for _, registration in instance:
-            failures.extend(instance._collect_registration_strict_failures(registration))
+            failures.extend(
+                instance._collect_registration_strict_failures(registration)
+            )
         if failures:
             raise RegistryStrictValidationError(failures)
         return instance

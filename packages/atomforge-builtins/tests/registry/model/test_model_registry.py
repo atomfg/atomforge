@@ -72,4 +72,3 @@ def test_strict_aggregates_lazy_field_failures(monkeypatch):
         "supported_properties",
     }
     assert "runtime_fakes:FakeTask" in str(error)
-

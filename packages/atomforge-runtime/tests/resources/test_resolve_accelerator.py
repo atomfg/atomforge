@@ -3,7 +3,11 @@ import pytest
 from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.resources.resource_models import ExecutionResources
 from atomforge_core.resources.resource_probes import ProbeResult
-from atomforge_runtime.resources import Availability, SystemResources, resolve_accelerator
+from atomforge_runtime.resources import (
+    Availability,
+    SystemResources,
+    resolve_accelerator,
+)
 
 
 @pytest.fixture
@@ -134,4 +138,3 @@ def test_strict_gpu_unavailable(
             probe_result=gpu_unavailable_probe,
             messages={},
         )
-

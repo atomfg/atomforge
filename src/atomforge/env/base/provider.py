@@ -36,11 +36,11 @@ class EnvironmentProvider(ABC):
     @abstractmethod
     def provider_name(self) -> str:
         raise NotImplementedError
-    
+
     @abstractmethod
     def environment_key(self, spec: EnvironmentSpec) -> str:
         """
-        Return a unique deterministic key for the given environment specification. 
+        Return a unique deterministic key for the given environment specification.
         This is used to determine if an environment already exists.
         """
         raise NotImplementedError

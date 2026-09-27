@@ -1,7 +1,11 @@
 import pytest
 
 from atomforge_builtins.model.ase_lj import LennardJones
-from atomforge_builtins.task.optimize import FixAtomsConstraint, Optimize, OptimizeResult
+from atomforge_builtins.task.optimize import (
+    FixAtomsConstraint,
+    Optimize,
+    OptimizeResult,
+)
 from atomforge_core.structure import StructureData
 
 
@@ -61,4 +65,7 @@ def constrained_optimize_result(backend, optimize_structure) -> OptimizeResult:
 def test_optimize_fix_atoms_constraint_holds_position(
     constrained_optimize_result: OptimizeResult, optimize_structure: StructureData
 ):
-    assert constrained_optimize_result.structure.positions[0] == optimize_structure.positions[0]
+    assert (
+        constrained_optimize_result.structure.positions[0]
+        == optimize_structure.positions[0]
+    )

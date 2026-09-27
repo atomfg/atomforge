@@ -33,7 +33,9 @@ def load_executor_class_for_route(
                 f"Unable to load model override executor for task kind '{route.task_kind}' "
                 "without a model registration"
             )
-        executor_cls = model_registration.load_task_override_executor_class(route.task_kind)
+        executor_cls = model_registration.load_task_override_executor_class(
+            route.task_kind
+        )
     else:
         executor_cls = task_registration.load_executor_class()
 
@@ -51,7 +53,9 @@ def resolve_worker_execution(
     model_registration: ModelRegistration | None,
     context: TaskExecutionContext,
 ) -> tuple[ExecutionRoute, type[TaskExecutor], CompatibilityCheck]:
-    host_report = resolve_host_execution(task_spec, task_registration, model_registration)
+    host_report = resolve_host_execution(
+        task_spec, task_registration, model_registration
+    )
     if not host_report.ok:
         raise ValueError(host_report.reason or "Task is not executable")
 
