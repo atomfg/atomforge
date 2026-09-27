@@ -19,6 +19,7 @@ NoDepSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
 
 
 class NoDep(ModelSpec):
+    environment_profile: Literal["tested"] = "tested"
     kind: Literal["no-dep"] = model_kind
     scale: float = 1.0
 
@@ -31,27 +32,25 @@ NoDepMetadata = ModelMetadata(
 )
 
 
-NoDepCapabilities = ResourceCapabilities(
-    accelerator=["cpu"], precision=None
-)
+NoDepCapabilities = ResourceCapabilities(accelerator=["cpu"], precision=None)
+
+NoDepEnvironmentProfiles = {
+    "tested": EnvironmentSpec(name=model_kind, python="==3.12.*", requirements=[])
+}
 
 
 class NoDepEnvironmentFactory(EnvironmentFactory[NoDep]):
     dependency_summary = DependencySummary(
         base_requirements=(),
-        python="3.12",
+        python="==3.12.*",
     )
 
     def build(self, spec: NoDep) -> EnvironmentSpec:
-        return EnvironmentSpec(
-            name=spec.kind, python="3.12", requirements=[]
-        )
+        return NoDepEnvironmentProfiles[spec.environment_profile]
 
 
 class NoDepExecutor(ModelExecutor[NoDep]):
-    def __init__(
-        self, spec: NoDep, resolved_resources: ResolvedResources
-    ) -> None:
+    def __init__(self, spec: NoDep, resolved_resources: ResolvedResources) -> None:
         super().__init__(spec, resolved_resources)
 
     def compute(self, structure: StructureData, properties: frozenset[Property]):
@@ -65,7 +64,9 @@ class NoDepExecutor(ModelExecutor[NoDep]):
         # Calculate energy if requested, otherwise set to None to avoid unnecessary computation
         # If forces were requested ASE will have already calculated the energy, so this won't trigger an additional calculation
         if Property.ENERGY in properties:
-            energy = len(structure.numbers) * -0.1 * self.spec.scale  # Dummy energy calculation based on number of atoms
+            energy = (
+                len(structure.numbers) * -0.1 * self.spec.scale
+            )  # Dummy energy calculation based on number of atoms
         else:
             energy = None
 

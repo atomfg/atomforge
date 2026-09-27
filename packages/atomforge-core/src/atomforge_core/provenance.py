@@ -81,6 +81,7 @@ class EnvironmentProvenance(BaseModel):
     provider_requirements: tuple[str, ...] = Field(default_factory=tuple)
     pyproject_hash: str | None = None
     lockfile_hash: str | None = None
+    model_profile: str | None = None
 
 
 class ResourceProvenance(BaseModel):
@@ -106,9 +107,15 @@ class Provenance(BaseModel):
     model: ModelProvenance | None = Field(
         None, description="Provenance of the model used for execution"
     )
-    environment: EnvironmentProvenance = Field(..., description="Provenance of the execution environment")
-    resources: ResourceProvenance = Field(..., description="Provenance of the resources used for execution")
-    execution: ExecutionProvenance = Field(..., description="Provenance of the execution itself")
+    environment: EnvironmentProvenance = Field(
+        ..., description="Provenance of the execution environment"
+    )
+    resources: ResourceProvenance = Field(
+        ..., description="Provenance of the resources used for execution"
+    )
+    execution: ExecutionProvenance = Field(
+        ..., description="Provenance of the execution itself"
+    )
 
 
 class PartialProvenance(BaseModel):
@@ -121,6 +128,7 @@ class PartialProvenance(BaseModel):
     environment_provider: str | None = None
     environment_key: str | None = None
     environment_spec_hash: str | None = None
+    model_profile: str | None = None
 
 
 class ExecutionErrorRecord(BaseModel):

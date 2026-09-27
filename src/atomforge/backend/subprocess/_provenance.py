@@ -31,6 +31,12 @@ def distribution_versions(distributions: list[str]) -> dict[str, str]:
     return versions
 
 
+def model_environment_profile(model: ModelSpec | None) -> str | None:
+    if not isinstance(model, ModelSpec):
+        return None
+    return model.environment_profile
+
+
 def build_model_provenance(
     model: ModelSpec | None,
     model_registry: ModelRegistry,
@@ -42,7 +48,7 @@ def build_model_provenance(
     distributions = tuple(model_registration.source)
     return ModelProvenance(
         kind=model.kind,
-        payload_hash=payload_hash(model),
+        payload_hash=payload_hash(model.scientific_payload()),
         distributions=distributions,
         versions=distribution_versions(list(distributions)),
     )
@@ -62,6 +68,9 @@ def build_provenance(
 ) -> Provenance:
     model_provenance = build_model_provenance(model, model_registry)
 
+    environment_provenance = environment_provenance.model_copy(
+        update={"model_profile": model_environment_profile(model)}
+    )
     return Provenance(
         task=TaskProvenance(
             kind=task.kind,
@@ -115,6 +124,7 @@ def build_partial_provenance(
         environment_provider=environment_provider,
         environment_key=environment_key,
         environment_spec_hash=environment_spec_hash,
+        model_profile=model_environment_profile(model),
     )
 
 

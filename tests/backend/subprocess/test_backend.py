@@ -16,7 +16,10 @@ from atomforge_core.protocol.response import (
 from atomforge_core.protocol.request import ShutdownRequest
 from atomforge_core.provenance import EnvironmentProvenance, payload_hash
 from atomforge_core.protocol.session import model_session_key
-from atomforge_core.resources.resource_models import ExecutionResources, ResolvedResources
+from atomforge_core.resources.resource_models import (
+    ExecutionResources,
+    ResolvedResources,
+)
 from atomforge_core.task.result import TaskResult
 from atomforge_core.task.spec import TaskSpec
 
@@ -81,16 +84,19 @@ def make_environment_session(
 def backend():
     return SubprocessBackend()
 
+
 def test_ensure_matching_request_id():
     request = ShutdownRequest(request_id="test123")
     response = ShutdownResponse(request_id=request.request_id)
     ensure_matching_response(request, response)  # Should not raise
+
 
 def test_ensure_matching_request_id_mismatch():
     request = ShutdownRequest(request_id="test123")
     response = ShutdownResponse(request_id="different_id")
     with pytest.raises(RuntimeError):
         ensure_matching_response(request, response)
+
 
 def test_backend_context_manager(backend):
     with backend:
@@ -170,6 +176,7 @@ def test_prepare_model_error(backend, mocker):
     with pytest.raises(RuntimeError, match="Model preparation failed"):
         backend.prepare_model(model_spec=None, task_spec=None, exec_resources=None)
 
+
 def test_try_execute_returns_incompatibility_for_unsupported_task(backend):
     from atomforge_builtins.model.ase_lj import LennardJones
     from atomforge_core.task.spec import TaskSpec
@@ -178,7 +185,6 @@ def test_try_execute_returns_incompatibility_for_unsupported_task(backend):
     from atomforge_runtime.registry.task.task_registration import TaskRegistration
 
     class UnsupportedTaskSpec(TaskSpec):
-
         kind: str = "unsupported_task"
 
         def required_model_properties(self) -> frozenset[Property]:
@@ -216,7 +222,6 @@ def test_execute_preserves_incompatibility_raising_behavior(backend):
     from atomforge_runtime.registry.task.task_registration import TaskRegistration
 
     class UnsupportedTaskSpec(TaskSpec):
-
         kind: str = "unsupported_task"
 
         def required_model_properties(self) -> frozenset[Property]:
@@ -255,6 +260,7 @@ def test_execute_model_free_does_not_prepare_model(backend, mocker):
         "get_environment_session",
         return_value=make_environment_session(env_spec, mock_env_subprocess),
     )
+
     class MockResponse:
         operation = "task"
         task_kind = "fake-task-only"
@@ -280,7 +286,7 @@ def test_execute_model_free_attaches_provenance(backend, mocker):
     task = TaskOnlySpec(value=9)
     env_spec = EnvironmentSpec(
         name="task-only-env",
-        python="3.12",
+        python="==3.12.*",
         requirements=["fake-base"],
         provider_requirements=["runtime-test-plugin"],
     )
@@ -311,6 +317,7 @@ def test_execute_model_free_attaches_provenance(backend, mocker):
             environment_provenance,
         ),
     )
+
     class MockResponse:
         operation = "task"
         task_kind = "fake-task-only"
@@ -400,6 +407,7 @@ def test_try_execute_records_environment_preparation_failure(backend, mocker):
     assert record.phase == "environment_preparation"
     assert record.provenance is None
     assert record.partial_provenance is not None
+    assert record.partial_provenance.model_profile is None
     assert record.partial_provenance.environment_spec_hash == env_spec.hash()
     assert record.error is not None
     assert record.error.error_type == "RuntimeError"
@@ -444,6 +452,7 @@ def test_try_execute_records_model_preparation_worker_error(backend, mocker):
     assert record.status == "error"
     assert record.phase == "model_preparation"
     assert record.partial_provenance is not None
+    assert record.partial_provenance.model_profile == "tested"
     assert record.error is not None
     assert record.error.message == "model failed"
     assert record.error.worker_traceback == "worker traceback"
@@ -560,7 +569,7 @@ def test_execute_model_task_attaches_model_provenance(backend, mocker):
     resolved_resources = ResolvedResources(accelerator="cpu", precision="f64")
     env_spec = EnvironmentSpec(
         name="model-env",
-        python="3.12",
+        python="==3.12.*",
         requirements=["fake-base"],
         provider_requirements=["runtime-test-plugin"],
     )
@@ -626,10 +635,15 @@ def test_execute_model_task_attaches_model_provenance(backend, mocker):
     assert result.provenance.task.payload_hash == payload_hash(task)
     assert result.provenance.model is not None
     assert result.provenance.model.kind == model.kind
-    assert result.provenance.model.payload_hash == payload_hash(model)
+    assert result.provenance.model.payload_hash == payload_hash(
+        model.scientific_payload()
+    )
+    assert result.provenance.environment.model_profile == "tested"
     assert result.provenance.model.distributions == ("runtime-test-plugin",)
     assert result.provenance.model.versions == {}
-    assert result.provenance.environment == environment_provenance
+    assert result.provenance.environment == environment_provenance.model_copy(
+        update={"model_profile": "tested"}
+    )
     assert result.provenance.resources.requested == exec_resources
     assert result.provenance.resources.resolved == resolved_resources
     assert result.provenance.execution.wall_time_s >= 0

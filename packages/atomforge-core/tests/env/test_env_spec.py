@@ -7,7 +7,7 @@ from atomforge_core.env.env import EnvironmentSpec
 def env_spec() -> EnvironmentSpec:
     return EnvironmentSpec(
         name="test-env",
-        python="3.8",
+        python=">=3.8,<3.9",
         requirements=("numpy==1.22", "pandas"),
         channels=("conda-forge",),
         extras={"dev": "pytest"},
@@ -35,7 +35,7 @@ def test_name_with_hash(env_spec: EnvironmentSpec):
 def test_merge_requirements(env_spec: EnvironmentSpec):
     other_requirements = ("scipy", "numpy")
     merged = env_spec.merge_requirements(env_spec.requirements, other_requirements)
-    assert set(merged) == {"numpy", "pandas", "scipy"}
+    assert set(merged) == {"numpy==1.22", "pandas", "scipy"}
 
 
 def test_merge_channels(env_spec: EnvironmentSpec):
@@ -45,21 +45,54 @@ def test_merge_channels(env_spec: EnvironmentSpec):
 
 
 def test_merge_python(env_spec: EnvironmentSpec):
-    assert env_spec.merge_python("3.8", "3.8") == "3.8"
-    assert env_spec.merge_python("3.8", None) == "3.8"
-    assert env_spec.merge_python(None, "3.8") == "3.8"
-    with pytest.raises(ValueError):
-        env_spec.merge_python("3.8", "3.9")
+    assert env_spec.merge_python(">=3.8", "<3.10") == "<3.10,>=3.8"
+    assert env_spec.merge_python(">=3.8", None) == ">=3.8"
+    assert env_spec.merge_python(None, "<3.10") == "<3.10"
+    assert env_spec.merge_python("==3.8.*", "==3.9.*") == "==3.8.*,==3.9.*"
 
 
-def test_merge_requirements_conflict(env_spec: EnvironmentSpec):
-    with pytest.raises(ValueError):
-        env_spec.merge_requirements(env_spec.requirements, ("numpy==1.19",))
+def test_merge_requirements_defers_unsatisfiable_versions(env_spec: EnvironmentSpec):
+    merged = env_spec.merge_requirements(env_spec.requirements, ("numpy==1.19",))
+    assert set(merged) == {"numpy==1.19,==1.22", "pandas"}
 
 
 def test_merge_requirements_no_conflict(env_spec: EnvironmentSpec):
     merged = env_spec.merge_requirements(env_spec.requirements, ("pandas==1.22",))
     assert set(merged) == {"numpy==1.22", "pandas==1.22"}
+
+
+def test_merge_requirements_preserves_model_bound_against_unpinned_task(env_spec):
+    merged = env_spec.merge_requirements(("ase>=3.25,<4",), ("ase",))
+
+    assert merged == ("ase<4,>=3.25",)
+
+
+def test_merge_requirements_preserves_extras_and_markers(env_spec):
+    merged = env_spec.merge_requirements(
+        ("foo[bar]>=1; python_version < '3.13'",),
+        ("foo[bar]<2; python_version < '3.13'",),
+    )
+
+    assert merged == ('foo[bar]<2,>=1; python_version < "3.13"',)
+
+
+def test_merge_requirements_rejects_conflicting_direct_urls(env_spec):
+    with pytest.raises(ValueError, match="Conflicting direct requirements"):
+        env_spec.merge_requirements(
+            ("foo @ https://example.com/one.whl",),
+            ("foo @ https://example.com/two.whl",),
+        )
+
+
+def test_python_specifier_is_canonicalized():
+    env = EnvironmentSpec(name="test", python=">=3.12, <3.13")
+
+    assert env.python == "<3.13,>=3.12"
+
+
+def test_invalid_python_specifier_is_rejected():
+    with pytest.raises(ValueError, match="Invalid Python version specification"):
+        EnvironmentSpec(name="test", python="3.12")
 
 
 def test_merge_extras(env_spec: EnvironmentSpec):
@@ -148,4 +181,3 @@ def test_merge_provider_requirements_deduplicates_normalized_names():
     merged = left + right
 
     assert merged.provider_requirements == ("atomforge-mace",)
-

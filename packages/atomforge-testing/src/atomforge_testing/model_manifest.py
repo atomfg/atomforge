@@ -8,6 +8,7 @@ from numbers import Real
 import tomllib
 
 import pytest
+from pydantic import ValidationError
 
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.env.factory import EnvironmentFactory
@@ -56,6 +57,7 @@ class ModelManifestCase:
     )
     runtime_structure: StructureData | None = None
     runtime_exec_resources: ExecutionResources | None = None
+    runtime_skip_reason: str | None = None
 
 
 def build_model_spec(case: ModelManifestCase, registration) -> ModelSpec:
@@ -278,7 +280,9 @@ def default_environment_provider(tmp_path):
     if settings.env_provider_kind == "uv":
         return UVEnvironmentProvider(search_path=(tmp_path,), install_path=tmp_path)
 
-    raise AssertionError(f"Unsupported environment provider: {settings.env_provider_kind}")
+    raise AssertionError(
+        f"Unsupported environment provider: {settings.env_provider_kind}"
+    )
 
 
 def format_environment_resolution_failure(result) -> str:
@@ -377,6 +381,22 @@ class ModelSpecContract:
         restored = registration.model_spec.model_validate(model_spec.model_dump())
 
         assert restored.model_dump() == model_spec.model_dump()
+
+    def test_model_spec_defaults_to_tested_environment_profile(self):
+        model_spec = self._build_model_spec()
+
+        assert model_spec.environment_profile == "tested"
+        assert model_spec.model_dump()["environment_profile"] == "tested"
+        assert "environment_profile" not in model_spec.scientific_payload()
+
+    def test_model_spec_rejects_unknown_environment_profile(self):
+        registration, _ = self._convert_manifest()
+        model_spec = build_model_spec(self.case, registration)
+        payload = model_spec.model_dump()
+        payload["environment_profile"] = "unsupported"
+
+        with pytest.raises(ValidationError):
+            registration.model_spec.model_validate(payload)
 
 
 class ModelRegistryContract:
@@ -480,6 +500,9 @@ class ModelSinglePointRuntimeContract:
         return default_runtime_exec_resources()
 
     def _execute_single_point(self, properties: frozenset[Property]):
+        if self.case.runtime_skip_reason is not None:
+            pytest.skip(self.case.runtime_skip_reason)
+
         from atomforge.backend.subprocess import SubprocessBackend
         from atomforge_builtins.task.single_point import SinglePoint
 

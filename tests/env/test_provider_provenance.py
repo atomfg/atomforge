@@ -46,8 +46,7 @@ def test_file_sha256_hashes_file_contents(tmp_path):
     path.write_text("content")
 
     assert (
-        file_sha256(path)
-        == "ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9"
+        file_sha256(path) == "ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9"
         "432297b9ec9f73"
     )
 
@@ -56,7 +55,7 @@ def test_base_provider_builds_path_independent_environment_provenance(tmp_path):
     provider = FakeEnvironmentProvider(search_path=(tmp_path,), install_path=tmp_path)
     spec = EnvironmentSpec(
         name="fake-env",
-        python="3.12",
+        python="==3.12.*",
         requirements=["fake-base"],
         provider_requirements=["fake-provider"],
     )
@@ -66,7 +65,7 @@ def test_base_provider_builds_path_independent_environment_provenance(tmp_path):
     assert provenance.provider == "fake"
     assert provenance.key == provider.environment_key(spec)
     assert provenance.spec_hash == spec.hash()
-    assert provenance.python == "3.12"
+    assert provenance.python == "==3.12.*"
     assert provenance.requirements == ("fake-base",)
     assert provenance.provider_requirements == ("fake-provider",)
     assert provenance.pyproject_hash is None

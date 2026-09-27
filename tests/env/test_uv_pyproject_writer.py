@@ -2,6 +2,18 @@ from atomforge.env.base.dependency import ResolvedDependency
 from atomforge.env.uv.uv_pyproject_writer import UVPyprojectWriter
 
 
+def test_uv_pyproject_writer_preserves_pep440_python_range():
+    writer = UVPyprojectWriter(
+        env_name="orb-tested",
+        python_version="<3.13,>=3.12",
+        dependencies=[],
+    )
+
+    pyproject = writer.to_pyproject()
+
+    assert 'requires-python = "<3.13,>=3.12"' in pyproject
+
+
 def test_uv_pyproject_writer_emits_extra_build_dependencies():
     writer = UVPyprojectWriter(
         env_name="fairchem-legacy",
@@ -24,17 +36,10 @@ def test_uv_pyproject_writer_emits_find_links():
         env_name="fairchem-legacy",
         python_version=">=3.12",
         dependencies=[ResolvedDependency("torch-scatter", exact=False)],
-        extras={
-            "uv.find-links": (
-                '["https://data.pyg.org/whl/torch-2.4.1+cpu.html"]'
-            )
-        },
+        extras={"uv.find-links": ('["https://data.pyg.org/whl/torch-2.4.1+cpu.html"]')},
     )
 
     pyproject = writer.to_pyproject()
 
     assert "[tool.uv]" in pyproject
-    assert (
-        'find-links = ["https://data.pyg.org/whl/torch-2.4.1+cpu.html"]'
-        in pyproject
-    )
+    assert 'find-links = ["https://data.pyg.org/whl/torch-2.4.1+cpu.html"]' in pyproject

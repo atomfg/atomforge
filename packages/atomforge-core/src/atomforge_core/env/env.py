@@ -1,11 +1,11 @@
 from __future__ import annotations
 from typing import Mapping
-import re
+
+from packaging.requirements import Requirement
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.utils import canonicalize_name
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-
-
-_DISTRIBUTION_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 def normalize_distribution_name(name: str) -> str:
@@ -16,12 +16,22 @@ def validate_distribution_name(name: str) -> str:
     stripped = name.strip()
     if not stripped:
         raise ValueError("distribution name must not be empty")
-    if not _DISTRIBUTION_NAME_RE.fullmatch(stripped):
+    try:
+        requirement = Requirement(stripped)
+    except Exception as exc:
         raise ValueError(
-            "distribution names must be bare package names only "
-            f"(got {name!r})"
+            f"distribution names must be bare package names only (got {name!r})"
+        ) from exc
+    if (
+        requirement.url
+        or requirement.extras
+        or requirement.marker
+        or requirement.specifier
+    ):
+        raise ValueError(
+            f"distribution names must be bare package names only (got {name!r})"
         )
-    return normalize_distribution_name(stripped)
+    return normalize_distribution_name(requirement.name)
 
 
 def parse_requirement(requirement_str: str) -> tuple[str, str | None]:
@@ -85,25 +95,22 @@ class EnvironmentSpec(BaseModel):
             normalized.append(validate_distribution_name(item))
 
         return tuple(sorted(set(normalized)))
-    
+
     @field_validator("python", mode="before")
+    @classmethod
     def normalize_python_version(cls, value):
         if value is None:
             return None
         value = value.strip()
         if value == "":
             return None
-        
-        if len(value.split(".")) not in (2, 3):
-            raise ValueError(f"Invalid python version specification: '{value}'")
-        
-        # Only allow numbers and operators (e.g. >=3.10, ==3.9.1, etc. not python=3.10.0-alpha)
-        allowed_characters = set("0123456789.><=!,~@")
-        if any(char not in allowed_characters for char in value):
-            raise ValueError(f"Invalid characters in python version specification: '{value}'")
 
-        return value
-
+        try:
+            return str(SpecifierSet(value))
+        except InvalidSpecifier as exc:
+            raise ValueError(
+                f"Invalid Python version specification: {value!r}"
+            ) from exc
 
     def hash(self) -> str:
         import hashlib
@@ -151,25 +158,41 @@ class EnvironmentSpec(BaseModel):
         """
         Merge two sets of requirements, ensuring that there are no conflicts.
         """
-        regs1 = list(parse_requirement(req) for req in reqs1)
-        regs2 = list(parse_requirement(req) for req in reqs2)
+        merged: dict[tuple[str, tuple[str, ...], str], Requirement] = {}
+        for raw in (*reqs1, *reqs2):
+            requirement = Requirement(raw)
+            key = (
+                canonicalize_name(requirement.name),
+                tuple(sorted(requirement.extras)),
+                str(requirement.marker) if requirement.marker else "",
+            )
+            previous = merged.get(key)
+            if previous is None:
+                merged[key] = requirement
+                continue
 
-        merged = {}
-        for name, spec in regs1 + regs2:
-            if name in merged:
-                if merged[name] is not None and spec is not None and merged[name] != spec:
+            if previous.url or requirement.url:
+                if (
+                    previous.url != requirement.url
+                    or previous.specifier
+                    or requirement.specifier
+                ):
                     raise ValueError(
-                        f"Conflict in requirements for package '{name}': '{merged[name]}' vs '{spec}'"
+                        f"Conflicting direct requirements for package '{key[0]}': "
+                        f"'{previous}' vs '{requirement}'"
                     )
-            merged[name] = spec
+                continue
 
-        # Sort the merged requirements by package name for consistency, and reconstruct the requirement strings.
-        merged = dict(sorted(merged.items()))
+            combined = SpecifierSet(
+                ",".join(
+                    part
+                    for part in (str(previous.specifier), str(requirement.specifier))
+                    if part
+                )
+            )
+            previous.specifier = combined
 
-        return tuple(
-            f"{name}{spec}" if spec is not None else name
-            for name, spec in merged.items()
-        )
+        return tuple(str(merged[key]) for key in sorted(merged))
 
     def merge_channels(
         self, channels1: tuple[str, ...], channels2: tuple[str, ...]
@@ -183,8 +206,8 @@ class EnvironmentSpec(BaseModel):
         """
         Merge two python version specifications, ensuring that there are no conflicts.
         """
-        if python1 and python2 and python1 != python2:
-            raise ValueError(f"Conflict in python versions: '{python1}' vs '{python2}'")
+        if python1 and python2:
+            return str(SpecifierSet(f"{python1},{python2}"))
         return python1 or python2
 
     def __add__(self, other: EnvironmentSpec) -> EnvironmentSpec:

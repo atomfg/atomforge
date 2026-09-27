@@ -6,6 +6,7 @@ from typing_extensions import Self
 
 from atomforge_core.env.env import EnvironmentSpec
 from dataclasses import dataclass
+from packaging.specifiers import SpecifierSet
 
 SpecT = TypeVar("SpecT")
 
@@ -15,8 +16,18 @@ class DependencySummary:
     base_requirements: tuple[str, ...] = ()
     possible_requirements: tuple[str, ...] = ()
     python: str | None = None
+    possible_python: tuple[str, ...] = ()
     channels: tuple[str, ...] = ()
     notes: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.python is not None:
+            object.__setattr__(self, "python", str(SpecifierSet(self.python)))
+        object.__setattr__(
+            self,
+            "possible_python",
+            tuple(str(SpecifierSet(value)) for value in self.possible_python),
+        )
 
     def declared_requirements(self) -> frozenset[str]:
         return frozenset(self.base_requirements) | frozenset(self.possible_requirements)
@@ -76,6 +87,11 @@ class EnvironmentFactory(ABC, Generic[SpecT]):
             elif env.python != self.dependency_summary.python:
                 raise ValueError(
                     f"{self.__class__.__name__} returned Python {env.python}, but dependency summary declares Python {self.dependency_summary.python}"
+                )
+        elif self.dependency_summary.possible_python:
+            if env.python not in self.dependency_summary.possible_python:
+                raise ValueError(
+                    f"{self.__class__.__name__} returned Python {env.python}, but dependency summary declares one of {self.dependency_summary.possible_python}"
                 )
 
         # Validate channels

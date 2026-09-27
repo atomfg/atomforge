@@ -11,7 +11,7 @@ def model_session_key(
 ) -> str:
     """Return a stable hash key for a model spec and execution resource request."""
     payload = {
-        "model": model_spec.model_dump(mode="json"),
+        "model": model_spec.scientific_payload(mode="json"),
         "resources": exec_resources.model_dump(mode="json"),
     }
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))

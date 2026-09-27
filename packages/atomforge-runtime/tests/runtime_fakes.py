@@ -33,13 +33,13 @@ class FakeModel(ModelSpec):
 class FakeEnvironmentFactory(EnvironmentFactory[object]):
     dependency_summary = DependencySummary(
         base_requirements=("fake-base",),
-        python="3.12",
+        python="==3.12.*",
     )
 
     def build(self, spec: object) -> EnvironmentSpec:
         return EnvironmentSpec(
             name="fake-env",
-            python="3.12",
+            python="==3.12.*",
             requirements=["fake-base"],
         )
 

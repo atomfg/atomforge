@@ -3,9 +3,11 @@ from atomforge_core.structure import StructureData
 from atomforge_builtins.model.ase_lj import LennardJones
 from atomforge_builtins.task.single_point import SinglePoint
 
+
 @pytest.fixture(scope="module", params=[["forces", "energy"], ["forces"], ["energy"]])
 def properties(request):
     return request.param
+
 
 @pytest.fixture(scope="module")
 def single_point_task(properties):
@@ -17,17 +19,22 @@ def single_point_task(properties):
         pbc=[False, False, False],
     )
 
-
     task = SinglePoint(structure=structure, properties=properties)
 
     return task
 
+
+@pytest.fixture(scope="module", params=["tested", "latest"])
+def environment_profile(request):
+    return request.param
+
+
 @pytest.fixture(scope="module")
-def single_point_result(backend, single_point_task):
+def single_point_result(backend, single_point_task, environment_profile):
     from atomforge_core.resources.resource_models import ExecutionResources
 
     resources = ExecutionResources(accelerator="cpu", precision="f64")
-    model = LennardJones()
+    model = LennardJones(environment_profile=environment_profile)
 
     result = backend.execute(single_point_task, model, resources)
 
@@ -45,6 +52,7 @@ def test_result_forces(single_point_result, properties):
         assert all(len(f) == 3 for f in single_point_result.forces)
     else:
         assert single_point_result.forces is None
+
 
 def test_result_energy(single_point_result, properties):
     if "energy" in properties:

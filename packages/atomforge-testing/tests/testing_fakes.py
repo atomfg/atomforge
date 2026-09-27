@@ -42,13 +42,13 @@ class FakeModelExecutor(ModelExecutor[FakeModel]):
 class FakeEnvironmentFactory(EnvironmentFactory[object]):
     dependency_summary = DependencySummary(
         base_requirements=("fake-base",),
-        python="3.12",
+        python="==3.12.*",
     )
 
     def build(self, spec: object) -> EnvironmentSpec:
         return EnvironmentSpec(
             name="fake-env",
-            python="3.12",
+            python="==3.12.*",
             requirements=["fake-base"],
         )
 
@@ -56,13 +56,13 @@ class FakeEnvironmentFactory(EnvironmentFactory[object]):
 class BrokenEnvironmentFactory(EnvironmentFactory[object]):
     dependency_summary = DependencySummary(
         base_requirements=(),
-        python="3.12",
+        python="==3.12.*",
     )
 
     def build(self, spec: object) -> EnvironmentSpec:
         return EnvironmentSpec(
             name="broken-env",
-            python="3.12",
+            python="==3.12.*",
             requirements=["undeclared-runtime-dependency"],
         )
 
@@ -70,7 +70,7 @@ class BrokenEnvironmentFactory(EnvironmentFactory[object]):
 class NonDeterministicEnvironmentFactory(EnvironmentFactory[object]):
     dependency_summary = DependencySummary(
         base_requirements=(),
-        python="3.12",
+        python="==3.12.*",
     )
     counter = 0
 
@@ -78,7 +78,7 @@ class NonDeterministicEnvironmentFactory(EnvironmentFactory[object]):
         type(self).counter += 1
         return EnvironmentSpec(
             name=f"non-deterministic-env-{type(self).counter}",
-            python="3.12",
+            python="==3.12.*",
         )
 
 
