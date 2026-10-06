@@ -27,6 +27,11 @@ def read_request(stream: TextIO) -> RequestMessage | None:
     return _REQUEST_ADAPTER.validate_json(line)
 
 
+def parse_response(line: str) -> ResponseMessage:
+    """Parse one serialized response line. Raises pydantic.ValidationError."""
+    return _RESPONSE_ADAPTER.validate_json(line)
+
+
 def read_response(stream: TextIO) -> ResponseMessage | None:
     line = stream.readline()
     if line == "":

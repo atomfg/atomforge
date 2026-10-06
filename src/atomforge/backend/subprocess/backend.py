@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -20,17 +21,15 @@ from atomforge.backend.subprocess._model_session import (
     prepare_init_model_request as _prepare_init_model_request,
 )
 from atomforge.backend.subprocess._transport import (
+    WorkerTransportError,
     send_request_and_get_response as _send_request_and_get_response,
-    send_shutdown_request as _send_shutdown_request,
 )
 from atomforge.env.uv import UVEnvironmentProvider
 from atomforge.settings.settings import AtomforgeSettings
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.model.spec import ModelSpec
-from atomforge_core.protocol.request import (
-    ShutdownRequest,
-    TaskRequest,
-)
+from atomforge_core.protocol.diagnostics import WorkerDiagnostics
+from atomforge_core.protocol.request import TaskRequest
 from atomforge_core.protocol.session import model_session_key
 from atomforge_core.provenance import ExecutionErrorRecord, ExecutionRecord
 from atomforge_core.resources.resource_models import ExecutionResources
@@ -45,6 +44,13 @@ if TYPE_CHECKING:
     from atomforge.backend.subprocess._environment import PreparedEnvironmentSession
     from atomforge.backend.subprocess._model_session import PreparedModelSession
     from atomforge.backend.subprocess._transport import EnvSubprocess
+
+logger = logging.getLogger(__name__)
+
+
+def _diagnostics_of(response) -> WorkerDiagnostics | None:
+    diagnostics = getattr(response, "diagnostics", None)
+    return diagnostics if isinstance(diagnostics, WorkerDiagnostics) else None
 
 
 class SubprocessBackend:
@@ -109,10 +115,15 @@ class SubprocessBackend:
             env_subprocess=env_session.env_subprocess,
         )
 
-        response = _send_request_and_get_response(
-            env_session.env_subprocess,
-            request,
-        )
+        try:
+            response = _send_request_and_get_response(
+                env_session.env_subprocess,
+                request,
+                timeout=self._settings.worker_init_timeout_s,
+            )
+        except WorkerTransportError:
+            self._discard_environment_session(env_session.env_key)
+            raise
 
         if response.operation == "error":
             raise RuntimeError(response.error or "Worker returned an unknown error")
@@ -130,8 +141,11 @@ class SubprocessBackend:
         task: TaskSpec,
         model: ModelSpec | None = None,
         exec_resources: ExecutionResources | None = None,
+        timeout: float | None = None,
     ) -> TaskResult:
-        record = self.try_execute(task, model=model, exec_resources=exec_resources)
+        record = self.try_execute(
+            task, model=model, exec_resources=exec_resources, timeout=timeout
+        )
         if record.status == "success" and record.result is not None:
             return record.result
 
@@ -149,9 +163,21 @@ class SubprocessBackend:
         task: TaskSpec,
         model: ModelSpec | None = None,
         exec_resources: ExecutionResources | None = None,
+        timeout: float | None = None,
     ) -> ExecutionRecord:
+        """Execute a task and return an :class:`ExecutionRecord`; never raises for
+        execution failures.
+
+        ``timeout`` (seconds) limits the task itself; ``None`` uses
+        ``AtomforgeSettings.worker_task_timeout_s``. Model initialization is
+        limited by ``AtomforgeSettings.worker_init_timeout_s``. If the worker
+        crashes, times out or breaks the protocol, it is discarded and the next
+        call starts a fresh one.
+        """
         if exec_resources is None:
             exec_resources = ExecutionResources()
+        if timeout is None:
+            timeout = self._settings.worker_task_timeout_s
 
         started_at = datetime.now(timezone.utc)
         started_perf = time.perf_counter()
@@ -228,8 +254,11 @@ class SubprocessBackend:
             response = _send_request_and_get_response(
                 env_session.env_subprocess,
                 request,
+                timeout=timeout,
             )
         except Exception as exc:
+            if isinstance(exc, WorkerTransportError):
+                self._discard_environment_session(env_session.env_key)
             return attempt.partial_record(
                 status="error",
                 phase="task_execution",
@@ -238,6 +267,7 @@ class SubprocessBackend:
                 env_session=env_session,
             )
         ended_at, wall_time_s = end_timing(started_perf)
+        attempt.task_diagnostics = _diagnostics_of(response)
 
         if response.operation == "error":
             return attempt.full_error_record(
@@ -319,8 +349,11 @@ class SubprocessBackend:
             init_response = _send_request_and_get_response(
                 env_session.env_subprocess,
                 init_request,
+                timeout=self._settings.worker_init_timeout_s,
             )
         except Exception as exc:
+            if isinstance(exc, WorkerTransportError):
+                self._discard_environment_session(env_session.env_key)
             return None, attempt.partial_record(
                 status="error",
                 phase="model_preparation",
@@ -328,6 +361,7 @@ class SubprocessBackend:
                 env_session=env_session,
             )
 
+        attempt.model_preparation_diagnostics = _diagnostics_of(init_response)
         error_record = self._model_preparation_error_record(
             attempt=attempt,
             env_session=env_session,
@@ -368,41 +402,48 @@ class SubprocessBackend:
             env_session=env_session,
         )
 
-    def send_shutdown(self, env_key: str) -> None:
-        env_subprocess = self.env_subprocesses.get(env_key, None)
+    def _forget_environment_session(self, env_key: str) -> EnvSubprocess | None:
+        env_subprocess = self.env_subprocesses.pop(env_key, None)
+        prepared = self.prepared_environments.pop(env_key, None)
+        if env_subprocess is None and prepared is not None:
+            env_subprocess = prepared.env_subprocess
+        if env_subprocess is not None:
+            stale = [
+                key
+                for key, session in self.prepared_models.items()
+                if session.process_uuid == env_subprocess.process_uuid
+            ]
+            for key in stale:
+                del self.prepared_models[key]
+        return env_subprocess
 
+    def _discard_environment_session(self, env_key: str) -> None:
+        """Drop a failed worker and everything cached for it.
+
+        The environment itself is kept on disk; the next call for it starts a
+        fresh worker and re-initializes models.
+        """
+        env_subprocess = self._forget_environment_session(env_key)
+        if env_subprocess is not None:
+            logger.warning(
+                "Discarding worker for environment %s after a transport failure",
+                env_key,
+            )
+            kill = getattr(env_subprocess, "kill", None)
+            if callable(kill):
+                kill()
+
+    def send_shutdown(self, env_key: str) -> None:
+        env_subprocess = self._forget_environment_session(env_key)
         if env_subprocess is None:
-            print(f"No subprocess found for environment {env_key}, skipping shutdown.")
+            logger.debug("No subprocess found for environment %s", env_key)
             return
 
-        request = ShutdownRequest(
-            operation="shutdown",
-            request_id=str(env_subprocess.get_request_counter()),
+        response = env_subprocess.shutdown(
+            timeout=self._settings.worker_shutdown_timeout_s
         )
-        response = _send_shutdown_request(env_subprocess, request)
-        if response is not None:
-            if response.operation == "error":
-                print(f"Worker error during shutdown: {response.error}", flush=True)
-            elif response.operation == "shutdown":
-                pass
-            else:
-                print(f"Unexpected response during shutdown: {response}", flush=True)
-        else:
-            print(
-                f"No response received during shutdown of worker {env_key}",
-                flush=True,
-            )
-
-        env_subprocess._process.wait()
-        del self.env_subprocesses[env_key]
-        self.prepared_environments.pop(env_key, None)
-
-        to_delete = []
-        for (model_cache_key, cache_env_key), session in self.prepared_models.items():
-            if session.process_uuid == env_subprocess.process_uuid:
-                to_delete.append((model_cache_key, cache_env_key))
-        for key in to_delete:
-            del self.prepared_models[key]
+        if response is not None and response.operation == "error":
+            logger.warning("Worker error during shutdown: %s", response.error)
 
     def shutdown(self) -> None:
         for env_key in list(self.env_subprocesses.keys()):

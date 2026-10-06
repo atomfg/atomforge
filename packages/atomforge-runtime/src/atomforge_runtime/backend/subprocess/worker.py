@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import contextlib
 import sys
-import os
+import time
 import traceback
 from typing import TextIO
 
@@ -15,7 +14,13 @@ from atomforge_runtime.resources import (
     resolve_resources,
     SystemResources,
 )
+from atomforge_core.protocol.diagnostics import WorkerDiagnostics
 from atomforge_core.protocol.session import model_session_key
+from atomforge_runtime.backend.subprocess.capture import (
+    CapturedOutput,
+    capture_output,
+    isolate_protocol_streams,
+)
 from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.model.spec import ModelSpec
 from atomforge_core.task.executability import CompatibilityCheck, ExecutionRoute
@@ -62,7 +67,13 @@ class SubprocessWorker:
         task_registry: TaskRegistry,
         model_registry: ModelRegistry,
         system_resources: SystemResources,
+        capture_fd_level: bool = False,
     ) -> None:
+        """
+        ``capture_fd_level`` additionally captures output written directly to
+        file descriptors 1 and 2 (native code) while handling a request. Only
+        enable it in a dedicated worker process (see :func:`main`).
+        """
         self._stdin = stdin
         self._stdout = stdout
         self._stderr = stderr
@@ -71,8 +82,9 @@ class SubprocessWorker:
         self._model_registry = model_registry
         self._system_resources = system_resources
 
+        self._capture_fd_level = capture_fd_level
+
         self._model_sessions: dict[str, ModelSession] = {}
-        self._dev_null = open(os.devnull, "w")
 
     def run(self) -> int:
         loop_count = 0
@@ -102,16 +114,36 @@ class SubprocessWorker:
         ), True
 
     def _task_execution_case(self, request: TaskRequest) -> tuple[object, bool]:
-        try:
-            response = self._execute_task(request)
-        except Exception as exc:
-            traceback.print_exc(file=self._stderr)
-            return self._failed_execution_case(request.request_id, exc)
+        started = time.perf_counter()
+        error: Exception | None = None
+        response = None
+        with capture_output(fd_level=self._capture_fd_level) as captured:
+            try:
+                response = self._execute_task(request)
+            except Exception as exc:
+                error = exc
+        diagnostics = self._diagnostics(captured, started)
 
-        return response, False
+        if error is not None:
+            traceback.print_exception(error, file=self._stderr)
+            return self._failed_execution_case(request.request_id, error, diagnostics)
+
+        return response.model_copy(update={"diagnostics": diagnostics}), False
+
+    @staticmethod
+    def _diagnostics(captured: CapturedOutput, started: float) -> WorkerDiagnostics:
+        return WorkerDiagnostics(
+            warnings=captured.warnings,
+            output=captured.output,
+            output_truncated=captured.output_truncated,
+            duration_s=time.perf_counter() - started,
+        )
 
     def _failed_execution_case(
-        self, request_id: str, exc: Exception
+        self,
+        request_id: str,
+        exc: Exception,
+        diagnostics: WorkerDiagnostics | None = None,
     ) -> tuple[ErrorResponse, bool]:
         return ErrorResponse(
             request_id=request_id,
@@ -119,6 +151,7 @@ class SubprocessWorker:
             traceback="".join(
                 traceback.format_exception(type(exc), exc, exc.__traceback__)
             ),
+            diagnostics=diagnostics,
         ), False
 
     def _handle_request(self, request) -> tuple[object, bool]:
@@ -138,14 +171,25 @@ class SubprocessWorker:
 
         return handler(request)
 
-    def _init_model_case(self, request: InitModelRequest) -> tuple[TaskResponse, bool]:
-        try:
-            model_executor, resolved_resources = self._create_model_executor(request)
-        except Exception as exc:
-            traceback.print_exc(file=self._stderr)
-            return self._failed_execution_case(request.request_id, exc)
+    def _init_model_case(
+        self, request: InitModelRequest
+    ) -> tuple[InitModelResponse | ErrorResponse, bool]:
+        started = time.perf_counter()
+        error: Exception | None = None
+        with capture_output(fd_level=self._capture_fd_level) as captured:
+            try:
+                model_executor, resolved_resources = self._create_model_executor(
+                    request
+                )
+                model_session_id = self._get_model_session_id(request)
+            except Exception as exc:
+                error = exc
+        diagnostics = self._diagnostics(captured, started)
 
-        model_session_id = self._get_model_session_id(request)
+        if error is not None:
+            traceback.print_exception(error, file=self._stderr)
+            return self._failed_execution_case(request.request_id, error, diagnostics)
+
         self._model_sessions[model_session_id] = ModelSession(
             model_executor=model_executor,
             resolved_resources=resolved_resources,
@@ -156,6 +200,7 @@ class SubprocessWorker:
             request_id=request.request_id,
             model_session_id=model_session_id,
             resolved_resources=resolved_resources,
+            diagnostics=diagnostics,
         ), False
 
     def _get_model_spec(self, request: InitModelRequest) -> ModelSpec:
@@ -181,31 +226,26 @@ class SubprocessWorker:
     def _create_model_executor(
         self, request: InitModelRequest
     ) -> tuple[ModelExecutor, ResolvedResources]:
-        # Get the ExecResources from the request
-        with contextlib.redirect_stdout(self._dev_null) as _:
-            with contextlib.redirect_stderr(self._dev_null) as _:
-                model_registration = self._model_registry.get(request.model_kind)
-                model_spec = model_registration.model_spec.model_validate(
-                    request.model_payload
-                )
+        model_registration = self._model_registry.get(request.model_kind)
+        model_spec = model_registration.model_spec.model_validate(request.model_payload)
 
-                probe = model_registration.load_probe()
-                if probe is not None:
-                    probe_result = probe(model_spec)
-                else:
-                    probe_result = None
+        probe = model_registration.load_probe()
+        if probe is not None:
+            probe_result = probe(model_spec)
+        else:
+            probe_result = None
 
-                resource_capabilities = model_registration.load_resource_capabilities()
-                resolved_resources = resolve_resources(
-                    exec_resources=request.exec_resources,
-                    system_resources=self._system_resources,
-                    resource_caps=resource_capabilities,
-                    probe_result=probe_result,
-                )
+        resource_capabilities = model_registration.load_resource_capabilities()
+        resolved_resources = resolve_resources(
+            exec_resources=request.exec_resources,
+            system_resources=self._system_resources,
+            resource_caps=resource_capabilities,
+            probe_result=probe_result,
+        )
 
-                model_executor = model_registration.load_executor_class()(
-                    model_spec, resolved_resources
-                )
+        model_executor = model_registration.load_executor_class()(
+            model_spec, resolved_resources
+        )
 
         return model_executor, resolved_resources
 
@@ -276,11 +316,7 @@ class SubprocessWorker:
                 route_kind=route.route_kind.value,
             )
         task_executor = task_executor_cls()
-
-        # Context manager that ensures nothing is written to stdout during model execution
-        with contextlib.redirect_stdout(self._dev_null) as _:
-            with contextlib.redirect_stderr(self._dev_null) as _:
-                task_result = task_executor.execute(task_spec, context)
+        task_result = task_executor.execute(task_spec, context)
 
         return TaskResponse(
             request_id=request.request_id,
@@ -293,18 +329,22 @@ class SubprocessWorker:
 
 
 def main(name: str) -> int:  # pragma: no cover
+    # First thing: nothing but the worker itself may write to the protocol pipe.
+    streams = isolate_protocol_streams()
+
     task_registry = TaskRegistry.default()
     model_registry = ModelRegistry.default()
     system_resources = discover_system_resources()
 
     worker = SubprocessWorker(
-        stdin=sys.stdin,
-        stdout=sys.stdout,
+        stdin=streams.stdin,
+        stdout=streams.stdout,
         stderr=sys.stderr,
         name=name,
         task_registry=task_registry,
         model_registry=model_registry,
         system_resources=system_resources,
+        capture_fd_level=True,
     )
     return worker.run()
 

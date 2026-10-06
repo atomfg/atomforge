@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from atomforge_core.protocol.diagnostics import WorkerDiagnostics
 from atomforge_core.resources.resource_models import (
     ExecutionResources,
     ResolvedResources,
@@ -137,6 +138,14 @@ class ExecutionErrorRecord(BaseModel):
     error_type: str
     message: str
     worker_traceback: str | None = None
+    worker_exit_code: int | None = Field(
+        default=None,
+        description="Exit code of the worker process if it died or was killed.",
+    )
+    worker_stderr: str | None = Field(
+        default=None,
+        description="Most recent stderr output of the worker process, for crashes and timeouts.",
+    )
 
 
 class ExecutionRecord(BaseModel):
@@ -154,6 +163,14 @@ class ExecutionRecord(BaseModel):
     provenance: Provenance | None = None
     partial_provenance: PartialProvenance | None = None
     error: ExecutionErrorRecord | None = None
+    model_preparation_diagnostics: WorkerDiagnostics | None = Field(
+        default=None,
+        description="Worker diagnostics from model initialization, if the model was initialized during this execution.",
+    )
+    task_diagnostics: WorkerDiagnostics | None = Field(
+        default=None,
+        description="Worker diagnostics from task execution.",
+    )
 
     @field_validator("result")
     @classmethod

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Literal
 
+from atomforge.backend.subprocess._transport import WorkerTransportError
 from atomforge.backend.subprocess._provenance import (
     attach_provenance,
     build_partial_provenance,
@@ -12,6 +13,7 @@ from atomforge.backend.subprocess._provenance import (
 )
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.model.spec import ModelSpec
+from atomforge_core.protocol.diagnostics import WorkerDiagnostics
 from atomforge_core.provenance import ExecutionErrorRecord, ExecutionRecord
 from atomforge_core.resources.resource_models import (
     ExecutionResources,
@@ -30,9 +32,16 @@ def end_timing(started_perf: float) -> tuple[datetime, float]:
 
 
 def error_from_exception(exc: Exception) -> ExecutionErrorRecord:
+    worker_exit_code = None
+    worker_stderr = None
+    if isinstance(exc, WorkerTransportError):
+        worker_exit_code = exc.exit_code
+        worker_stderr = exc.stderr_tail
     return ExecutionErrorRecord(
         error_type=exc.__class__.__name__,
         message=str(exc) or exc.__class__.__name__,
+        worker_exit_code=worker_exit_code,
+        worker_stderr=worker_stderr,
     )
 
 
@@ -52,6 +61,14 @@ class ExecutionAttempt:
     exec_resources: ExecutionResources
     started_at: datetime
     started_perf: float
+    model_preparation_diagnostics: WorkerDiagnostics | None = None
+    task_diagnostics: WorkerDiagnostics | None = None
+
+    def _diagnostics_fields(self) -> dict[str, WorkerDiagnostics | None]:
+        return {
+            "model_preparation_diagnostics": self.model_preparation_diagnostics,
+            "task_diagnostics": self.task_diagnostics,
+        }
 
     def input_error(self, message: str) -> ExecutionRecord:
         return self.partial_record(
@@ -109,6 +126,7 @@ class ExecutionAttempt:
             phase=phase,
             partial_provenance=partial,
             error=error,
+            **self._diagnostics_fields(),
         )
 
     def full_provenance(
@@ -152,6 +170,7 @@ class ExecutionAttempt:
                 wall_time_s=wall_time_s,
             ),
             error=error,
+            **self._diagnostics_fields(),
         )
 
     def success_record(
@@ -174,4 +193,5 @@ class ExecutionAttempt:
             phase="task_execution",
             result=attach_provenance(result, provenance),
             provenance=provenance,
+            **self._diagnostics_fields(),
         )

@@ -43,7 +43,11 @@ def get_environment_session(
 
     prepared = prepared_environments.get(env_key)
     if prepared is not None:
-        return prepared
+        if getattr(prepared.env_subprocess, "alive", True):
+            return prepared
+        # The worker died since it was last used: drop it and start a fresh one.
+        prepared_environments.pop(env_key, None)
+        env_subprocesses.pop(env_key, None)
 
     handle = environment_provider.ensure_environment(env_spec)
     info = environment_provider.inspect_environment(handle)

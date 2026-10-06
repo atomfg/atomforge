@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Any, Annotated, Literal
 from pydantic import Field, TypeAdapter
 
+from atomforge_core.protocol.diagnostics import WorkerDiagnostics
 from atomforge_core.resources.resource_models import ResolvedResources
 
 
@@ -18,6 +19,7 @@ class InitModelResponse(BaseModel):
     request_id: str
     model_session_id: str
     resolved_resources: ResolvedResources
+    diagnostics: WorkerDiagnostics | None = None
 
 
 class ErrorResponse(BaseModel):
@@ -27,6 +29,7 @@ class ErrorResponse(BaseModel):
     error: str
     message: str | None = None
     traceback: str | None = None
+    diagnostics: WorkerDiagnostics | None = None
 
 
 class IncompatibilityResponse(BaseModel):
@@ -36,6 +39,7 @@ class IncompatibilityResponse(BaseModel):
     task_kind: str
     reason: str
     route_kind: str | None = None
+    diagnostics: WorkerDiagnostics | None = None
 
 
 class TaskResponse(BaseModel):
@@ -44,6 +48,7 @@ class TaskResponse(BaseModel):
     request_id: str
     task_kind: str
     result_payload: dict[str, Any]
+    diagnostics: WorkerDiagnostics | None = None
 
 
 ResponseMessage = Annotated[
