@@ -22,15 +22,15 @@ class AtomforgeSettings(BaseModel):
         json_schema_extra={"env_var": "ATOMFORGE_ENV_PROVIDER_KIND"},
     )
     worker_init_timeout_s: float | None = Field(
-        default=None,
+        default=1800.0,
         gt=0,
-        description="Seconds to wait for a worker to initialize a model (includes checkpoint downloads). None waits indefinitely. On timeout the worker is killed.",
+        description="Seconds to wait for a worker to initialize a model (includes checkpoint downloads). Defaults to 30 minutes. None waits indefinitely. On timeout the worker is killed.",
         json_schema_extra={"env_var": "ATOMFORGE_WORKER_INIT_TIMEOUT_S"},
     )
     worker_task_timeout_s: float | None = Field(
-        default=None,
+        default=3600.0,
         gt=0,
-        description="Default seconds to wait for a worker to finish one task. None waits indefinitely. Can be overridden per call. On timeout the worker is killed.",
+        description="Default seconds to wait for a worker to finish one task. Defaults to 1 hour. None waits indefinitely. Can be overridden per call. On timeout the worker is killed.",
         json_schema_extra={"env_var": "ATOMFORGE_WORKER_TASK_TIMEOUT_S"},
     )
     worker_shutdown_timeout_s: float = Field(

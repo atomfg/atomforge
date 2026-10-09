@@ -43,7 +43,7 @@ class Optimize(TaskSpec):
     kind: Literal["optimize"] = KIND
     structure: StructureData
     fmax: float = 0.05
-    max_steps: int | None = None
+    max_steps: int = Field(default=1000, gt=0)
     optimizer: Literal["bfgs", "lbfgs", "fire"] = "bfgs"
     constraints: tuple[OptimizeConstraint, ...] = ()
 

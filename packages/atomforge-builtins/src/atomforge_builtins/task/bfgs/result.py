@@ -11,3 +11,5 @@ class BFGSResult(TaskResult):
     structure: StructureData
     energy: float
     forces: list[list[float]]
+    converged: bool
+    steps: int

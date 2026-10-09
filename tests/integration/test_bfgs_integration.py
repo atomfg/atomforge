@@ -35,3 +35,8 @@ def test_result_forces(bfgs_result: BFGSResult):
     assert bfgs_result.forces is not None
     assert len(bfgs_result.forces) == 2
     assert all(len(f) == 3 for f in bfgs_result.forces)
+
+
+def test_result_convergence(bfgs_result: BFGSResult):
+    assert isinstance(bfgs_result.converged, bool)
+    assert 0 <= bfgs_result.steps <= 1000

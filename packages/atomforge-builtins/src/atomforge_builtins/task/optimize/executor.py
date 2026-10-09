@@ -67,10 +67,7 @@ class OptimizeExecutor(TaskExecutor[Optimize, OptimizeResult]):
             atoms.set_constraint([constraint_to_ase(c) for c in spec.constraints])
 
         optimizer = optimizer_cls(atoms)
-        if spec.max_steps is None:
-            converged = optimizer.run(fmax=spec.fmax)
-        else:
-            converged = optimizer.run(fmax=spec.fmax, steps=spec.max_steps)
+        converged = optimizer.run(fmax=spec.fmax, steps=spec.max_steps)
 
         final_structure = convert_to_structure(atoms)
         energy = atoms.get_potential_energy()

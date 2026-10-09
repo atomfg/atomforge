@@ -28,6 +28,15 @@ def test_bfgs_kind(bfgs_task):
     assert bfgs_task.kind == "bfgs"
 
 
+def test_bfgs_default_max_steps(bfgs_task):
+    assert bfgs_task.max_steps == 1000
+
+
+def test_bfgs_rejects_non_positive_max_steps(example_structure):
+    with pytest.raises(ValueError):
+        BFGS(structure=example_structure, max_steps=0)
+
+
 def test_bfgs_required_properties(bfgs_task):
     required_props = bfgs_task.required_model_properties()
     assert isinstance(required_props, frozenset)

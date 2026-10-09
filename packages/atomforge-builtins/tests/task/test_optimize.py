@@ -28,7 +28,7 @@ def test_optimize_defaults(optimize_task):
     assert optimize_task.kind == "optimize"
     assert optimize_task.fmax == 0.05
     assert optimize_task.optimizer == "bfgs"
-    assert optimize_task.max_steps is None
+    assert optimize_task.max_steps == 1000
     assert optimize_task.constraints == ()
 
 

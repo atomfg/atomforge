@@ -28,7 +28,7 @@ class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
         atoms = convert_to_atoms(spec.structure)
         atoms.calc = ModelCalculatorAdapter(model_executor)
         optimizer = BFGSOptimizer(atoms)
-        optimizer.run(fmax=spec.fmax)
+        converged = optimizer.run(fmax=spec.fmax, steps=spec.max_steps)
 
         final_structure = convert_to_structure(atoms)
         energy = atoms.get_potential_energy()
@@ -37,4 +37,6 @@ class BFGSExecutor(TaskExecutor[BFGS, BFGSResult]):
             structure=final_structure,
             energy=energy,
             forces=forces.tolist(),
+            converged=bool(converged),
+            steps=optimizer.nsteps,
         )
