@@ -30,6 +30,7 @@ jobs:
           - test-cov-core
           - test-cov-runtime
           - test-cov-builtins
+          - test-cov-testing
           - test-cov-host
     name: ${{ matrix.suite }}
     steps:

@@ -10,7 +10,8 @@ wheels/
 .venv
 
 # Testing / Coverage
-.coverage
+.coverage*
+.coverage-html/
 
 # Development playground
 dev
@@ -21,3 +22,10 @@ AGENTS.md
 
 # Temporary plugin symbolic links
 plugins/*
+
+# Docs build output
+docs/site/
+**/.quarto/
+
+# macOS
+.DS_Store

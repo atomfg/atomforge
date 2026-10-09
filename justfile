@@ -31,16 +31,24 @@ test-builtins:
 test-cov-builtins:
     cd packages/atomforge-builtins && uv run pytest --cov-report term --cov-report xml:.coverage-builtins.xml --cov src/atomforge_builtins
 
+test-testing:
+    cd packages/atomforge-testing && uv run pytest
+
+test-cov-testing:
+    cd packages/atomforge-testing && uv run pytest --cov-report term --cov-report xml:.coverage-testing.xml --cov src/atomforge_testing
+
 test-all:
     just test-core
     just test-runtime
     just test-builtins
+    just test-testing
     just test-host
 
 test-cov-all:
     just test-cov-core
     just test-cov-runtime
     just test-cov-builtins
+    just test-cov-testing
     just test-cov-host
 
 
@@ -105,6 +113,10 @@ validate-release-tag TAG="":
 
 smoke-release:
     python scripts/release/smoke_release.py
+
+smoke-wheels:
+    just build-release
+    just smoke-release
 
 select-release-files:
     python scripts/release/select_release_files.py
