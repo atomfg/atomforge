@@ -112,14 +112,14 @@ validate-release-tag TAG="":
     echo "Release tag is valid: $tag"
 
 smoke-release:
-    python scripts/release/smoke_release.py
+    uv run python scripts/release/smoke_release.py
 
 smoke-wheels:
     just build-release
     just smoke-release
 
 select-release-files:
-    python scripts/release/select_release_files.py
+    uv run python scripts/release/select_release_files.py
 
 ruff-check:
     uv run ruff check .
