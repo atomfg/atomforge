@@ -13,12 +13,17 @@ dev = [
 ]
 ```
 
-For local development, add the relevant path source:
+For local development, add path sources pointing at your local `atomforge` checkout.
+The official plugins are laid out with the plugin two levels below the workspace root
+(`<root>/atomforge` next to `<root>/plugins/atomforge-<name>`), which gives:
 
 ```toml
 [tool.uv.sources]
-atomforge_testing = { path = "../atomforge/packages/atomforge-testing", editable = true }
+atomforge_core = { path = "../../atomforge/packages/atomforge-core", editable = true }
+atomforge_testing = { path = "../../atomforge/packages/atomforge-testing", editable = true }
 ```
+
+Adjust the relative paths if your plugin sits somewhere else relative to `atomforge`.
 
 ## 2. Add One Test Class Per Model
 
