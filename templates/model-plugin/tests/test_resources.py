@@ -1,0 +1,40 @@
+"""Unit tests for the resource translation. They run on the host, without torch, and
+cover the GPU mapping that CI cannot execute."""
+
+import pytest
+
+from atomforge_core.resources.resource_models import ResolvedResources
+
+from atomforge_template.torch_lj.definitions import TorchLJResourceCapabilities
+from atomforge_template.torch_lj.resources import torch_device, torch_dtype
+
+
+def resolved(accelerator=None, precision=None):
+    return ResolvedResources(accelerator=accelerator, precision=precision)
+
+
+@pytest.mark.parametrize(
+    ("accelerator", "expected"), [("cpu", "cpu"), ("gpu", "cuda"), (None, "cpu")]
+)
+def test_torch_device(accelerator, expected):
+    assert torch_device(resolved(accelerator=accelerator)) == expected
+
+
+@pytest.mark.parametrize(
+    ("precision", "expected"),
+    [("f32", "float32"), ("f64", "float64"), (None, "float64")],
+)
+def test_torch_dtype(precision, expected):
+    assert torch_dtype(resolved(precision=precision)) == expected
+
+
+def test_every_declared_capability_has_a_translation():
+    for accelerator in TorchLJResourceCapabilities.accelerator:
+        torch_device(resolved(accelerator=accelerator))
+    for precision in TorchLJResourceCapabilities.precision:
+        torch_dtype(resolved(precision=precision))
+
+
+def test_undeclared_accelerator_is_rejected():
+    with pytest.raises(ValueError, match="mps"):
+        torch_device(resolved(accelerator="mps"))

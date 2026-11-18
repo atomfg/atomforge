@@ -7,6 +7,7 @@ on:
       - "src/**"
       - "packages/**"
       - "tests/**"
+      - "templates/**"
       - "pyproject.toml"
       - "uv.lock"
       - "justfile"
@@ -16,6 +17,7 @@ on:
       - "src/**"
       - "packages/**"
       - "tests/**"
+      - "templates/**"
       - "pyproject.toml"
       - "uv.lock"
       - "justfile"
@@ -56,3 +58,23 @@ jobs:
 
       - name: Run tests
         run: just ${{ matrix.suite }}
+
+  template:
+    runs-on: ubuntu-latest
+    name: test-template
+    env:
+      # Build the template's worker environment against the CPU-only torch wheels,
+      # which are a fraction of the size of the default CUDA ones.
+      UV_INDEX: https://download.pytorch.org/whl/cpu
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Run tests
+        run: just test-template

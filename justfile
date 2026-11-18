@@ -37,12 +37,21 @@ test-testing:
 test-cov-testing:
     cd packages/atomforge-testing && uv run pytest --cov-report term --cov-report xml:.coverage-testing.xml --cov src/atomforge_testing
 
+# The model plugin template, including the runtime tests that build its torch worker
+# environment. In CI, UV_INDEX points the worker build at the CPU-only torch wheels;
+# `--no-sync` keeps that setting away from the template's own locked environment.
+test-template:
+    cd templates/model-plugin && uv sync --locked
+    cd templates/model-plugin && uv run --no-sync pytest -m atomforge_environment
+    cd templates/model-plugin && ATOMFORGE_RUN_RUNTIME_TESTS=1 uv run --no-sync pytest
+
 test-all:
     just test-core
     just test-runtime
     just test-builtins
     just test-testing
     just test-host
+    just test-template
 
 test-cov-all:
     just test-cov-core

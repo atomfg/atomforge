@@ -1,0 +1,46 @@
+[project]
+name = "atomforge-template"
+version = "0.1.0"
+description = "Template for an atomforge model plugin: a Lennard-Jones potential in PyTorch."
+readme = "README.md"
+requires-python = ">=3.12"
+# Host-side dependencies only. The model's own dependencies (here torch) are NOT
+# listed here. They belong in the environment factory (torch_lj/environment.py) and
+# are installed only in the isolated worker environment.
+dependencies = [
+    "atomforge-core>=0.1.0a1",
+]
+
+# One entry point per model. The target must be a ModelManifest.
+[project.entry-points.'atomforge.model']
+torch_lj = "atomforge_template.torch_lj.manifest:torch_lj_manifest"
+
+[dependency-groups]
+dev = [
+    "atomforge-testing[runtime]>=0.1.0a1",
+    "pytest>=9.0.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "atomforge_environment: opt-in AtomForge environment resolver contracts",
+    "atomforge_runtime: opt-in AtomForge runtime execution contracts",
+]
+# Fail on deprecation warnings, so that use of a deprecated atomforge API shows up
+# while the old API still works. Relax this if a third-party dependency warns.
+filterwarnings = ["error::DeprecationWarning"]
+
+# Points at the atomforge packages in this repository. Remove this table (or point
+# it at your own atomforge checkout) when you use the template outside the
+# atomforge repository.
+[tool.uv.sources]
+atomforge = { path = "../..", editable = true }
+atomforge_core = { path = "../../packages/atomforge-core", editable = true }
+atomforge_runtime = { path = "../../packages/atomforge-runtime", editable = true }
+atomforge_builtins = { path = "../../packages/atomforge-builtins", editable = true }
+atomforge_testing = { path = "../../packages/atomforge-testing", editable = true }
