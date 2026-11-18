@@ -9,11 +9,10 @@ class UVPyprojectWriter(PyprojectWriter):
             extras += "[tool.uv]\n"
             extras += f"find-links = {find_links}\n\n"
 
-        uv_sources = [
-            dep
-            for dep in self.dependencies
-            if dep.exact and dep.url and dep.url.startswith("file://")
-        ]
+        # Editable host installs stay editable in the worker. Other direct sources
+        # (git, archives, non-editable directories) are plain "name @ url"
+        # dependencies and need no source entry.
+        uv_sources = [dep for dep in self.dependencies if dep.exact and dep.editable]
         if uv_sources:
             extras += "[tool.uv.sources]\n"
             for dep in uv_sources:
