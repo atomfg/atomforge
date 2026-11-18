@@ -17,8 +17,10 @@ PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
 
 
 def torch_lj_spec_factory(model_cls):
-    # One representative, valid spec for the contracts to use.
-    return model_cls(epsilon=1.0, sigma=1.0)
+    # One representative, valid spec for the contracts to use. sigma puts the
+    # shortest pair of the ethanol physics structure (the O-H bond) near the
+    # minimum, so forces and curvature are of the size real models give.
+    return model_cls(epsilon=1.0, sigma=0.8)
 
 
 class TestTorchLJ(ModelPluginContract):
@@ -31,4 +33,7 @@ class TestTorchLJ(ModelPluginContract):
         model_spec_factory=torch_lj_spec_factory,
         runtime_structure=structures.small_molecule(),
         runtime_exec_resources=ExecutionResources(accelerator="cpu", precision="f32"),
+        # The model accepts only non-periodic structures, so the physics
+        # checks run on the molecule alone.
+        physics_structures={"molecule": structures.ethanol()},
     )
