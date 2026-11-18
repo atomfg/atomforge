@@ -11,14 +11,25 @@ on:
       - "uv.lock"
       - "justfile"
       - ".github/workflows/tests.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "packages/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "justfile"
+      - ".github/workflows/tests.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# One group per branch or PR. A new push to a PR cancels its outdated run; runs on
+# main always complete.
 concurrency:
-  group: tests
-  cancel-in-progress: false
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
