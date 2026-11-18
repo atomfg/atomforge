@@ -43,8 +43,8 @@ Add `ATOMFORGE_TEST_GPU=1` to the last command on a machine with a CUDA GPU.
 1. Rename the distribution (`pyproject.toml`), the package `atomforge_template`, the
    subpackage `torch_lj` and the model kind `torch-lj`. Update the entry point and
    the strings in `manifest.py` to match.
-2. Remove `[tool.uv.sources]` from `pyproject.toml`, or point it at your own
-   atomforge checkout.
+2. `[tool.uv.sources]` in `pyproject.toml` says where atomforge comes from. Keep
+   it, point it at a newer atomforge commit, or at your own atomforge checkout.
 3. Replace the spec fields, the requirements in `environment.py` and the model in
    `executor.py`. Update the supported properties, resource capabilities and
    metadata in `definitions.py`.

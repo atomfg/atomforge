@@ -44,6 +44,12 @@ test-template:
     cd templates/model-plugin && uv sync --locked
     cd templates/model-plugin && uv run --no-sync pytest -m atomforge_environment
     cd templates/model-plugin && ATOMFORGE_RUN_RUNTIME_TESTS=1 uv run --no-sync pytest
+    just test-template-export
+
+# The standalone export of the template (what is mirrored), tested as a fresh copy.
+# Exports HEAD, so it tests committed code only.
+test-template-export:
+    ATOMFORGE_RUN_RUNTIME_TESTS=1 uv run pytest scripts/template/tests
 
 test-all:
     just test-core

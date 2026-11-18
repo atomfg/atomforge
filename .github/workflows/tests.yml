@@ -8,6 +8,7 @@ on:
       - "packages/**"
       - "tests/**"
       - "templates/**"
+      - "scripts/template/**"
       - "pyproject.toml"
       - "uv.lock"
       - "justfile"
@@ -18,6 +19,7 @@ on:
       - "packages/**"
       - "tests/**"
       - "templates/**"
+      - "scripts/template/**"
       - "pyproject.toml"
       - "uv.lock"
       - "justfile"
@@ -68,6 +70,9 @@ jobs:
       UV_INDEX: https://download.pytorch.org/whl/cpu
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The export tests install atomforge from this checkout via git+file://.
+          fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v6
         with:

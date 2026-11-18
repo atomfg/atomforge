@@ -35,9 +35,9 @@ markers = [
 # while the old API still works. Relax this if a third-party dependency warns.
 filterwarnings = ["error::DeprecationWarning"]
 
-# Points at the atomforge packages in this repository. Remove this table (or point
-# it at your own atomforge checkout) when you use the template outside the
-# atomforge repository.
+# Where atomforge comes from. Inside the atomforge repository these are the local
+# packages; the exported template pins them to an atomforge commit instead.
+# (scripts/template/export.py replaces everything from the line above to the end.)
 [tool.uv.sources]
 atomforge = { path = "../..", editable = true }
 atomforge_core = { path = "../../packages/atomforge-core", editable = true }
