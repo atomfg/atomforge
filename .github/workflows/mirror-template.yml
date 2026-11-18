@@ -4,9 +4,10 @@
 # its atomforge sources pinned to that commit, and committed to the mirror. The
 # export itself is tested on pull requests by the test-template job.
 #
-# Credentials: the GitHub App atomfg-model-template-mirror (Contents: write, installed
-# only on the mirror). Its key lives in the `template-mirror` environment, which only
-# `main` may use. This workflow never runs on pull requests.
+# Credentials: the GitHub App atomfg-model-template-mirror (Contents and Workflows
+# write, installed only on the mirror). Workflows is needed because the template ships
+# a workflow file. The App's key lives in the `template-mirror` environment, which
+# only `main` may use. This workflow never runs on pull requests.
 name: Mirror template
 
 on:
@@ -53,6 +54,8 @@ jobs:
           owner: atomfg
           repositories: atomforge-model-plugin-template
           permission-contents: write
+          # Needed to push the template's own .github/workflows/tests.yml.
+          permission-workflows: write
 
       - name: Commit to the mirror
         env:
