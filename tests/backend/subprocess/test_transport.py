@@ -251,3 +251,29 @@ def test_clean_shutdown_also_kills_leftover_helper_processes(spawn_helper):
 
     assert worker.exit_code == 0
     assert process_is_gone(pid)
+
+
+def test_worker_does_not_inherit_host_only_matplotlib_backend(monkeypatch):
+    # Jupyter sets this; the named module only exists in the host environment.
+    monkeypatch.setenv("MPLBACKEND", "module://matplotlib_inline.backend_inline")
+    monkeypatch.setenv("ATOMFORGE_TEST_INHERITED", "yes")
+    worker = start(
+        """
+        import json, os, sys
+        line = sys.stdin.readline()
+        request = json.loads(line)
+        ok = "MPLBACKEND" not in os.environ and os.environ["ATOMFORGE_TEST_INHERITED"] == "yes"
+        if not ok:
+            sys.exit(3)
+        print(json.dumps({"operation": "shutdown", "request_id": request["request_id"]}), flush=True)
+        """
+    )
+    response = worker.request(request("1"), timeout=10)
+    assert response.request_id == "1"
+
+
+def test_worker_keeps_named_matplotlib_backend(monkeypatch):
+    from atomforge.backend.subprocess._transport import _worker_environment
+
+    monkeypatch.setenv("MPLBACKEND", "agg")
+    assert _worker_environment()["MPLBACKEND"] == "agg"
