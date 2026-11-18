@@ -27,8 +27,9 @@ Adjust the relative paths if your plugin sits somewhere else relative to `atomfo
 
 ## 2. Add One Test Class Per Model
 
-Copy `templates/test_model_plugin.py` into your plugin's `tests/` directory and
-fill in:
+Copy `tests/test_contracts.py` from the
+[model plugin template](../../../templates/model-plugin/) into your plugin's `tests/`
+directory and fill in:
 
 - the manifest import
 - the entry point name
