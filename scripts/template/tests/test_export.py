@@ -5,7 +5,7 @@ tests export the template against this repository's HEAD commit, through a
 git+file:// URL, so they test committed code: commit before running them locally.
 
     uv run pytest scripts/template/tests
-    ATOMFORGE_RUN_RUNTIME_TESTS=1 uv run pytest scripts/template/tests   # + runtime
+    uv run pytest scripts/template/tests --run-exported-tests   # + its tests
 """
 
 import os
@@ -104,10 +104,7 @@ def test_exported_lockfile_is_up_to_date(exported):
     run(["uv", "lock", "--locked"], cwd=exported)
 
 
-@pytest.mark.skipif(
-    os.environ.get("ATOMFORGE_RUN_RUNTIME_TESTS") != "1",
-    reason="Set ATOMFORGE_RUN_RUNTIME_TESTS=1 to run the exported plugin's tests",
-)
+@pytest.mark.exported_tests
 def test_exported_project_tests_pass(exported, tmp_path):
     # A fresh ~/.atomforge, so worker environments are built from the export's
     # git sources rather than reused. Keep uv's cache to avoid re-downloading.
@@ -116,12 +113,14 @@ def test_exported_project_tests_pass(exported, tmp_path):
 
     run(["uv", "sync", "--locked"], cwd=exported, env=env)
     run(
-        ["uv", "run", "--no-sync", "pytest", "-m", "atomforge_environment"],
+        [
+            "uv",
+            "run",
+            "--no-sync",
+            "pytest",
+            "--atomforge-environment",
+            "--atomforge-runtime",
+        ],
         cwd=exported,
         env=env,
-    )
-    run(
-        ["uv", "run", "--no-sync", "pytest"],
-        cwd=exported,
-        env={**env, "ATOMFORGE_RUN_RUNTIME_TESTS": "1"},
     )

@@ -23,8 +23,6 @@ import atomforge_testing.model_manifest as model_manifest_contracts
 from atomforge_testing.model_manifest import (
     assert_energy_result,
     assert_forces_result,
-    skip_environment_resolution_contract_unless_enabled,
-    skip_runtime_contract_unless_enabled,
 )
 
 
@@ -368,26 +366,6 @@ def test_environment_contract_fails_on_non_deterministic_factory(tmp_path):
         contract.test_environment_factory_is_deterministic_for_model_spec()
 
 
-class FakeRequest:
-    class Config:
-        class Option:
-            markexpr = "atomforge_environment"
-
-        option = Option()
-
-    config = Config()
-
-
-class FakeUnmarkedRequest:
-    class Config:
-        class Option:
-            markexpr = ""
-
-        option = Option()
-
-    config = Config()
-
-
 def test_environment_resolution_contract_uses_provider_resolution(
     tmp_path,
     monkeypatch,
@@ -403,7 +381,7 @@ def test_environment_resolution_contract_uses_provider_resolution(
         lambda provider_tmp_path: provider,
     )
 
-    contract.test_environment_resolves_with_default_provider(FakeRequest(), tmp_path)
+    contract.test_environment_resolves_with_default_provider(tmp_path)
 
     assert len(provider.resolved_specs) == 1
     assert provider.resolved_specs[0].name == "fake-env"
@@ -430,21 +408,13 @@ def test_environment_resolution_contract_fails_with_diagnostics(
     )
 
     with pytest.raises(AssertionError) as exc_info:
-        contract.test_environment_resolves_with_default_provider(
-            FakeRequest(),
-            tmp_path,
-        )
+        contract.test_environment_resolves_with_default_provider(tmp_path)
 
     message = str(exc_info.value)
     assert "Environment resolution failed." in message
     assert "provider: fake" in message
     assert "resolver stdout" in message
     assert "resolver stderr" in message
-
-
-def test_environment_resolution_contract_skips_without_marker():
-    with pytest.raises(pytest.skip.Exception):
-        skip_environment_resolution_contract_unless_enabled(FakeUnmarkedRequest())
 
 
 def test_model_spec_factory_returns_registered_model_spec(tmp_path):
@@ -546,19 +516,6 @@ def test_registry_contract_fails_for_model_spec_mismatch(tmp_path, monkeypatch):
         contract.test_discovered_registration_model_spec_matches_manifest_path()
 
 
-def test_runtime_gate_skips_when_environment_variable_is_unset(monkeypatch):
-    monkeypatch.delenv("ATOMFORGE_RUN_RUNTIME_TESTS", raising=False)
-
-    with pytest.raises(pytest.skip.Exception):
-        skip_runtime_contract_unless_enabled()
-
-
-def test_runtime_gate_does_not_skip_when_environment_variable_is_set(monkeypatch):
-    monkeypatch.setenv("ATOMFORGE_RUN_RUNTIME_TESTS", "1")
-
-    skip_runtime_contract_unless_enabled()
-
-
 def test_energy_result_accepts_numeric_energy():
     assert_energy_result(ModelResult(energy=1))
     assert_energy_result(ModelResult(energy=1.0))
@@ -621,3 +578,21 @@ def test_reference_structure_helpers_return_fresh_instances():
 
     assert first is not second
     assert first == second
+
+
+def test_model_spec_round_trips_through_json(tmp_path):
+    contract = FakeModelSpecContract()
+    contract.manifest_case = build_case(tmp_path)
+
+    contract.test_model_spec_round_trips_through_json()
+
+
+def test_model_spec_json_round_trip_failure_fails_spec_contract(tmp_path):
+    contract = FakeModelSpecContract()
+    contract.manifest_case = build_case(
+        tmp_path,
+        manifest=manifest_factory(model_spec="testing_fakes:JsonLossyFakeModel"),
+    )
+
+    with pytest.raises(AssertionError):
+        contract.test_model_spec_round_trips_through_json()

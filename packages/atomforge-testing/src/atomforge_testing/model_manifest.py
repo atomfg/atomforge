@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-import os
 from pathlib import Path
 from numbers import Real
 import tomllib
@@ -66,7 +65,9 @@ def build_model_spec(case: ModelManifestCase, registration) -> ModelSpec:
     return model_spec
 
 
-class ModelManifestContract:
+class _ManifestCaseContract:
+    """Helpers shared by every contract. Subclasses set ``manifest_case``."""
+
     manifest_case: ModelManifestCase
 
     @property
@@ -75,7 +76,7 @@ class ModelManifestContract:
             return self.manifest_case
         except AttributeError as exc:
             raise AssertionError(
-                "ModelManifestContract subclasses must define manifest_case"
+                f"{type(self).__name__} must define manifest_case"
             ) from exc
 
     def _convert_manifest(self):
@@ -86,10 +87,19 @@ class ModelManifestContract:
             entry_point_package=self.case.entry_point_package,
         )
 
-    def _build_default_model_spec(self):
+    def _build_model_spec(self) -> ModelSpec:
         registration, _ = self._convert_manifest()
         return build_model_spec(self.case, registration)
 
+    def _build_environment_spec(self) -> EnvironmentSpec:
+        return self._environment_factory()(self._build_model_spec())
+
+    def _environment_factory(self) -> EnvironmentFactory:
+        registration, _ = self._convert_manifest()
+        return registration.load_environment_factory()
+
+
+class ModelManifestContract(_ManifestCaseContract):
     def test_manifest_is_model_manifest(self):
         assert isinstance(self.case.manifest, ModelManifest)
 
@@ -118,18 +128,7 @@ class ModelManifestContract:
         registration.validate_strict()
 
 
-class ModelManifestSymbolContract:
-    manifest_case: ModelManifestCase
-
-    @property
-    def case(self) -> ModelManifestCase:
-        try:
-            return self.manifest_case
-        except AttributeError as exc:
-            raise AssertionError(
-                "ModelManifestSymbolContract subclasses must define manifest_case"
-            ) from exc
-
+class ModelManifestSymbolContract(_ManifestCaseContract):
     def test_model_spec_symbol_is_model_spec_subclass(self):
         model_spec = self.case.manifest.model_spec.load_symbol()
 
@@ -186,35 +185,7 @@ class ModelManifestSymbolContract:
             assert issubclass(executor_cls, TaskExecutor), task_kind
 
 
-class ModelEnvironmentContract:
-    manifest_case: ModelManifestCase
-
-    @property
-    def case(self) -> ModelManifestCase:
-        try:
-            return self.manifest_case
-        except AttributeError as exc:
-            raise AssertionError(
-                "ModelEnvironmentContract subclasses must define manifest_case"
-            ) from exc
-
-    def _convert_manifest(self):
-        converter = ManifestToRegistrationConverter()
-        return converter(
-            self.case.manifest,
-            entry_point_name=self.case.entry_point_name,
-            entry_point_package=self.case.entry_point_package,
-        )
-
-    def _environment_factory(self) -> EnvironmentFactory:
-        registration, _ = self._convert_manifest()
-        return registration.load_environment_factory()
-
-    def _build_environment_spec(self) -> EnvironmentSpec:
-        registration, _ = self._convert_manifest()
-        model_spec = build_model_spec(self.case, registration)
-        return registration.load_environment_factory()(model_spec)
-
+class ModelEnvironmentContract(_ManifestCaseContract):
     def test_environment_factory_builds_model_environment(self):
         env_spec = self._build_environment_spec()
 
@@ -259,19 +230,6 @@ class ModelEnvironmentContract:
         assert expected_channels.issubset(set(env_spec.channels))
 
 
-def environment_resolution_contract_enabled(request) -> bool:
-    markexpr = request.config.option.markexpr
-    return "atomforge_environment" in markexpr
-
-
-def skip_environment_resolution_contract_unless_enabled(request) -> None:
-    if not environment_resolution_contract_enabled(request):
-        pytest.skip(
-            "Run pytest with -m atomforge_environment to run AtomForge "
-            "environment resolution contracts"
-        )
-
-
 def default_environment_provider(tmp_path):
     from atomforge.env.uv import UVEnvironmentProvider
     from atomforge.settings.settings import AtomforgeSettings
@@ -302,35 +260,9 @@ def format_environment_resolution_failure(result) -> str:
     )
 
 
-class ModelEnvironmentResolutionContract:
-    manifest_case: ModelManifestCase
-
-    @property
-    def case(self) -> ModelManifestCase:
-        try:
-            return self.manifest_case
-        except AttributeError as exc:
-            raise AssertionError(
-                "ModelEnvironmentResolutionContract subclasses must define "
-                "manifest_case"
-            ) from exc
-
-    def _convert_manifest(self):
-        converter = ManifestToRegistrationConverter()
-        return converter(
-            self.case.manifest,
-            entry_point_name=self.case.entry_point_name,
-            entry_point_package=self.case.entry_point_package,
-        )
-
-    def _build_environment_spec(self) -> EnvironmentSpec:
-        registration, _ = self._convert_manifest()
-        model_spec = build_model_spec(self.case, registration)
-        return registration.load_environment_factory()(model_spec)
-
+class ModelEnvironmentResolutionContract(_ManifestCaseContract):
     @pytest.mark.atomforge_environment
-    def test_environment_resolves_with_default_provider(self, request, tmp_path):
-        skip_environment_resolution_contract_unless_enabled(request)
+    def test_environment_resolves_with_default_provider(self, tmp_path):
         provider = default_environment_provider(tmp_path)
         env_spec = self._build_environment_spec()
 
@@ -339,30 +271,7 @@ class ModelEnvironmentResolutionContract:
         assert result.success, format_environment_resolution_failure(result)
 
 
-class ModelSpecContract:
-    manifest_case: ModelManifestCase
-
-    @property
-    def case(self) -> ModelManifestCase:
-        try:
-            return self.manifest_case
-        except AttributeError as exc:
-            raise AssertionError(
-                "ModelSpecContract subclasses must define manifest_case"
-            ) from exc
-
-    def _convert_manifest(self):
-        converter = ManifestToRegistrationConverter()
-        return converter(
-            self.case.manifest,
-            entry_point_name=self.case.entry_point_name,
-            entry_point_package=self.case.entry_point_package,
-        )
-
-    def _build_model_spec(self):
-        registration, _ = self._convert_manifest()
-        return build_model_spec(self.case, registration)
-
+class ModelSpecContract(_ManifestCaseContract):
     def test_model_spec_factory_returns_registered_model_spec(self):
         registration, _ = self._convert_manifest()
         model_spec = build_model_spec(self.case, registration)
@@ -382,6 +291,20 @@ class ModelSpecContract:
 
         assert restored.model_dump() == model_spec.model_dump()
 
+    def test_model_spec_round_trips_through_json(self):
+        model_spec = self._build_model_spec()
+        spec_cls = type(model_spec)
+
+        try:
+            restored = spec_cls.model_validate_json(model_spec.model_dump_json())
+        except ValidationError as exc:
+            raise AssertionError(
+                f"{spec_cls.__name__} does not survive a JSON round trip, which "
+                f"is how specs reach the worker:\n{exc}"
+            ) from exc
+
+        assert restored == model_spec
+
     def test_model_spec_defaults_to_tested_environment_profile(self):
         model_spec = self._build_model_spec()
 
@@ -399,18 +322,7 @@ class ModelSpecContract:
             registration.model_spec.model_validate(payload)
 
 
-class ModelRegistryContract:
-    manifest_case: ModelManifestCase
-
-    @property
-    def case(self) -> ModelManifestCase:
-        try:
-            return self.manifest_case
-        except AttributeError as exc:
-            raise AssertionError(
-                "ModelRegistryContract subclasses must define manifest_case"
-            ) from exc
-
+class ModelRegistryContract(_ManifestCaseContract):
     def _discovered_registration(self):
         registry = ModelRegistry.default()
         return registry.get(self.case.manifest.kind)
@@ -440,17 +352,6 @@ class ModelRegistryContract:
         assert registration.model_spec is self.case.manifest.model_spec.load_symbol()
 
 
-def runtime_contract_enabled() -> bool:
-    return os.environ.get("ATOMFORGE_RUN_RUNTIME_TESTS") == "1"
-
-
-def skip_runtime_contract_unless_enabled() -> None:
-    if not runtime_contract_enabled():
-        pytest.skip(
-            "Set ATOMFORGE_RUN_RUNTIME_TESTS=1 to run AtomForge runtime contracts"
-        )
-
-
 def assert_energy_result(result) -> None:
     assert result.energy is not None
     assert isinstance(result.energy, Real)
@@ -464,31 +365,7 @@ def assert_forces_result(result, structure: StructureData) -> None:
     assert all(len(force) == 3 for force in result.forces)
 
 
-@pytest.mark.atomforge_runtime
-class ModelSinglePointRuntimeContract:
-    manifest_case: ModelManifestCase
-
-    @property
-    def case(self) -> ModelManifestCase:
-        try:
-            return self.manifest_case
-        except AttributeError as exc:
-            raise AssertionError(
-                "ModelSinglePointRuntimeContract subclasses must define manifest_case"
-            ) from exc
-
-    def _convert_manifest(self):
-        converter = ManifestToRegistrationConverter()
-        return converter(
-            self.case.manifest,
-            entry_point_name=self.case.entry_point_name,
-            entry_point_package=self.case.entry_point_package,
-        )
-
-    def _build_runtime_model_spec(self):
-        registration, _ = self._convert_manifest()
-        return build_model_spec(self.case, registration)
-
+class ModelSinglePointRuntimeContract(_ManifestCaseContract):
     def _runtime_structure(self) -> StructureData:
         if self.case.runtime_structure is not None:
             return self.case.runtime_structure
@@ -499,40 +376,59 @@ class ModelSinglePointRuntimeContract:
             return self.case.runtime_exec_resources
         return default_runtime_exec_resources()
 
-    def _execute_single_point(self, properties: frozenset[Property]):
+    def _execute_single_point(self, backend, properties: frozenset[Property]):
         if self.case.runtime_skip_reason is not None:
             pytest.skip(self.case.runtime_skip_reason)
 
-        from atomforge.backend.subprocess import SubprocessBackend
         from atomforge_builtins.task.single_point import SinglePoint
 
         structure = self._runtime_structure()
         task = SinglePoint(structure=structure, properties=properties)
-        model = self._build_runtime_model_spec()
+        model = self._build_model_spec()
         resources = self._runtime_exec_resources()
 
-        backend = SubprocessBackend()
         return backend.execute(task, model=model, exec_resources=resources)
 
-    def test_single_point_energy_executes_if_declared(self):
-        skip_runtime_contract_unless_enabled()
+    # Marks go on the methods, not the class: pytest collects class marks
+    # through the MRO, so a class mark would gate every test of a bundle that
+    # inherits this contract.
+    @pytest.mark.atomforge_runtime
+    def test_single_point_energy_executes_if_declared(self, atomforge_backend):
         registration, _ = self._convert_manifest()
         supported_properties = registration.load_supported_properties()
         if Property.ENERGY not in supported_properties:
             pytest.skip(f"{registration.kind} does not declare energy support")
 
-        result = self._execute_single_point(frozenset({Property.ENERGY}))
+        result = self._execute_single_point(
+            atomforge_backend, frozenset({Property.ENERGY})
+        )
 
         assert_energy_result(result)
 
-    def test_single_point_forces_shape_if_declared(self):
-        skip_runtime_contract_unless_enabled()
+    @pytest.mark.atomforge_runtime
+    def test_single_point_forces_shape_if_declared(self, atomforge_backend):
         registration, _ = self._convert_manifest()
         supported_properties = registration.load_supported_properties()
         if Property.FORCES not in supported_properties:
             pytest.skip(f"{registration.kind} does not declare forces support")
 
         structure = self._runtime_structure()
-        result = self._execute_single_point(frozenset({Property.FORCES}))
+        result = self._execute_single_point(
+            atomforge_backend, frozenset({Property.FORCES})
+        )
 
         assert_forces_result(result, structure)
+
+
+class ModelPluginContract(
+    ModelManifestContract,
+    ModelManifestSymbolContract,
+    ModelSpecContract,
+    ModelRegistryContract,
+    ModelEnvironmentContract,
+    ModelEnvironmentResolutionContract,
+    ModelSinglePointRuntimeContract,
+):
+    """Every model plugin contract. Subclass it once per model and set
+    ``manifest_case``; the environment and runtime contracts run only with
+    ``--atomforge-environment`` and ``--atomforge-runtime``."""

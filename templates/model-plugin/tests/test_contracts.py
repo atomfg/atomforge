@@ -1,25 +1,15 @@
 """The atomforge-testing contracts: check that the plugin is wired the way atomforge
 expects. Add one test class per model in the plugin.
 
-    uv run pytest                                                  # wiring
-    uv run pytest -m atomforge_environment                         # env resolves
-    ATOMFORGE_RUN_RUNTIME_TESTS=1 uv run pytest -m atomforge_runtime  # runs the model
+    uv run pytest                            # wiring
+    uv run pytest --atomforge-environment    # + the model environment resolves
+    uv run pytest --atomforge-runtime        # + runs the model
 """
 
 from pathlib import Path
 
 from atomforge_core.resources.resource_models import ExecutionResources
-from atomforge_testing import (
-    ModelEnvironmentContract,
-    ModelEnvironmentResolutionContract,
-    ModelManifestCase,
-    ModelManifestContract,
-    ModelManifestSymbolContract,
-    ModelRegistryContract,
-    ModelSinglePointRuntimeContract,
-    ModelSpecContract,
-)
-from atomforge_testing import structures
+from atomforge_testing import ModelManifestCase, ModelPluginContract, structures
 
 from atomforge_template.manifest import torch_lj_manifest
 
@@ -31,15 +21,7 @@ def torch_lj_spec_factory(model_cls):
     return model_cls(epsilon=1.0, sigma=1.0)
 
 
-class TestTorchLJ(
-    ModelManifestContract,
-    ModelManifestSymbolContract,
-    ModelSpecContract,
-    ModelRegistryContract,
-    ModelEnvironmentContract,
-    ModelEnvironmentResolutionContract,
-    ModelSinglePointRuntimeContract,
-):
+class TestTorchLJ(ModelPluginContract):
     manifest_case = ModelManifestCase(
         manifest=torch_lj_manifest,
         entry_point_name="torch_lj",

@@ -38,9 +38,7 @@ jobs:
         run: uv run --no-sync pytest
 
       - name: Environment resolution
-        run: uv run --no-sync pytest -m atomforge_environment
+        run: uv run --no-sync pytest --atomforge-environment -m atomforge_environment
 
       - name: Runtime
-        run: uv run --no-sync pytest -m atomforge_runtime
-        env:
-          ATOMFORGE_RUN_RUNTIME_TESTS: "1"
+        run: uv run --no-sync pytest --atomforge-runtime -m atomforge_runtime

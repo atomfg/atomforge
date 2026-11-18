@@ -42,14 +42,13 @@ test-cov-testing:
 # `--no-sync` keeps that setting away from the template's own locked environment.
 test-template:
     cd templates/model-plugin && uv sync --locked
-    cd templates/model-plugin && uv run --no-sync pytest -m atomforge_environment
-    cd templates/model-plugin && ATOMFORGE_RUN_RUNTIME_TESTS=1 uv run --no-sync pytest
+    cd templates/model-plugin && uv run --no-sync pytest --atomforge-environment --atomforge-runtime
     just test-template-export
 
 # The standalone export of the template (what is mirrored), tested as a fresh copy.
 # Exports HEAD, so it tests committed code only.
 test-template-export:
-    ATOMFORGE_RUN_RUNTIME_TESTS=1 uv run pytest scripts/template/tests
+    uv run pytest scripts/template/tests --run-exported-tests
 
 test-all:
     just test-core

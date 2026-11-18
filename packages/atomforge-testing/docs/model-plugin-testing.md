@@ -43,17 +43,7 @@ Example:
 from pathlib import Path
 
 from atomforge_core.resources.resource_models import ExecutionResources
-from atomforge_testing import structures
-from atomforge_testing import (
-    ModelEnvironmentContract,
-    ModelEnvironmentResolutionContract,
-    ModelManifestCase,
-    ModelManifestContract,
-    ModelManifestSymbolContract,
-    ModelRegistryContract,
-    ModelSpecContract,
-    ModelSinglePointRuntimeContract,
-)
+from atomforge_testing import ModelManifestCase, ModelPluginContract, structures
 
 from my_plugin.manifest import my_model_manifest
 
@@ -66,15 +56,7 @@ def my_model_spec_factory(model_cls):
     return model_cls(required_option="small")
 
 
-class TestMyModel(
-    ModelManifestContract,
-    ModelManifestSymbolContract,
-    ModelSpecContract,
-    ModelRegistryContract,
-    ModelEnvironmentContract,
-    ModelEnvironmentResolutionContract,
-    ModelSinglePointRuntimeContract,
-):
+class TestMyModel(ModelPluginContract):
     manifest_case = ModelManifestCase(
         manifest=my_model_manifest,
         entry_point_name="my_model",
@@ -87,31 +69,38 @@ class TestMyModel(
     )
 ```
 
+`ModelPluginContract` combines all the contracts below. To use only some of
+them, inherit from those instead.
+
 ## 3. Run the Tests
 
-Fast wiring checks:
+atomforge-testing installs a pytest plugin, so options, markers and fixtures are
+available without any configuration in your `pyproject.toml` or `conftest.py`.
 
 ```bash
-uv run pytest
+uv run pytest                            # wiring checks
+uv run pytest --atomforge-environment    # + resolve the model environment
+uv run pytest --atomforge-runtime        # + execute the model
+uv run pytest --atomforge-runtime --atomforge-gpu   # + tests marked for a GPU
 ```
 
-Environment resolver checks:
+The options are the only way to enable the slower checks. The markers
+`atomforge_environment`, `atomforge_runtime` and `atomforge_gpu` only select:
+`uv run pytest --atomforge-runtime -m atomforge_runtime` runs just the runtime
+checks.
 
-```bash
-uv run pytest -m atomforge_environment
-```
-
-Runtime execution checks:
-
-```bash
-ATOMFORGE_RUN_RUNTIME_TESTS=1 uv run pytest -m atomforge_runtime
-```
+Your own runtime tests can mark themselves with `@pytest.mark.atomforge_runtime`
+and use the session-scoped `atomforge_backend` fixture, one backend shared by
+the whole session (see the template's `tests/test_torch_lj.py`). Mark methods
+rather than classes that other test classes inherit from: pytest collects class
+marks through inheritance.
 
 ## What the Contracts Check
 
 - `ModelManifestContract`: manifest type, entry point text, and strict loading.
 - `ModelManifestSymbolContract`: one checklist test per manifest symbol.
-- `ModelSpecContract`: representative spec construction and Pydantic round-trip.
+- `ModelSpecContract`: representative spec construction, and round trips through
+  Python and JSON dumps (specs reach the worker as JSON).
 - `ModelRegistryContract`: installed package discovery through `ModelRegistry`.
 - `ModelEnvironmentContract`: environment factory determinism, provider
   requirements, and dependency summary consistency.
