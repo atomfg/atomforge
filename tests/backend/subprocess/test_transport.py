@@ -168,9 +168,15 @@ def process_is_gone(pid: int, wait: float = 5.0) -> bool:
             os.kill(pid, 0)
         except ProcessLookupError:
             return True
-        stat = Path(f"/proc/{pid}/stat")
-        if stat.exists() and stat.read_text().split(") ")[-1].startswith("Z"):
-            return True
+        try:
+            stat = Path(f"/proc/{pid}/stat").read_text()
+        except FileNotFoundError:
+            # No /proc (macOS), or the process was reaped after os.kill above.
+            if sys.platform.startswith("linux"):
+                return True
+        else:
+            if stat.split(") ")[-1].startswith("Z"):
+                return True
         time.sleep(0.05)
     return False
 
