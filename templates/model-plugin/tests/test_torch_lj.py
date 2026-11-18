@@ -16,7 +16,7 @@ from atomforge_core.property import Property
 from atomforge_core.resources.resource_models import ExecutionResources
 from atomforge_core.structure import StructureData
 
-from atomforge_template.torch_lj.spec import TorchLJ
+from atomforge_template.spec import TorchLJ
 
 pytestmark = [
     pytest.mark.atomforge_runtime,

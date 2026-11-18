@@ -5,15 +5,15 @@ description = "Template for an atomforge model plugin: a Lennard-Jones potential
 readme = "README.md"
 requires-python = ">=3.12"
 # Host-side dependencies only. The model's own dependencies (here torch) are NOT
-# listed here. They belong in the environment factory (torch_lj/environment.py) and
-# are installed only in the isolated worker environment.
+# listed here. They belong in the environment factory (environment.py) and are
+# installed only in the isolated worker environment.
 dependencies = [
     "atomforge-core>=0.1.0a1",
 ]
 
 # One entry point per model. The target must be a ModelManifest.
 [project.entry-points.'atomforge.model']
-torch_lj = "atomforge_template.torch_lj.manifest:torch_lj_manifest"
+torch_lj = "atomforge_template.manifest:torch_lj_manifest"
 
 [dependency-groups]
 dev = [

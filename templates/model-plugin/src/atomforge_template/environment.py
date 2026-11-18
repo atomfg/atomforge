@@ -1,7 +1,7 @@
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.env.factory import DependencySummary, EnvironmentFactory
 
-from atomforge_template.torch_lj.spec import TorchLJ
+from atomforge_template.spec import TorchLJ
 
 # The worker environment. These are the model's real dependencies; the host never
 # installs them. "tested" pins what the plugin is tested against, "latest" lets

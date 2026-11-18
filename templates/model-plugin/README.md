@@ -17,7 +17,7 @@ them, see the docs:
 ## Layout
 
 ```
-src/atomforge_template/torch_lj/
+src/atomforge_template/
 ├── spec.py          # user-facing settings (host)
 ├── definitions.py   # model kind, supported properties, resources, metadata (host)
 ├── environment.py   # the worker environment: the model's real dependencies (host)
@@ -27,6 +27,10 @@ src/atomforge_template/torch_lj/
 ```
 
 The host never installs torch. If a host-side module imports it, the tests fail.
+
+A plugin can provide several models. Then give each model its own subpackage with
+these modules, a manifest and an entry point per model, and put code they share at
+the package root.
 
 ## Run the tests
 
@@ -40,9 +44,9 @@ Add `ATOMFORGE_TEST_GPU=1` to the last command on a machine with a CUDA GPU.
 
 ## Make it yours
 
-1. Rename the distribution (`pyproject.toml`), the package `atomforge_template`, the
-   subpackage `torch_lj` and the model kind `torch-lj`. Update the entry point and
-   the strings in `manifest.py` to match.
+1. Rename the distribution (`pyproject.toml`), the package `atomforge_template` and
+   the model kind `torch-lj`. Update the entry point and the strings in
+   `manifest.py` to match.
 2. `[tool.uv.sources]` in `pyproject.toml` says where atomforge comes from. Keep
    it, point it at a newer atomforge commit, or at your own atomforge checkout.
 3. Replace the spec fields, the requirements in `environment.py` and the model in
