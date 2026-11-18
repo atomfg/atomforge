@@ -1,3 +1,4 @@
 format: 
-    gfm: default
+    gfm:
+        fig-format: svg
     ipynb: default

@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11"
 
 [[package]]
@@ -28,6 +28,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ase", marker = "extra == 'ase'", specifier = ">=3.23" },
     { name = "atomforge-builtins", editable = "../atomforge-builtins" },
     { name = "atomforge-core", editable = "../atomforge-core" },
     { name = "atomforge-runtime", editable = "../atomforge-runtime" },
@@ -37,9 +38,11 @@ requires-dist = [
     { name = "rich-click", specifier = ">=1.9.7,<2" },
     { name = "uv", specifier = ">=0.11.7,<0.12" },
 ]
+provides-extras = ["ase"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "ase", specifier = ">=3.23" },
     { name = "depgraph-py", specifier = ">=0.1.1" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },

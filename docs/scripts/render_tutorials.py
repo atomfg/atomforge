@@ -1,6 +1,7 @@
 from pathlib import Path
 import subprocess
 import os
+import shutil
 
 
 def check_quarto():
@@ -47,6 +48,14 @@ def render_tutorial(tutorial_path):
     renderend_ipynb = tutorial_path.with_suffix(".ipynb")
     if renderend_ipynb.exists():
         renderend_ipynb.rename(tutorial_path.parent.parent / renderend_ipynb.name)
+
+    # Figures are written to <name>_files/ and referenced relative to the markdown.
+    rendered_files = tutorial_path.with_name(f"{tutorial_path.stem}_files")
+    if rendered_files.exists():
+        target = tutorial_path.parent.parent / rendered_files.name
+        if target.exists():
+            shutil.rmtree(target)
+        rendered_files.rename(target)
 
 
 if __name__ == "__main__":
