@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from numbers import Real
 import tomllib
 
 import pytest
@@ -24,6 +23,15 @@ from atomforge_runtime.registry.model.model_helpers import (
     ManifestToRegistrationConverter,
 )
 from atomforge_runtime.registry.model.model_registry import ModelRegistry
+
+from atomforge_testing.capabilities import (  # noqa: F401 - re-exported
+    PROPERTY_CHECKS,
+    assert_energies_result,
+    assert_energy_result,
+    assert_forces_result,
+    assert_magmoms_result,
+    assert_stress_result,
+)
 
 
 def default_runtime_structure() -> StructureData:
@@ -87,12 +95,22 @@ class _ManifestCaseContract:
             entry_point_package=self.case.entry_point_package,
         )
 
-    def _build_model_spec(self) -> ModelSpec:
+    def _build_model_spec(self, environment_profile: str | None = None) -> ModelSpec:
+        """The case's representative spec, optionally with another
+        environment profile."""
         registration, _ = self._convert_manifest()
-        return build_model_spec(self.case, registration)
+        model_spec = build_model_spec(self.case, registration)
+        if environment_profile is None:
+            return model_spec
+        payload = model_spec.model_dump()
+        payload["environment_profile"] = environment_profile
+        return type(model_spec).model_validate(payload)
 
-    def _build_environment_spec(self) -> EnvironmentSpec:
-        return self._environment_factory()(self._build_model_spec())
+    def _build_environment_spec(
+        self, environment_profile: str | None = None
+    ) -> EnvironmentSpec:
+        model_spec = self._build_model_spec(environment_profile)
+        return self._environment_factory()(model_spec)
 
     def _environment_factory(self) -> EnvironmentFactory:
         registration, _ = self._convert_manifest()
@@ -186,19 +204,28 @@ class ModelManifestSymbolContract(_ManifestCaseContract):
 
 
 class ModelEnvironmentContract(_ManifestCaseContract):
-    def test_environment_factory_builds_model_environment(self):
-        env_spec = self._build_environment_spec()
+    """Environment factory checks, run once per environment profile that the
+    model spec allows."""
+
+    def test_environment_factory_builds_model_environment(
+        self, atomforge_environment_profile
+    ):
+        env_spec = self._build_environment_spec(atomforge_environment_profile)
 
         assert isinstance(env_spec, EnvironmentSpec)
 
-    def test_environment_factory_is_deterministic_for_model_spec(self):
-        first = self._build_environment_spec()
-        second = self._build_environment_spec()
+    def test_environment_factory_is_deterministic_for_model_spec(
+        self, atomforge_environment_profile
+    ):
+        first = self._build_environment_spec(atomforge_environment_profile)
+        second = self._build_environment_spec(atomforge_environment_profile)
 
         assert second == first
 
-    def test_environment_provider_requirements_include_entry_point_package(self):
-        env_spec = self._build_environment_spec()
+    def test_environment_provider_requirements_include_entry_point_package(
+        self, atomforge_environment_profile
+    ):
+        env_spec = self._build_environment_spec(atomforge_environment_profile)
         expected = normalize_distribution_name(self.case.entry_point_package)
         provider_requirements = {
             normalize_distribution_name(requirement)
@@ -207,23 +234,29 @@ class ModelEnvironmentContract(_ManifestCaseContract):
 
         assert expected in provider_requirements
 
-    def test_environment_requirements_are_declared_in_dependency_summary(self):
-        env_spec = self._build_environment_spec()
+    def test_environment_requirements_are_declared_in_dependency_summary(
+        self, atomforge_environment_profile
+    ):
+        env_spec = self._build_environment_spec(atomforge_environment_profile)
         factory = self._environment_factory()
         declared = factory.dependency_summary.declared_requirements()
 
         assert frozenset(env_spec.requirements).issubset(declared)
 
-    def test_environment_python_matches_dependency_summary(self):
-        env_spec = self._build_environment_spec()
+    def test_environment_python_matches_dependency_summary(
+        self, atomforge_environment_profile
+    ):
+        env_spec = self._build_environment_spec(atomforge_environment_profile)
         factory = self._environment_factory()
         expected_python = factory.dependency_summary.python
 
         if expected_python is not None:
             assert env_spec.python == expected_python
 
-    def test_environment_channels_include_dependency_summary_channels(self):
-        env_spec = self._build_environment_spec()
+    def test_environment_channels_include_dependency_summary_channels(
+        self, atomforge_environment_profile
+    ):
+        env_spec = self._build_environment_spec(atomforge_environment_profile)
         factory = self._environment_factory()
         expected_channels = set(factory.dependency_summary.channels)
 
@@ -262,9 +295,11 @@ def format_environment_resolution_failure(result) -> str:
 
 class ModelEnvironmentResolutionContract(_ManifestCaseContract):
     @pytest.mark.atomforge_environment
-    def test_environment_resolves_with_default_provider(self, tmp_path):
+    def test_environment_resolves_with_default_provider(
+        self, tmp_path, atomforge_environment_profile
+    ):
         provider = default_environment_provider(tmp_path)
-        env_spec = self._build_environment_spec()
+        env_spec = self._build_environment_spec(atomforge_environment_profile)
 
         result = provider.resolve_environment(env_spec)
 
@@ -352,72 +387,85 @@ class ModelRegistryContract(_ManifestCaseContract):
         assert registration.model_spec is self.case.manifest.model_spec.load_symbol()
 
 
-def assert_energy_result(result) -> None:
-    assert result.energy is not None
-    assert isinstance(result.energy, Real)
-
-
-def assert_forces_result(result, structure: StructureData) -> None:
-    assert result.forces is not None
-    assert isinstance(result.forces, list)
-    assert len(result.forces) == len(structure.numbers)
-    assert all(isinstance(force, list) for force in result.forces)
-    assert all(len(force) == 3 for force in result.forces)
-
-
 class ModelSinglePointRuntimeContract(_ManifestCaseContract):
+    """Runs the model through the backend: every declared property, and every
+    declared resource combination with strict resources.
+
+    The tests are marked on the methods, not the class: pytest collects class
+    marks through the MRO, so a class mark would gate every test of a bundle
+    that inherits this contract.
+    """
+
     def _runtime_structure(self) -> StructureData:
         if self.case.runtime_structure is not None:
             return self.case.runtime_structure
         return default_runtime_structure()
+
+    def _structure_for(self, prop: Property) -> StructureData:
+        structure = self._runtime_structure()
+        if prop is Property.STRESS and not any(structure.pbc):
+            from atomforge_testing.structures import periodic_bulk
+
+            return periodic_bulk()
+        return structure
 
     def _runtime_exec_resources(self) -> ExecutionResources:
         if self.case.runtime_exec_resources is not None:
             return self.case.runtime_exec_resources
         return default_runtime_exec_resources()
 
-    def _execute_single_point(self, backend, properties: frozenset[Property]):
+    def _execute_single_point(
+        self,
+        backend,
+        properties: frozenset[Property],
+        structure: StructureData,
+        resources: ExecutionResources,
+    ):
         if self.case.runtime_skip_reason is not None:
             pytest.skip(self.case.runtime_skip_reason)
 
         from atomforge_builtins.task.single_point import SinglePoint
 
-        structure = self._runtime_structure()
         task = SinglePoint(structure=structure, properties=properties)
         model = self._build_model_spec()
-        resources = self._runtime_exec_resources()
-
         return backend.execute(task, model=model, exec_resources=resources)
 
-    # Marks go on the methods, not the class: pytest collects class marks
-    # through the MRO, so a class mark would gate every test of a bundle that
-    # inherits this contract.
     @pytest.mark.atomforge_runtime
-    def test_single_point_energy_executes_if_declared(self, atomforge_backend):
-        registration, _ = self._convert_manifest()
-        supported_properties = registration.load_supported_properties()
-        if Property.ENERGY not in supported_properties:
-            pytest.skip(f"{registration.kind} does not declare energy support")
+    def test_declared_property_is_returned(
+        self, atomforge_backend, atomforge_declared_property
+    ):
+        prop = atomforge_declared_property
+        structure = self._structure_for(prop)
 
         result = self._execute_single_point(
-            atomforge_backend, frozenset({Property.ENERGY})
+            atomforge_backend,
+            frozenset({prop}),
+            structure,
+            self._runtime_exec_resources(),
         )
 
-        assert_energy_result(result)
+        PROPERTY_CHECKS[prop](result, structure)
 
     @pytest.mark.atomforge_runtime
-    def test_single_point_forces_shape_if_declared(self, atomforge_backend):
+    def test_declared_resources_execute_strictly(
+        self, atomforge_backend, atomforge_declared_resources
+    ):
         registration, _ = self._convert_manifest()
-        supported_properties = registration.load_supported_properties()
-        if Property.FORCES not in supported_properties:
-            pytest.skip(f"{registration.kind} does not declare forces support")
+        supported = registration.load_supported_properties()
+        if Property.ENERGY in supported:
+            prop = Property.ENERGY
+        else:
+            prop = next(p for p in Property if p in supported)
+        structure = self._structure_for(prop)
 
-        structure = self._runtime_structure()
         result = self._execute_single_point(
-            atomforge_backend, frozenset({Property.FORCES})
+            atomforge_backend,
+            frozenset({prop}),
+            structure,
+            atomforge_declared_resources,
         )
 
-        assert_forces_result(result, structure)
+        PROPERTY_CHECKS[prop](result, structure)
 
 
 class ModelPluginContract(

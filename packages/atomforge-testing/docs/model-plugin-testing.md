@@ -81,11 +81,13 @@ available without any configuration in your `pyproject.toml` or `conftest.py`.
 uv run pytest                            # wiring checks
 uv run pytest --atomforge-environment    # + resolve the model environment
 uv run pytest --atomforge-runtime        # + execute the model
-uv run pytest --atomforge-runtime --atomforge-gpu   # + tests marked for a GPU
+uv run pytest --atomforge-runtime --atomforge-gpu   # + CUDA GPU combinations
+uv run pytest --atomforge-runtime --atomforge-mps   # + Apple MPS combinations
 ```
 
 The options are the only way to enable the slower checks. The markers
-`atomforge_environment`, `atomforge_runtime` and `atomforge_gpu` only select:
+`atomforge_environment`, `atomforge_runtime`, `atomforge_gpu` and
+`atomforge_mps` only select:
 `uv run pytest --atomforge-runtime -m atomforge_runtime` runs just the runtime
 checks.
 
@@ -106,8 +108,24 @@ marks through inheritance.
   requirements, and dependency summary consistency.
 - `ModelEnvironmentResolutionContract`: opt-in provider dry-run resolution for
   the model environment.
-- `ModelSinglePointRuntimeContract`: declared energy/forces execute through the
-  backend-created environment.
+- `ModelSinglePointRuntimeContract`: opt-in execution through the backend:
+  - `test_declared_property_is_returned[<property>]`: each declared property,
+    requested alone, comes back finite and in the right shape: `energy` a
+    number, `forces` one 3-vector per atom, `stress` 3×3, `energies` and
+    `magmoms` one value per atom. Stress is requested on a periodic structure:
+    the case's `runtime_structure` if it is periodic, otherwise
+    `structures.periodic_bulk()`.
+  - `test_declared_resources_execute_strictly[<accelerator>-<precision>]`: a
+    single point runs with `strict=True` for every combination your
+    `ResourceCapabilities` declares. A capability left as `None` runs as
+    `default`. `gpu` combinations need `--atomforge-gpu`, `mps` combinations
+    `--atomforge-mps`.
+
+The environment contracts run once per environment profile: the values of your
+spec's `environment_profile` `Literal` (e.g. `[tested]` and `[latest]`), or only
+`tested` if the field is not a `Literal`. The contracts are parametrized from the
+manifest when pytest collects them; if a manifest symbol cannot be loaded, those
+tests are skipped and `ModelManifestSymbolContract` reports the error.
 
 Reference structures are available from `atomforge_testing.structures`:
 
