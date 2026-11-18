@@ -89,6 +89,20 @@ def _process_group_options() -> dict:
     return {"start_new_session": True}
 
 
+def _worker_environment() -> dict[str, str]:
+    """Environment variables for a worker: the host's, minus host-only settings.
+
+    ``MPLBACKEND=module://...`` names a matplotlib backend that is a package in
+    the host environment, such as ``matplotlib_inline`` that Jupyter sets. That
+    package is not installed in the worker's environment, so a model that imports
+    matplotlib would fail.
+    """
+    env = dict(os.environ)
+    if env.get("MPLBACKEND", "").startswith("module://"):
+        del env["MPLBACKEND"]
+    return env
+
+
 class EnvSubprocess:
     def __init__(
         self,
@@ -119,6 +133,7 @@ class EnvSubprocess:
             text=True,
             encoding="utf-8",
             errors="replace",
+            env=_worker_environment(),
             **_process_group_options(),
         )
 

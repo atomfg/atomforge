@@ -10,3 +10,4 @@ These tutorials are executable documents. The documentation pages are rendered f
 | --- | --- | --- |
 | [First calculation](first_calculation.md) | [Download](first_calculation.ipynb) | Running a single-point calculation with `SubprocessBackend` |
 | [Different models](different_models.md) | [Download](different_models.ipynb) | Running multiple models in different environments |
+| [ASE calculator](ase_calculator.md) | [Download](ase_calculator.ipynb) | Using any model as an ASE calculator, compared with ASE's equation of state tutorial |
