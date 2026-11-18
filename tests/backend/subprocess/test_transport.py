@@ -18,14 +18,15 @@ from atomforge.backend.subprocess._transport import (
 )
 from atomforge_core.protocol.request import ShutdownRequest
 
-# Reads one request and answers it correctly, then keeps serving.
+# Answers every request correctly and keeps serving until its stdin closes, which
+# EnvSubprocess.shutdown does after its shutdown request. It must not exit on the
+# shutdown request itself: the round-trip test sends one and then checks that the
+# worker is still alive, which would race with the worker's exit.
 ECHO_WORKER = """
 import json, sys
 for line in sys.stdin:
     request = json.loads(line)
     print(json.dumps({"operation": "shutdown", "request_id": request["request_id"]}), flush=True)
-    if request["operation"] == "shutdown":
-        break
 """
 
 
