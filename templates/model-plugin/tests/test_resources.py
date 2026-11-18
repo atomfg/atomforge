@@ -5,8 +5,8 @@ import pytest
 
 from atomforge_core.resources.resource_models import ResolvedResources
 
-from atomforge_template.torch_lj.definitions import TorchLJResourceCapabilities
-from atomforge_template.torch_lj.resources import torch_device, torch_dtype
+from atomforge_template.definitions import TorchLJResourceCapabilities
+from atomforge_template.resources import torch_device, torch_dtype
 
 
 def resolved(accelerator=None, precision=None):

@@ -4,8 +4,8 @@ from atomforge_core.property import Property
 from atomforge_core.resources.resource_models import ResolvedResources
 from atomforge_core.structure import StructureData
 
-from atomforge_template.torch_lj.resources import torch_device, torch_dtype
-from atomforge_template.torch_lj.spec import TorchLJ
+from atomforge_template.resources import torch_device, torch_dtype
+from atomforge_template.spec import TorchLJ
 
 
 class TorchLJExecutor(ModelExecutor[TorchLJ]):

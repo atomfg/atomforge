@@ -4,18 +4,12 @@ from atomforge_core.registry.model_manifest import ModelManifest
 # "module:attr" strings, so registering the plugin imports nothing heavy.
 torch_lj_manifest = ModelManifest(
     kind="torch-lj",
-    model_spec="atomforge_template.torch_lj.spec:TorchLJ",
-    executor_cls="atomforge_template.torch_lj.executor:TorchLJExecutor",
-    supported_properties=(
-        "atomforge_template.torch_lj.definitions:TorchLJSupportedProperties"
-    ),
-    environment_factory_cls=(
-        "atomforge_template.torch_lj.environment:TorchLJEnvironmentFactory"
-    ),
-    metadata="atomforge_template.torch_lj.definitions:TorchLJMetadata",
-    resource_capabilities=(
-        "atomforge_template.torch_lj.definitions:TorchLJResourceCapabilities"
-    ),
+    model_spec="atomforge_template.spec:TorchLJ",
+    executor_cls="atomforge_template.executor:TorchLJExecutor",
+    supported_properties="atomforge_template.definitions:TorchLJSupportedProperties",
+    environment_factory_cls="atomforge_template.environment:TorchLJEnvironmentFactory",
+    metadata="atomforge_template.definitions:TorchLJMetadata",
+    resource_capabilities="atomforge_template.definitions:TorchLJResourceCapabilities",
     # The distribution that provides this entry point. It is installed into the
     # worker environment alongside the requirements from the environment factory.
     distribution=["atomforge_template"],

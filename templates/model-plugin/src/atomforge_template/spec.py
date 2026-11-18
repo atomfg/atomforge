@@ -4,7 +4,7 @@ from pydantic import Field
 
 from atomforge_core.model.spec import ModelSpec
 
-from atomforge_template.torch_lj.definitions import model_kind
+from atomforge_template.definitions import model_kind
 
 
 class TorchLJ(ModelSpec):
