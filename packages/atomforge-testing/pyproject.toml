@@ -18,22 +18,22 @@ runtime = [
     "atomforge",
 ]
 
+[project.entry-points.pytest11]
+atomforge_testing = "atomforge_testing.plugin"
+
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "atomforge",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = [
-    "atomforge_environment: opt-in AtomForge environment resolver contracts",
-    "atomforge_runtime: opt-in AtomForge runtime execution contracts",
-]
 
 [tool.uv.sources]
 atomforge = { path="../..", editable=true }

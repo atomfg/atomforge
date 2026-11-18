@@ -35,12 +35,14 @@ the package root.
 ## Run the tests
 
 ```bash
-uv run pytest                                                       # wiring
-uv run pytest -m atomforge_environment                              # env resolves
-ATOMFORGE_RUN_RUNTIME_TESTS=1 uv run pytest -m atomforge_runtime    # runs the model
+uv run pytest                            # wiring
+uv run pytest --atomforge-environment    # + the model environment resolves
+uv run pytest --atomforge-runtime        # + runs the model
 ```
 
-Add `ATOMFORGE_TEST_GPU=1` to the last command on a machine with a CUDA GPU.
+The options combine. Add `--atomforge-gpu` on a machine with a CUDA GPU. Use `-m`
+to select, e.g. `uv run pytest --atomforge-runtime -m atomforge_runtime` runs only
+the tests that execute the model.
 
 ## Make it yours
 

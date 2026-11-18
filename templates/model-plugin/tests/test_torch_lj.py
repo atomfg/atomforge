@@ -1,14 +1,13 @@
 """Checks of the model's numbers, run through atomforge in the worker environment.
 
 The host test environment has no torch, so the model is always called through a
-backend, just as users call it. Replace the reference values with ones for your
-model, e.g. computed with the model's own package.
+backend, just as users call it: `atomforge_backend` is one backend shared by the
+whole test session. Replace the reference values with ones for your model, e.g.
+computed with the model's own package.
 
-    ATOMFORGE_RUN_RUNTIME_TESTS=1 uv run pytest -m atomforge_runtime
-    ATOMFORGE_RUN_RUNTIME_TESTS=1 ATOMFORGE_TEST_GPU=1 uv run pytest -m atomforge_runtime
+    uv run pytest --atomforge-runtime
+    uv run pytest --atomforge-runtime --atomforge-gpu
 """
-
-import os
 
 import pytest
 
@@ -18,13 +17,7 @@ from atomforge_core.structure import StructureData
 
 from atomforge_template.spec import TorchLJ
 
-pytestmark = [
-    pytest.mark.atomforge_runtime,
-    pytest.mark.skipif(
-        os.environ.get("ATOMFORGE_RUN_RUNTIME_TESTS") != "1",
-        reason="Set ATOMFORGE_RUN_RUNTIME_TESTS=1 to run the model",
-    ),
-]
+pytestmark = pytest.mark.atomforge_runtime
 
 EPSILON = 0.5
 SIGMA = 2.0
@@ -61,14 +54,6 @@ def lj_dimer_force(r: float) -> float:
     return 24 * EPSILON * (2 * sr6**2 - sr6) / r
 
 
-@pytest.fixture(scope="module")
-def backend():
-    from atomforge.backend.subprocess import SubprocessBackend
-
-    with SubprocessBackend() as backend:
-        yield backend
-
-
 def single_point(backend, structure, resources):
     from atomforge_builtins.task.single_point import SinglePoint
 
@@ -83,8 +68,8 @@ def cpu(precision: str) -> ExecutionResources:
     return ExecutionResources(accelerator="cpu", precision=precision, strict=True)
 
 
-def test_dimer_matches_analytic_lj(backend):
-    result = single_point(backend, dimer(DISTANCE), cpu("f64"))
+def test_dimer_matches_analytic_lj(atomforge_backend):
+    result = single_point(atomforge_backend, dimer(DISTANCE), cpu("f64"))
 
     assert result.energy == pytest.approx(lj_dimer_energy(DISTANCE), rel=1e-12)
     force = lj_dimer_force(DISTANCE)
@@ -94,28 +79,25 @@ def test_dimer_matches_analytic_lj(backend):
     ]
 
 
-def test_forces_sum_to_zero(backend):
-    result = single_point(backend, trimer(), cpu("f64"))
+def test_forces_sum_to_zero(atomforge_backend):
+    result = single_point(atomforge_backend, trimer(), cpu("f64"))
 
     total = [sum(force[k] for force in result.forces) for k in range(3)]
     assert total == pytest.approx([0.0, 0.0, 0.0], abs=1e-12)
 
 
-def test_f32_agrees_with_f64(backend):
-    f64 = single_point(backend, trimer(), cpu("f64"))
-    f32 = single_point(backend, trimer(), cpu("f32"))
+def test_f32_agrees_with_f64(atomforge_backend):
+    f64 = single_point(atomforge_backend, trimer(), cpu("f64"))
+    f32 = single_point(atomforge_backend, trimer(), cpu("f32"))
 
     assert f32.energy == pytest.approx(f64.energy, rel=1e-5)
 
 
-@pytest.mark.skipif(
-    os.environ.get("ATOMFORGE_TEST_GPU") != "1",
-    reason="Set ATOMFORGE_TEST_GPU=1 on a machine with a CUDA GPU",
-)
-def test_gpu_agrees_with_cpu(backend):
+@pytest.mark.atomforge_gpu
+def test_gpu_agrees_with_cpu(atomforge_backend):
     gpu = ExecutionResources(accelerator="gpu", precision="f64", strict=True)
-    on_gpu = single_point(backend, trimer(), gpu)
-    on_cpu = single_point(backend, trimer(), cpu("f64"))
+    on_gpu = single_point(atomforge_backend, trimer(), gpu)
+    on_cpu = single_point(atomforge_backend, trimer(), cpu("f64"))
 
     assert on_gpu.energy == pytest.approx(on_cpu.energy, rel=1e-10)
     for gpu_force, cpu_force in zip(on_gpu.forces, on_cpu.forces):

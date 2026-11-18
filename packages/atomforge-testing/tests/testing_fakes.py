@@ -1,4 +1,6 @@
-from typing import Literal
+from typing import Annotated, Literal
+
+from pydantic import PlainSerializer
 
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.env.factory import DependencySummary, EnvironmentFactory
@@ -20,6 +22,16 @@ class FakeModel(ModelSpec):
 class RequiredFakeModel(ModelSpec):
     kind: Literal["fake-model"] = "fake-model"
     variant: str
+
+
+class JsonLossyFakeModel(ModelSpec):
+    """Round-trips through Python-mode dumps but not through JSON."""
+
+    kind: Literal["fake-model"] = "fake-model"
+    variant: Annotated[
+        Literal["small"],
+        PlainSerializer(lambda value: value.upper(), when_used="json"),
+    ] = "small"
 
 
 class MismatchedKindFakeModel(ModelSpec):

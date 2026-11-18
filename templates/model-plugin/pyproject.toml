@@ -27,10 +27,6 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = [
-    "atomforge_environment: opt-in AtomForge environment resolver contracts",
-    "atomforge_runtime: opt-in AtomForge runtime execution contracts",
-]
 # Fail on deprecation warnings, so that use of a deprecated atomforge API shows up
 # while the old API still works. Relax this if a third-party dependency warns.
 filterwarnings = ["error::DeprecationWarning"]

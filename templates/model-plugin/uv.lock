@@ -160,6 +160,7 @@ provides-extras = ["runtime"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "atomforge", editable = "../../" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
 ]
