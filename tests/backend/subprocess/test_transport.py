@@ -170,8 +170,10 @@ def process_is_gone(pid: int, wait: float = 5.0) -> bool:
             return True
         try:
             stat = Path(f"/proc/{pid}/stat").read_text()
-        except FileNotFoundError:
-            # No /proc (macOS), or the process was reaped after os.kill above.
+        except (FileNotFoundError, ProcessLookupError):
+            # No /proc (macOS), or the process was reaped after os.kill above:
+            # before the open (FileNotFoundError) or between open and read
+            # (ProcessLookupError, ESRCH).
             if sys.platform.startswith("linux"):
                 return True
         else:
