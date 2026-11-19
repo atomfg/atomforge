@@ -17,6 +17,7 @@ bfgs = "atomforge_builtins.task.bfgs.manifest:bfgs_manifest"
 optimize = "atomforge_builtins.task.optimize.manifest:optimize_manifest"
 analyze_symmetry = "atomforge_builtins.task.analyze_symmetry.manifest:analyze_symmetry_manifest"
 atomic_descriptor = "atomforge_builtins.task.atomic_descriptor.manifest:atomic_descriptor_manifest"
+describe_model_result = "atomforge_builtins.task.describe_model_result.manifest:describe_model_result_manifest"
 
 [project.entry-points.'atomforge.model']
 lennard_jones = "atomforge_builtins.model.ase_lj.manifest:lennard_jones_manifest"

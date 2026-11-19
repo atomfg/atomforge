@@ -89,12 +89,27 @@ def environment_profile_params(case) -> list:
     ]
 
 
+def result_request_params(case) -> list:
+    """Each declared property on its own and all declared properties
+    together (id ``all``), since executors can branch on what is
+    requested."""
+    try:
+        supported = case.manifest.supported_properties.load_symbol()
+    except Exception as exc:  # noqa: BLE001 - reported by the symbol contract
+        return _unloadable("supported properties", exc)
+    declared = [prop for prop in Property if prop in supported]
+    return [pytest.param(frozenset({prop}), id=prop.value) for prop in declared] + [
+        pytest.param(frozenset(declared), id="all")
+    ]
+
+
 # In this order, so that the profile comes first in a test id
 # (``[latest-stress]``).
 PARAMETRIZATIONS: dict[str, Callable] = {
     "atomforge_environment_profile": environment_profile_params,
     "atomforge_declared_property": declared_property_params,
     "atomforge_declared_resources": declared_resources_params,
+    "atomforge_result_request": result_request_params,
 }
 
 

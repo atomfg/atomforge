@@ -1,5 +1,9 @@
 from typing import Annotated, Literal
 
+# Imported here, before any pytester inner session: an in-process inner run
+# drops the modules it imported, and numpy cannot be loaded twice.
+import numpy
+
 from pydantic import PlainSerializer
 
 from atomforge_core.env.env import EnvironmentSpec
@@ -543,17 +547,11 @@ class TaskRunningBackend(InProcessBackend):
         return type(result).model_validate_json(result.model_dump_json())
 
 
-def _np():
-    import numpy as np
-
-    return np
-
-
 class NdarrayForcesExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if result.forces is not None:
-            result.forces = _np().asarray(result.forces)
+            result.forces = numpy.asarray(result.forces)
         return result
 
 
@@ -563,7 +561,7 @@ class ArrayRowsForcesExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if result.forces is not None:
-            result.forces = list(_np().asarray(result.forces))
+            result.forces = list(numpy.asarray(result.forces))
         return result
 
 
@@ -594,7 +592,7 @@ class Float32EnergyExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if result.energy is not None:
-            result.energy = _np().float32(result.energy)
+            result.energy = numpy.float32(result.energy)
         return result
 
 
@@ -602,7 +600,7 @@ class Float64EnergyExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if result.energy is not None:
-            result.energy = _np().float64(result.energy)
+            result.energy = numpy.float64(result.energy)
         return result
 
 
@@ -610,7 +608,7 @@ class Float32MagmomsExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if result.magmoms is not None:
-            result.magmoms = [_np().float32(m) for m in result.magmoms]
+            result.magmoms = [numpy.float32(m) for m in result.magmoms]
         return result
 
 
@@ -620,5 +618,5 @@ class BranchingForcesExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if frozenset(properties) == frozenset({Property.FORCES}):
-            result.forces = _np().asarray(result.forces)
+            result.forces = numpy.asarray(result.forces)
         return result
