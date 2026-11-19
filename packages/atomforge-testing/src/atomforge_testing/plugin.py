@@ -21,7 +21,11 @@ GATES = {
     ),
     "atomforge_gpu": (
         "--atomforge-gpu",
-        "execute models on a GPU (needs a machine with one)",
+        "execute models on a CUDA GPU (needs a machine with one)",
+    ),
+    "atomforge_mps": (
+        "--atomforge-mps",
+        "execute models on Apple's MPS (needs a Mac with Apple silicon)",
     ),
 }
 
@@ -58,6 +62,21 @@ def pytest_collection_modifyitems(
         for item in items:
             if item.get_closest_marker(marker) is not None:
                 item.add_marker(skip)
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """Parametrize contract tests from the case's manifest: one test per
+    declared property, declared resource combination and environment
+    profile."""
+    case = getattr(metafunc.cls, "manifest_case", None)
+    if case is None:
+        return
+
+    from atomforge_testing.capabilities import PARAMETRIZATIONS
+
+    for argname, parametrization in PARAMETRIZATIONS.items():
+        if argname in metafunc.fixturenames:
+            metafunc.parametrize(argname, parametrization(case))
 
 
 @pytest.fixture(scope="session")

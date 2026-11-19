@@ -316,30 +316,32 @@ def test_environment_contract_builds_model_environment(tmp_path):
     contract = FakeModelEnvironmentContract()
     contract.manifest_case = build_case(tmp_path)
 
-    contract.test_environment_factory_builds_model_environment()
+    contract.test_environment_factory_builds_model_environment("tested")
 
 
 def test_environment_contract_is_deterministic_for_model_spec(tmp_path):
     contract = FakeModelEnvironmentContract()
     contract.manifest_case = build_case(tmp_path)
 
-    contract.test_environment_factory_is_deterministic_for_model_spec()
+    contract.test_environment_factory_is_deterministic_for_model_spec("tested")
 
 
 def test_environment_contract_checks_provider_requirements(tmp_path):
     contract = FakeModelEnvironmentContract()
     contract.manifest_case = build_case(tmp_path)
 
-    contract.test_environment_provider_requirements_include_entry_point_package()
+    contract.test_environment_provider_requirements_include_entry_point_package(
+        "tested"
+    )
 
 
 def test_environment_contract_checks_dependency_summary_details(tmp_path):
     contract = FakeModelEnvironmentContract()
     contract.manifest_case = build_case(tmp_path)
 
-    contract.test_environment_requirements_are_declared_in_dependency_summary()
-    contract.test_environment_python_matches_dependency_summary()
-    contract.test_environment_channels_include_dependency_summary_channels()
+    contract.test_environment_requirements_are_declared_in_dependency_summary("tested")
+    contract.test_environment_python_matches_dependency_summary("tested")
+    contract.test_environment_channels_include_dependency_summary_channels("tested")
 
 
 def test_environment_contract_fails_on_undeclared_requirements(tmp_path):
@@ -350,7 +352,7 @@ def test_environment_contract_fails_on_undeclared_requirements(tmp_path):
     )
 
     with pytest.raises(ValueError):
-        contract.test_environment_factory_builds_model_environment()
+        contract.test_environment_factory_builds_model_environment("tested")
 
 
 def test_environment_contract_fails_on_non_deterministic_factory(tmp_path):
@@ -363,7 +365,7 @@ def test_environment_contract_fails_on_non_deterministic_factory(tmp_path):
     )
 
     with pytest.raises(AssertionError):
-        contract.test_environment_factory_is_deterministic_for_model_spec()
+        contract.test_environment_factory_is_deterministic_for_model_spec("tested")
 
 
 def test_environment_resolution_contract_uses_provider_resolution(
@@ -381,7 +383,7 @@ def test_environment_resolution_contract_uses_provider_resolution(
         lambda provider_tmp_path: provider,
     )
 
-    contract.test_environment_resolves_with_default_provider(tmp_path)
+    contract.test_environment_resolves_with_default_provider(tmp_path, "tested")
 
     assert len(provider.resolved_specs) == 1
     assert provider.resolved_specs[0].name == "fake-env"
@@ -408,7 +410,7 @@ def test_environment_resolution_contract_fails_with_diagnostics(
     )
 
     with pytest.raises(AssertionError) as exc_info:
-        contract.test_environment_resolves_with_default_provider(tmp_path)
+        contract.test_environment_resolves_with_default_provider(tmp_path, "tested")
 
     message = str(exc_info.value)
     assert "Environment resolution failed." in message

@@ -147,6 +147,17 @@ def fake_uv_provider(monkeypatch):
     return FakeUVEnvironmentProvider
 
 
+def assert_all(result, outcome: str) -> int:
+    """Every collected test ended with `outcome`, and there was at least one.
+    Returns how many. Counts are not fixed: they follow what the fake case
+    declares (one runtime test per property and resource combination)."""
+    found = result.parseoutcomes()
+    found.pop("warnings", None)
+    assert set(found) == {outcome}, found
+    assert found[outcome] > 0
+    return found[outcome]
+
+
 # Gating: environment resolution
 
 
@@ -201,7 +212,7 @@ def test_runtime_contracts_are_skipped_without_option(plugin_project):
 
     result = plugin_project.runpytest_inprocess()
 
-    result.assert_outcomes(skipped=4)
+    assert_all(result, "skipped")
 
 
 def test_runtime_environment_variable_no_longer_enables_runtime(
@@ -213,7 +224,7 @@ def test_runtime_environment_variable_no_longer_enables_runtime(
 
     result = plugin_project.runpytest_inprocess()
 
-    result.assert_outcomes(skipped=4)
+    assert_all(result, "skipped")
 
 
 def test_runtime_contracts_run_with_option(plugin_project):
@@ -222,7 +233,7 @@ def test_runtime_contracts_run_with_option(plugin_project):
 
     result = plugin_project.runpytest_inprocess("--atomforge-runtime")
 
-    result.assert_outcomes(passed=4)
+    assert_all(result, "passed")
 
 
 def test_gpu_marker_is_gated_by_gpu_option(plugin_project):
@@ -264,7 +275,7 @@ def test_contracts_collect_under_strict_markers(plugin_project):
 
     result = plugin_project.runpytest_inprocess("--strict-markers", "-W", "error")
 
-    result.assert_outcomes(skipped=5)
+    assert_all(result, "skipped")
 
 
 # The shared backend
@@ -302,16 +313,8 @@ def test_runtime_contracts_share_one_backend_closed_at_session_end(
 
     result = plugin_project.runpytest_inprocess("--atomforge-runtime")
 
-    result.assert_outcomes(passed=4)
-    assert RecordingBackend.events == [
-        "init",
-        "enter",
-        "execute",
-        "execute",
-        "execute",
-        "execute",
-        "exit",
-    ]
+    passed = assert_all(result, "passed")
+    assert RecordingBackend.events == ["init", "enter", *["execute"] * passed, "exit"]
 
 
 def test_no_backend_is_created_when_runtime_is_disabled(plugin_project, monkeypatch):
@@ -323,7 +326,7 @@ def test_no_backend_is_created_when_runtime_is_disabled(plugin_project, monkeypa
     )
     plugin_project.makepyfile(test_contracts=RUNTIME_TESTS)
 
-    plugin_project.runpytest_inprocess().assert_outcomes(skipped=4)
+    assert_all(plugin_project.runpytest_inprocess(), "skipped")
 
     assert RecordingBackend.events == []
 
