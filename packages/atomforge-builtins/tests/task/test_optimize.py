@@ -147,3 +147,17 @@ def test_optimize_max_steps_forwarding(
         TaskExecutionContext(model_executor=model_executor),
     )
     assert result.steps <= 1
+
+
+@pytest.mark.skipif(not HAS_ASE, reason="Requires ASE installation")
+@pytest.mark.parametrize("optimizer_name", ["bfgs", "lbfgs", "fire"])
+def test_optimize_converges_with_each_optimizer(
+    example_structure, optimize_executor, model_executor, optimizer_name
+):
+    # The model returns forces as nested lists, as ModelResult declares and
+    # plugins do; the optimizers need them as an array.
+    result = optimize_executor.execute(
+        Optimize(structure=example_structure, optimizer=optimizer_name),
+        TaskExecutionContext(model_executor=model_executor),
+    )
+    assert result.converged

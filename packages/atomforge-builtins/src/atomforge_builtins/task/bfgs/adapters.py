@@ -17,12 +17,15 @@ class ModelCalculatorAdapter:
                 self.model_executor = executor
 
             def calculate(self, atoms, properties=None, system_changes=None):
+                import numpy as np
+
                 structure = convert_to_structure(atoms)
                 model_result = self.model_executor.compute(
                     structure, {Property.ENERGY, Property.FORCES}
                 )
                 self.results["energy"] = model_result.energy
-                self.results["forces"] = model_result.forces
+                # ModelResult.forces is a nested list; ASE needs an array.
+                self.results["forces"] = np.asarray(model_result.forces, dtype=float)
 
         return ASEModelCalculatorAdapter(model_executor)
 
