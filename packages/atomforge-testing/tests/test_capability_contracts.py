@@ -166,11 +166,11 @@ def test_one_property_test_per_declared_property(pytester):
     result = pytester.runpytest_inprocess("--atomforge-runtime", "-v")
 
     assert matching(outcomes(result), PROPERTY_TEST) == {
-        "energy": "PASSED",
-        "forces": "PASSED",
-        "stress": "PASSED",
-        "energies": "PASSED",
-        "magmoms": "PASSED",
+        "tested-energy": "PASSED",
+        "tested-forces": "PASSED",
+        "tested-stress": "PASSED",
+        "tested-energies": "PASSED",
+        "tested-magmoms": "PASSED",
     }
 
 
@@ -185,8 +185,8 @@ def test_only_declared_properties_are_tested(pytester):
     result = pytester.runpytest_inprocess("--atomforge-runtime", "-v")
 
     assert matching(outcomes(result), PROPERTY_TEST) == {
-        "energy": "PASSED",
-        "forces": "PASSED",
+        "tested-energy": "PASSED",
+        "tested-forces": "PASSED",
     }
 
 
@@ -239,7 +239,7 @@ def test_malformed_property_fails_its_own_test(pytester, executor, failing):
     result = pytester.runpytest_inprocess("--atomforge-runtime", "-v")
 
     found = matching(outcomes(result), PROPERTY_TEST)
-    assert found.pop(failing) == "FAILED"
+    assert found.pop(f"tested-{failing}") == "FAILED"
     assert set(found.values()) == {"PASSED"}
 
 
@@ -264,10 +264,10 @@ def test_cpu_combinations_run_and_gpu_needs_its_option(pytester):
     result = pytester.runpytest_inprocess("--atomforge-runtime", "-v")
 
     assert matching(outcomes(result), RESOURCES_TEST) == {
-        "cpu-f32": "PASSED",
-        "cpu-f64": "PASSED",
-        "gpu-f32": "SKIPPED",
-        "gpu-f64": "SKIPPED",
+        "tested-cpu-f32": "PASSED",
+        "tested-cpu-f64": "PASSED",
+        "tested-gpu-f32": "SKIPPED",
+        "tested-gpu-f64": "SKIPPED",
     }
 
 
@@ -292,12 +292,12 @@ def test_mps_needs_its_own_option(pytester):
     )
 
     assert matching(outcomes(gpu_only), RESOURCES_TEST) == {
-        "cpu-f32": "PASSED",
-        "mps-f32": "SKIPPED",
+        "tested-cpu-f32": "PASSED",
+        "tested-mps-f32": "SKIPPED",
     }
     assert matching(outcomes(with_mps), RESOURCES_TEST) == {
-        "cpu-f32": "PASSED",
-        "mps-f32": "PASSED",
+        "tested-cpu-f32": "PASSED",
+        "tested-mps-f32": "PASSED",
     }
 
 
@@ -320,7 +320,9 @@ def test_undeclared_precision_uses_the_default(pytester):
 
     result = pytester.runpytest_inprocess("--atomforge-runtime", "-v")
 
-    assert matching(outcomes(result), RESOURCES_TEST) == {"cpu-default": "PASSED"}
+    assert matching(outcomes(result), RESOURCES_TEST) == {
+        "tested-cpu-default": "PASSED"
+    }
 
 
 def test_declared_precision_that_fails_strictly_fails_its_test(pytester):
@@ -334,8 +336,8 @@ def test_declared_precision_that_fails_strictly_fails_its_test(pytester):
     result = pytester.runpytest_inprocess("--atomforge-runtime", "-v")
 
     found = matching(outcomes(result), RESOURCES_TEST)
-    assert found["cpu-f32"] == "PASSED"
-    assert found["cpu-f64"] == "FAILED"
+    assert found["tested-cpu-f32"] == "PASSED"
+    assert found["tested-cpu-f64"] == "FAILED"
 
 
 # Environment profiles

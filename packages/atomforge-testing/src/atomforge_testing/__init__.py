@@ -7,6 +7,7 @@ from atomforge_testing.model_manifest import (
     ModelManifestSymbolContract,
     ModelPhysicsContract,
     ModelPluginContract,
+    ModelReferenceContract,
     ModelSpecContract,
     ModelSinglePointRuntimeContract,
 )
@@ -21,6 +22,7 @@ __all__ = [
     "ModelPhysics",
     "ModelPhysicsContract",
     "ModelPluginContract",
+    "ModelReferenceContract",
     "ModelRegistryContract",
     "ModelSpecContract",
     "ModelSinglePointRuntimeContract",

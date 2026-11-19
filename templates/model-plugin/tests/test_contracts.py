@@ -4,6 +4,9 @@ expects. Add one test class per model in the plugin.
     uv run pytest                            # wiring
     uv run pytest --atomforge-environment    # + the model environment resolves
     uv run pytest --atomforge-runtime        # + runs the model
+
+The runtime run also compares the model's results with the references in
+tests/test_contracts/; a missing one is recorded on the first run.
 """
 
 from pathlib import Path

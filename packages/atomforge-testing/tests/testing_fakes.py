@@ -459,3 +459,49 @@ class HiddenWrongSignExecutor(ModelExecutor[FakeModel]):
             result.forces[1][1] -= self.FIELD
             result.forces = [[-c for c in f] for f in result.forces]
         return result
+
+
+# Runtime contracts per profile, and reference values (step 4)
+
+
+class LatestWrongSignExecutor(ModelExecutor[ProfiledFakeModel]):
+    """Exact with the tested profile; forces with the wrong sign with latest."""
+
+    def compute(self, structure, properties):
+        result = spring_result(structure, properties)
+        if self.spec.environment_profile == "latest" and result.forces is not None:
+            result.forces = [[-c for c in f] for f in result.forces]
+        return result
+
+
+class ShiftedSpringExecutor(ModelExecutor[FakeModel]):
+    """The spring model with every value of one array shifted by a set
+    amount, in every run or only in f32 runs. Tests set the class attributes
+    between inner sessions."""
+
+    shifts: dict[str, float] = {}
+    f32_shifts: dict[str, float] = {}
+
+    def compute(self, structure, properties):
+        result = spring_result(structure, properties)
+        shifts = dict(type(self).shifts)
+        if self.resolved_resources.precision == "f32":
+            for key, value in type(self).f32_shifts.items():
+                shifts[key] = shifts.get(key, 0.0) + value
+        n_atoms = len(structure.numbers)
+        if result.energy is not None:
+            result.energy += n_atoms * shifts.get("energy_per_atom", 0.0)
+        if result.forces is not None:
+            shift = shifts.get("forces", 0.0)
+            result.forces = [[c + shift for c in f] for f in result.forces]
+        if result.stress is not None:
+            shift = shifts.get("stress", 0.0)
+            result.stress = [[c + shift for c in row] for row in result.stress]
+        return result
+
+
+class OtherKindFakeModel(ModelSpec):
+    kind: Literal["other-fake-model"] = "other-fake-model"
+
+
+EnergyForcesStress = frozenset({Property.ENERGY, Property.FORCES, Property.STRESS})

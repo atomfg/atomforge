@@ -25,7 +25,7 @@ from atomforge_runtime.registry.model.model_helpers import (
 from atomforge_runtime.registry.model.model_registry import ModelRegistry
 
 from atomforge_testing import physics
-from atomforge_testing.physics import ModelPhysics, Tolerances
+from atomforge_testing.physics import ModelPhysics, ReferenceTolerances, Tolerances
 from atomforge_testing.capabilities import (  # noqa: F401 - re-exported
     PROPERTY_CHECKS,
     assert_energies_result,
@@ -80,6 +80,9 @@ class ModelManifestCase:
     # None uses atomforge_testing.structures.reference_structures(); a mapping
     # replaces them, and the checks of a structure it leaves out are skipped.
     physics_structures: Mapping[str, StructureData] | None = None
+    # Replacement for the reference comparison's tolerances
+    # (atomforge_testing.physics.REFERENCE_TOLERANCES).
+    reference_tolerances: ReferenceTolerances | None = None
 
     def __post_init__(self) -> None:
         if self.physics_structures is not None:
@@ -443,6 +446,17 @@ class _RuntimeContract(_ManifestCaseContract):
             return periodic_bulk()
         return structure
 
+    def _physics_structure(self, name: str) -> StructureData:
+        if self.case.physics_structures is None:
+            from atomforge_testing.structures import reference_structures
+
+            structures = reference_structures()
+        else:
+            structures = self.case.physics_structures
+        if name not in structures:
+            pytest.skip(f"the case has no {name} physics structure")
+        return structures[name]
+
     def _runtime_exec_resources(self) -> ExecutionResources:
         if self.case.runtime_exec_resources is not None:
             return self.case.runtime_exec_resources
@@ -454,6 +468,7 @@ class _RuntimeContract(_ManifestCaseContract):
         properties: frozenset[Property],
         structure: StructureData,
         resources: ExecutionResources,
+        environment_profile: str | None = None,
     ):
         if self.case.runtime_skip_reason is not None:
             pytest.skip(self.case.runtime_skip_reason)
@@ -461,7 +476,7 @@ class _RuntimeContract(_ManifestCaseContract):
         from atomforge_builtins.task.single_point import SinglePoint
 
         task = SinglePoint(structure=structure, properties=properties)
-        model = self._build_model_spec()
+        model = self._build_model_spec(environment_profile)
         return backend.execute(task, model=model, exec_resources=resources)
 
 
@@ -471,7 +486,10 @@ class ModelSinglePointRuntimeContract(_RuntimeContract):
 
     @pytest.mark.atomforge_runtime
     def test_declared_property_is_returned(
-        self, atomforge_backend, atomforge_declared_property
+        self,
+        atomforge_backend,
+        atomforge_environment_profile,
+        atomforge_declared_property,
     ):
         prop = atomforge_declared_property
         structure = self._structure_for(prop)
@@ -481,13 +499,17 @@ class ModelSinglePointRuntimeContract(_RuntimeContract):
             frozenset({prop}),
             structure,
             self._runtime_exec_resources(),
+            atomforge_environment_profile,
         )
 
         PROPERTY_CHECKS[prop](result, structure)
 
     @pytest.mark.atomforge_runtime
     def test_declared_resources_execute_strictly(
-        self, atomforge_backend, atomforge_declared_resources
+        self,
+        atomforge_backend,
+        atomforge_environment_profile,
+        atomforge_declared_resources,
     ):
         registration, _ = self._convert_manifest()
         supported = registration.load_supported_properties()
@@ -502,6 +524,7 @@ class ModelSinglePointRuntimeContract(_RuntimeContract):
             frozenset({prop}),
             structure,
             atomforge_declared_resources,
+            atomforge_environment_profile,
         )
 
         PROPERTY_CHECKS[prop](result, structure)
@@ -524,17 +547,6 @@ class ModelPhysicsContract(_RuntimeContract):
     (atomforge_testing.physics). Each check runs on the reference structures
     it applies to, or on the case's ``physics_structures``."""
 
-    def _physics_structure(self, name: str) -> StructureData:
-        if self.case.physics_structures is None:
-            from atomforge_testing.structures import reference_structures
-
-            structures = reference_structures()
-        else:
-            structures = self.case.physics_structures
-        if name not in structures:
-            pytest.skip(f"the case has no {name} physics structure")
-        return structures[name]
-
     def _require_physics(self, *properties: str) -> None:
         missing = self.case.physics.missing(*properties)
         if missing:
@@ -544,12 +556,13 @@ class ModelPhysicsContract(_RuntimeContract):
     def _tolerances(self, resources: ExecutionResources) -> Tolerances:
         return physics.tolerances_for(resources.precision, self.case.tolerances)
 
-    def _run(self, backend, structure, properties, resources=None):
+    def _run(self, backend, profile, structure, properties, resources=None):
         return self._execute_single_point(
             backend,
             frozenset(properties),
             structure,
             resources or self._runtime_exec_resources(),
+            profile,
         )
 
     def _finite_difference_resources(self) -> ExecutionResources:
@@ -562,16 +575,22 @@ class ModelPhysicsContract(_RuntimeContract):
     @pytest.mark.atomforge_runtime
     @ALL_STRUCTURES
     def test_energy_is_invariant_under_translation(
-        self, atomforge_backend, structure_name
+        self, atomforge_backend, atomforge_environment_profile, structure_name
     ):
         self._require_physics("translation_invariant")
         self._require(Property.ENERGY)
         structure = self._physics_structure(structure_name)
         tolerance = self._tolerances(self._runtime_exec_resources())
 
-        before = self._run(atomforge_backend, structure, {Property.ENERGY})
+        before = self._run(
+            atomforge_backend,
+            atomforge_environment_profile,
+            structure,
+            {Property.ENERGY},
+        )
         after = self._run(
             atomforge_backend,
+            atomforge_environment_profile,
             physics.translated(structure, TRANSLATION),
             {Property.ENERGY},
         )
@@ -588,16 +607,22 @@ class ModelPhysicsContract(_RuntimeContract):
     @pytest.mark.atomforge_runtime
     @MOLECULE
     def test_energy_is_invariant_under_rotation(
-        self, atomforge_backend, structure_name
+        self, atomforge_backend, atomforge_environment_profile, structure_name
     ):
         self._require_physics("rotation_invariant")
         self._require(Property.ENERGY)
         structure = self._physics_structure(structure_name)
         tolerance = self._tolerances(self._runtime_exec_resources())
 
-        before = self._run(atomforge_backend, structure, {Property.ENERGY})
+        before = self._run(
+            atomforge_backend,
+            atomforge_environment_profile,
+            structure,
+            {Property.ENERGY},
+        )
         after = self._run(
             atomforge_backend,
+            atomforge_environment_profile,
             physics.rotated(structure, ROTATION_AXIS, ROTATION_DEGREES),
             {Property.ENERGY},
         )
@@ -612,13 +637,20 @@ class ModelPhysicsContract(_RuntimeContract):
 
     @pytest.mark.atomforge_runtime
     @MOLECULE
-    def test_forces_sum_to_zero(self, atomforge_backend, structure_name):
+    def test_forces_sum_to_zero(
+        self, atomforge_backend, atomforge_environment_profile, structure_name
+    ):
         self._require_physics("conservative_forces", "translation_invariant")
         self._require(Property.FORCES)
         structure = self._physics_structure(structure_name)
         tolerance = self._tolerances(self._runtime_exec_resources())
 
-        result = self._run(atomforge_backend, structure, {Property.FORCES})
+        result = self._run(
+            atomforge_backend,
+            atomforge_environment_profile,
+            structure,
+            {Property.FORCES},
+        )
 
         deviation = physics.net_force_per_atom(result.forces)
         assert deviation <= tolerance.forces, (
@@ -628,7 +660,9 @@ class ModelPhysicsContract(_RuntimeContract):
 
     @pytest.mark.atomforge_runtime
     @ALL_STRUCTURES
-    def test_forces_match_energy_gradient(self, atomforge_backend, structure_name):
+    def test_forces_match_energy_gradient(
+        self, atomforge_backend, atomforge_environment_profile, structure_name
+    ):
         self._require_physics("conservative_forces")
         self._require(Property.ENERGY, Property.FORCES)
         structure = self._physics_structure(structure_name)
@@ -637,7 +671,11 @@ class ModelPhysicsContract(_RuntimeContract):
         step = tolerance.finite_difference_step
 
         forces = self._run(
-            atomforge_backend, structure, {Property.FORCES}, resources
+            atomforge_backend,
+            atomforge_environment_profile,
+            structure,
+            {Property.FORCES},
+            resources,
         ).forces
         coordinates = physics.largest_force_coordinates(forces)
         largest = abs(forces[coordinates[0][0]][coordinates[0][1]])
@@ -655,6 +693,7 @@ class ModelPhysicsContract(_RuntimeContract):
             plus, minus = (
                 self._run(
                     atomforge_backend,
+                    atomforge_environment_profile,
                     physics.displaced(structure, atom, axis, sign * step),
                     {Property.ENERGY},
                     resources,
@@ -676,15 +715,19 @@ class ModelPhysicsContract(_RuntimeContract):
     @pytest.mark.atomforge_runtime
     @ALL_STRUCTURES
     def test_repeated_request_gives_same_result(
-        self, atomforge_backend, structure_name
+        self, atomforge_backend, atomforge_environment_profile, structure_name
     ):
         self._require(Property.ENERGY)
         properties = {Property.ENERGY, Property.FORCES} & self._supported_properties()
         structure = self._physics_structure(structure_name)
         tolerance = self._tolerances(self._runtime_exec_resources())
 
-        first = self._run(atomforge_backend, structure, properties)
-        second = self._run(atomforge_backend, structure, properties)
+        first = self._run(
+            atomforge_backend, atomforge_environment_profile, structure, properties
+        )
+        second = self._run(
+            atomforge_backend, atomforge_environment_profile, structure, properties
+        )
 
         energy_deviation = physics.energy_per_atom_difference(
             first.energy, second.energy, len(structure.numbers)
@@ -704,13 +747,18 @@ class ModelPhysicsContract(_RuntimeContract):
 
     @pytest.mark.atomforge_runtime
     @ALL_STRUCTURES
-    def test_per_atom_energies_sum_to_energy(self, atomforge_backend, structure_name):
+    def test_per_atom_energies_sum_to_energy(
+        self, atomforge_backend, atomforge_environment_profile, structure_name
+    ):
         self._require(Property.ENERGY, Property.ENERGIES)
         structure = self._physics_structure(structure_name)
         tolerance = self._tolerances(self._runtime_exec_resources())
 
         result = self._run(
-            atomforge_backend, structure, {Property.ENERGY, Property.ENERGIES}
+            atomforge_backend,
+            atomforge_environment_profile,
+            structure,
+            {Property.ENERGY, Property.ENERGIES},
         )
 
         deviation = physics.per_atom_energies_deviation(result.energies, result.energy)
@@ -722,18 +770,98 @@ class ModelPhysicsContract(_RuntimeContract):
 
     @pytest.mark.atomforge_runtime
     @PERIODIC
-    def test_stress_is_symmetric(self, atomforge_backend, structure_name):
+    def test_stress_is_symmetric(
+        self, atomforge_backend, atomforge_environment_profile, structure_name
+    ):
         self._require_physics("conservative_forces", "rotation_invariant")
         self._require(Property.STRESS)
         structure = self._physics_structure(structure_name)
         tolerance = self._tolerances(self._runtime_exec_resources())
 
-        result = self._run(atomforge_backend, structure, {Property.STRESS})
+        result = self._run(
+            atomforge_backend,
+            atomforge_environment_profile,
+            structure,
+            {Property.STRESS},
+        )
 
         deviation = physics.stress_asymmetry(result.stress)
         assert deviation <= tolerance.stress, (
             f"stress of the {structure_name} is asymmetric by "
             f"{deviation:.3g} eV/Å³ (tolerance {tolerance.stress:.3g})"
+        )
+
+
+class ModelReferenceContract(_RuntimeContract):
+    """Compares results on the physics structures with references stored next
+    to the plugin's tests (pytest-regressions' ``ndarrays_regression``; needs
+    ``atomforge-testing[regression]``).
+
+    One reference per structure, named ``<kind>-<structure>.npz``. The
+    ``tested`` profile's test records it when it is missing, or under
+    ``--force-regen`` or ``--regen-all``: on CPU, at the highest declared
+    precision. Every profile compares its result, at the case's runtime
+    resources, with the same reference and the reference tolerances.
+    """
+
+    def _reference_tolerances(self) -> ReferenceTolerances:
+        if self.case.reference_tolerances is not None:
+            return self.case.reference_tolerances
+        return physics.REFERENCE_TOLERANCES
+
+    @pytest.mark.atomforge_runtime
+    @ALL_STRUCTURES
+    def test_matches_reference(
+        self, request, atomforge_backend, atomforge_environment_profile, structure_name
+    ):
+        from atomforge_testing import reference
+
+        self._require(Property.ENERGY)
+        structure = self._physics_structure(structure_name)
+        regression = reference.ndarrays_regression(request)
+        name = reference.reference_name(self.case.manifest.kind, structure_name)
+        path = request.getfixturevalue("original_datadir") / f"{name}.npz"
+        regenerating = request.config.getoption(
+            "force_regen"
+        ) or request.config.getoption("regen_all")
+        records = atomforge_environment_profile == reference.RECORDING_PROFILE
+
+        if not records:
+            if regenerating:
+                pytest.skip(
+                    "references are being regenerated; only the "
+                    f"{reference.RECORDING_PROFILE} profile records them"
+                )
+            if not path.is_file():
+                pytest.fail(
+                    f"no reference {path}; run test_matches_reference"
+                    f"[{reference.RECORDING_PROFILE}-{structure_name}] to record it",
+                    pytrace=False,
+                )
+
+        supported = self._supported_properties()
+        properties = {Property.ENERGY}
+        if Property.FORCES in supported:
+            properties.add(Property.FORCES)
+        if Property.STRESS in supported and any(structure.pbc):
+            properties.add(Property.STRESS)
+
+        if records and (regenerating or not path.is_file()):
+            capabilities = self.case.manifest.resource_capabilities.load_symbol()
+            resources = reference.recording_resources(capabilities)
+            profile = reference.RECORDING_PROFILE
+        else:
+            resources = self._runtime_exec_resources()
+            profile = atomforge_environment_profile
+
+        result = self._execute_single_point(
+            atomforge_backend, frozenset(properties), structure, resources, profile
+        )
+
+        regression.check(
+            reference.arrays(result, len(structure.numbers)),
+            basename=name,
+            tolerances=reference.tolerances(self._reference_tolerances()),
         )
 
 
@@ -746,6 +874,7 @@ class ModelPluginContract(
     ModelEnvironmentResolutionContract,
     ModelSinglePointRuntimeContract,
     ModelPhysicsContract,
+    ModelReferenceContract,
 ):
     """Every model plugin contract. Subclass it once per model and set
     ``manifest_case``; the environment and runtime contracts run only with

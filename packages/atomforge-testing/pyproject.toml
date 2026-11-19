@@ -17,6 +17,11 @@ dependencies = [
 runtime = [
     "atomforge",
 ]
+# Reference values (ModelReferenceContract).
+regression = [
+    "numpy",
+    "pytest-regressions>=2.11",
+]
 
 [project.entry-points.pytest11]
 atomforge_testing = "atomforge_testing.plugin"
@@ -30,6 +35,8 @@ dev = [
     "atomforge",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+    "numpy",
+    "pytest-regressions>=2.11",
 ]
 
 [tool.pytest.ini_options]

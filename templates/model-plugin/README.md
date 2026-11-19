@@ -46,6 +46,11 @@ The options combine. Add `--atomforge-gpu` on a machine with a CUDA GPU, and
 to select, e.g. `uv run pytest --atomforge-runtime -m atomforge_runtime` runs only
 the tests that execute the model.
 
+With `--atomforge-runtime`, the model's results are also compared with reference
+values stored in `tests/test_contracts/` (one `.npz` file per structure). A missing
+reference is recorded by the first run, which fails so that you commit the file;
+after an intended change, `--force-regen` rewrites the references that differ.
+
 ## Make it yours
 
 1. Rename the distribution (`pyproject.toml`), the package `atomforge_template` and
@@ -58,3 +63,6 @@ the tests that execute the model.
    metadata in `definitions.py`.
 4. Rewrite `resources.py` for your framework, and replace the reference values in
    `tests/test_torch_lj.py` with ones for your model.
+5. Delete `tests/test_contracts/torch-lj-*.npz`, run
+   `uv run pytest --atomforge-runtime` once to record your model's references,
+   and commit them.
