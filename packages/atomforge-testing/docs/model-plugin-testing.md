@@ -120,6 +120,34 @@ marks through inheritance.
     `ResourceCapabilities` declares. A capability left as `None` runs as
     `default`. `gpu` combinations need `--atomforge-gpu`, `mps` combinations
     `--atomforge-mps`.
+- `ModelPhysicsContract`: opt-in model-independent physics checks, run on the
+  physics structures (below) with the case's `runtime_exec_resources`:
+  - `test_energy_is_invariant_under_translation[<structure>]`
+  - `test_energy_is_invariant_under_rotation[molecule]`
+  - `test_forces_sum_to_zero[molecule]`
+  - `test_forces_match_energy_gradient[<structure>]`: central finite
+    differences of the energy on the three largest force components, in f64
+    if the model declares it. Fails as uninformative if the largest component
+    is below ten times the tolerance, since a wrong sign could then pass.
+  - `test_repeated_request_gives_same_result[<structure>]`
+  - `test_per_atom_energies_sum_to_energy[<structure>]`
+  - `test_stress_is_symmetric[slab]`, `[bulk]`
+
+  Deviations are compared with tolerances per precision
+  (`atomforge_testing.physics.DEFAULT_TOLERANCES`, measured on the existing
+  plugins; `default` precision uses the f32 set). Replace them per precision
+  with the case's `tolerances={"f32": Tolerances(...)}`.
+
+  A model that lacks a property a check relies on declares it in the case, and
+  the checks that rely on it are skipped:
+
+  ```python
+  # Direct forces, rotational symmetry learned from data.
+  physics=ModelPhysics(conservative_forces=False, rotation_invariant=False)
+  ```
+
+  Zero net force needs conservative and translation-invariant forces;
+  symmetric stress needs conservative and rotation-invariant ones.
 
 The environment contracts run once per environment profile: the values of your
 spec's `environment_profile` `Literal` (e.g. `[tested]` and `[latest]`), or only
@@ -129,9 +157,14 @@ tests are skipped and `ModelManifestSymbolContract` reports the error.
 
 Reference structures are available from `atomforge_testing.structures`:
 
-- `small_molecule()`
-- `periodic_bulk()`
-- `isolated_atom()`
+- `small_molecule()`, `periodic_bulk()`, `isolated_atom()`: small structures
+  for the single-point runtime contract.
+- `reference_structures()`: the physics structures, near equilibrium with
+  every atom slightly displaced (seeded, so always the same):
+  `"molecule"` (ethanol), `"slab"` (Cu(111), 2×2, three layers) and `"bulk"`
+  (diamond Si). A model that cannot run one of them, or needs others, sets
+  `physics_structures={"molecule": ...}` in its case; the checks of a
+  structure left out are skipped.
 
 ## Common Failures
 

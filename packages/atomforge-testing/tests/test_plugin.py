@@ -18,6 +18,7 @@ from atomforge_testing import (
     ModelEnvironmentResolutionContract,
     ModelManifestContract,
     ModelManifestSymbolContract,
+    ModelPhysicsContract,
     ModelRegistryContract,
     ModelSinglePointRuntimeContract,
     ModelSpecContract,
@@ -342,6 +343,7 @@ CONTRACTS = (
     ModelEnvironmentContract,
     ModelEnvironmentResolutionContract,
     ModelSinglePointRuntimeContract,
+    ModelPhysicsContract,
 )
 
 
@@ -409,5 +411,7 @@ def test_bundle_marks_only_gated_tests(plugin_project):
     runtime = collected("-m", "atomforge_runtime")
     environment = collected("-m", "atomforge_environment")
 
-    assert runtime == contract_test_names(ModelSinglePointRuntimeContract)
+    assert runtime == contract_test_names(
+        ModelSinglePointRuntimeContract
+    ) | contract_test_names(ModelPhysicsContract)
     assert environment == contract_test_names(ModelEnvironmentResolutionContract)
