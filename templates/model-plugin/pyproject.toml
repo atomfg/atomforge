@@ -17,7 +17,7 @@ torch_lj = "atomforge_template.manifest:torch_lj_manifest"
 
 [dependency-groups]
 dev = [
-    "atomforge-testing[runtime]>=0.1.0a1",
+    "atomforge-testing[runtime,regression]>=0.1.0a1",
     "pytest>=9.0.3",
 ]
 

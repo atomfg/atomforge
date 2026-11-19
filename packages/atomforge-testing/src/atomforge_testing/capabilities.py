@@ -89,10 +89,12 @@ def environment_profile_params(case) -> list:
     ]
 
 
+# In this order, so that the profile comes first in a test id
+# (``[latest-stress]``).
 PARAMETRIZATIONS: dict[str, Callable] = {
+    "atomforge_environment_profile": environment_profile_params,
     "atomforge_declared_property": declared_property_params,
     "atomforge_declared_resources": declared_resources_params,
-    "atomforge_environment_profile": environment_profile_params,
 }
 
 

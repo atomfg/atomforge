@@ -77,7 +77,7 @@ class Tolerances:
 DEFAULT_TOLERANCES: Mapping[str, Tolerances] = {
     "f32": Tolerances(
         energy_per_atom=1e-5,
-        forces=1e-4,
+        forces=3e-4,
         stress=1e-7,
         finite_difference=3e-2,
         finite_difference_step=3e-3,
@@ -90,6 +90,28 @@ DEFAULT_TOLERANCES: Mapping[str, Tolerances] = {
         finite_difference_step=1e-4,
     ),
 }
+
+
+@dataclass(frozen=True)
+class ReferenceTolerances:
+    """Absolute tolerances for comparing a result with a stored reference
+    (`ModelReferenceContract`), in the units of `Tolerances`."""
+
+    energy_per_atom: float
+    forces: float
+    stress: float
+
+
+# Measured: ten times the largest difference observed between conditions
+# (f32 against f64, tested against latest, CPU against MPS) on the existing
+# plugins, rounded up to 1 or 3 x 10^n; see the same research post. One set for
+# every precision, since a reference is recorded once and checked on other
+# machines and in other precisions.
+REFERENCE_TOLERANCES = ReferenceTolerances(
+    energy_per_atom=1e-5,
+    forces=3e-4,
+    stress=3e-5,
+)
 
 
 def tolerance_key(precision: str | None) -> str:

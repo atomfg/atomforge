@@ -8,7 +8,7 @@ expects.
 ```toml
 [dependency-groups]
 dev = [
-    "atomforge-testing[runtime]",
+    "atomforge-testing[runtime,regression]",
     "pytest>=9.0.3",
 ]
 ```
@@ -109,29 +109,29 @@ marks through inheritance.
 - `ModelEnvironmentResolutionContract`: opt-in provider dry-run resolution for
   the model environment.
 - `ModelSinglePointRuntimeContract`: opt-in execution through the backend:
-  - `test_declared_property_is_returned[<property>]`: each declared property,
-    requested alone, comes back finite and in the right shape: `energy` a
+  - `test_declared_property_is_returned[<profile>-<property>]`: each declared
+    property, requested alone, comes back finite and in the right shape: `energy` a
     number, `forces` one 3-vector per atom, `stress` 3×3, `energies` and
     `magmoms` one value per atom. Stress is requested on a periodic structure:
     the case's `runtime_structure` if it is periodic, otherwise
     `structures.periodic_bulk()`.
-  - `test_declared_resources_execute_strictly[<accelerator>-<precision>]`: a
-    single point runs with `strict=True` for every combination your
+  - `test_declared_resources_execute_strictly[<profile>-<accelerator>-<precision>]`:
+    a single point runs with `strict=True` for every combination your
     `ResourceCapabilities` declares. A capability left as `None` runs as
     `default`. `gpu` combinations need `--atomforge-gpu`, `mps` combinations
     `--atomforge-mps`.
 - `ModelPhysicsContract`: opt-in model-independent physics checks, run on the
   physics structures (below) with the case's `runtime_exec_resources`:
-  - `test_energy_is_invariant_under_translation[<structure>]`
-  - `test_energy_is_invariant_under_rotation[molecule]`
-  - `test_forces_sum_to_zero[molecule]`
-  - `test_forces_match_energy_gradient[<structure>]`: central finite
+  - `test_energy_is_invariant_under_translation[<profile>-<structure>]`
+  - `test_energy_is_invariant_under_rotation[<profile>-molecule]`
+  - `test_forces_sum_to_zero[<profile>-molecule]`
+  - `test_forces_match_energy_gradient[<profile>-<structure>]`: central finite
     differences of the energy on the three largest force components, in f64
     if the model declares it. Fails as uninformative if the largest component
     is below ten times the tolerance, since a wrong sign could then pass.
-  - `test_repeated_request_gives_same_result[<structure>]`
-  - `test_per_atom_energies_sum_to_energy[<structure>]`
-  - `test_stress_is_symmetric[slab]`, `[bulk]`
+  - `test_repeated_request_gives_same_result[<profile>-<structure>]`
+  - `test_per_atom_energies_sum_to_energy[<profile>-<structure>]`
+  - `test_stress_is_symmetric[<profile>-slab]`, `[<profile>-bulk]`
 
   Deviations are compared with tolerances per precision
   (`atomforge_testing.physics.DEFAULT_TOLERANCES`, measured on the existing
@@ -149,11 +149,27 @@ marks through inheritance.
   Zero net force needs conservative and translation-invariant forces;
   symmetric stress needs conservative and rotation-invariant ones.
 
-The environment contracts run once per environment profile: the values of your
-spec's `environment_profile` `Literal` (e.g. `[tested]` and `[latest]`), or only
-`tested` if the field is not a `Literal`. The contracts are parametrized from the
-manifest when pytest collects them; if a manifest symbol cannot be loaded, those
-tests are skipped and `ModelManifestSymbolContract` reports the error.
+- `ModelReferenceContract`: opt-in comparison with reference values stored
+  next to your tests, through pytest-regressions (needs the `regression`
+  extra):
+  - `test_matches_reference[<profile>-<structure>]`: energy per atom, forces,
+    and stress (when declared, on periodic structures) on each physics
+    structure, against `tests/<test module>/<kind>-<structure>.npz`, within
+    `atomforge_testing.physics.REFERENCE_TOLERANCES` (absolute; replace with
+    the case's `reference_tolerances=ReferenceTolerances(...)`).
+  - A missing reference fails the `[tested-…]` test, which records it on CPU
+    at the highest declared precision; commit the file. `--force-regen`
+    rewrites references that differ, `--regen-all` all of them. Other
+    profiles compare with the `tested` reference and never write.
+
+Every contract that builds or runs the model runs once per environment
+profile: the values of your spec's `environment_profile` `Literal` (e.g.
+`tested` and `latest`), or only `tested` if the field is not a `Literal`. The
+profile comes first in the test id (`[latest-stress]`, `[latest-bulk]`), so
+the `latest` profile gets the same runtime, physics and reference checks as
+`tested`, with no second test class. The contracts are parametrized from the
+manifest when pytest collects them; if a manifest symbol cannot be loaded,
+those tests are skipped and `ModelManifestSymbolContract` reports the error.
 
 Reference structures are available from `atomforge_testing.structures`:
 
@@ -179,3 +195,9 @@ skipped or fails, see [How the plugin tests work](plugin-tests.md).
 - Environment resolver failures: the provider cannot solve the generated model
   environment, often due to incompatible Python or dependency constraints.
 - Runtime import errors: the model environment requirements are incomplete.
+- `File not found in data directory, created: ...npz`: a new reference was
+  recorded; check it in and run again.
+- `no reference ...; run test_matches_reference[tested-...]`: a non-`tested`
+  profile ran before any reference was recorded.
+- `the reference contract needs pytest-regressions and numpy`: add
+  `atomforge-testing[regression]` to the test dependencies.

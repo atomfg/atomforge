@@ -3,7 +3,8 @@
 A model plugin gets its tests from `atomforge-testing`. The plugin writes one
 short class per model, and pytest turns it into a few dozen tests that check the
 plugin is wired the way atomforge expects, that its environment resolves, that
-the model runs, and that its results obey basic physics.
+the model runs, that its results obey basic physics, and that they have not
+changed since they were recorded.
 
 This page explains how that happens: what the class gives you, where each test
 comes from, and why a test runs, is skipped or fails. For the steps to set up the
@@ -28,7 +29,7 @@ class TestTorchLJ(ModelPluginContract):  # (1)!
     )
 ```
 
-1.  `ModelPluginContract` contains no tests of its own. It inherits from eight
+1.  `ModelPluginContract` contains no tests of its own. It inherits from nine
     *contracts*, classes of test methods that know nothing about any particular
     model. Pytest collects inherited `test_*` methods, so `TestTorchLJ` gets all
     of them.
@@ -48,21 +49,25 @@ class TestTorchLJ(ModelPluginContract):  # (1)!
 6.  The structure for the basic runtime tests (`small_molecule()` by default).
     A test of stress uses `structures.periodic_bulk()` instead when this
     structure is not periodic.
-7.  The resources for the runtime and physics tests (CPU and f32 by default).
-8.  The structures for the physics checks. By default they are all three
-    reference structures, a molecule, a slab and a bulk crystal; this model only
-    handles non-periodic systems, so it keeps the molecule, and the checks on the
-    slab and bulk are skipped.
+7.  The resources for the runtime, physics and reference tests (CPU and f32 by
+    default).
+8.  The structures for the physics checks and the reference values. By default
+    they are all three reference structures, a molecule, a slab and a bulk
+    crystal; this model only handles non-periodic systems, so it keeps the
+    molecule, and the tests on the slab and bulk are skipped.
 
-Three fields are not used here: `runtime_skip_reason` skips every test that
+Four fields are not used here: `runtime_skip_reason` skips every test that
 runs the model, with that reason; `physics` declares physical properties the
 model does not have (see [Skips](#why-a-test-is-skipped)); `tolerances` replaces
-the physics checks' default tolerances for a precision.
+the physics checks' default tolerances for a precision; and
+`reference_tolerances` replaces those of the reference comparison.
 
 ## What it gives
 
-For the template, the class collects 58 tests. They come from the eight
-contracts:
+For the template, the class collects 86 tests. They come from the nine
+contracts; the template's spec has two environment profiles, `tested` and
+`latest`, and every contract that builds or runs the model does so once per
+profile:
 
 | Contract | Tests for the template | What it checks | Needs |
 |---|---|---|---|
@@ -72,11 +77,12 @@ contracts:
 | `ModelRegistryContract` | 4 | the installed package is found by `ModelRegistry.default()`, with the same kind, source and spec class | |
 | `ModelEnvironmentContract` | 6 × 2 profiles | the environment factory builds an `EnvironmentSpec`, the same one twice, and only from requirements, Python and channels its `DependencySummary` declares | |
 | `ModelEnvironmentResolutionContract` | 1 × 2 profiles | the environment provider (uv) resolves that environment | `--atomforge-environment` |
-| `ModelSinglePointRuntimeContract` | 2 properties + 4 resource combinations | each declared property comes back finite and in the right shape; each declared accelerator and precision runs with `strict=True` | `--atomforge-runtime` (GPU: also `--atomforge-gpu`) |
-| `ModelPhysicsContract` | 16 | rigid-motion invariance, zero net force, forces against the energy gradient, repeatability, per-atom energies and symmetric stress | `--atomforge-runtime` |
+| `ModelSinglePointRuntimeContract` | (2 properties + 4 resource combinations) × 2 profiles | each declared property comes back finite and in the right shape; each declared accelerator and precision runs with `strict=True` | `--atomforge-runtime` (GPU: also `--atomforge-gpu`) |
+| `ModelPhysicsContract` | 16 × 2 profiles | rigid-motion invariance, zero net force, forces against the energy gradient, repeatability, per-atom energies and symmetric stress | `--atomforge-runtime` |
+| `ModelReferenceContract` | 3 structures × 2 profiles | energy, forces and stress match the references stored with the plugin's tests (see [Reference values](#reference-values)) | `--atomforge-runtime` and the `regression` extra |
 
 The first five contracts only import the plugin; they run in a second, with a
-plain `uv run pytest`. The last three create the model's environment or run the
+plain `uv run pytest`. The last four create the model's environment or run the
 model, and are switched on by command-line options (see [Gates](#gates)).
 
 ## How a class becomes tests
@@ -106,27 +112,30 @@ one test per value:
 
 | Argument | Values from the manifest | For the template |
 |---|---|---|
-| `atomforge_declared_property` | the supported properties | `[energy]`, `[forces]` |
-| `atomforge_declared_resources` | every accelerator × precision in the resource capabilities; a knob set to `None` gives `default` | `[cpu-f32]`, `[cpu-f64]`, `[gpu-f32]`, `[gpu-f64]` |
-| `atomforge_environment_profile` | the values of the spec's `environment_profile` `Literal`, or only `tested` | `[tested]`, `[latest]` |
+| `atomforge_environment_profile` | the values of the spec's `environment_profile` `Literal`, or only `tested` | `tested`, `latest` |
+| `atomforge_declared_property` | the supported properties | `energy`, `forces` |
+| `atomforge_declared_resources` | every accelerator × precision in the resource capabilities; a knob set to `None` gives `default` | `cpu-f32`, `cpu-f64`, `gpu-f32`, `gpu-f64` |
 
-The values in brackets become part of the test id, so
-`test_declared_property_is_returned[forces]` is the test that requests forces
-alone. Declaring a new property or precision therefore adds tests by itself,
-and a plugin cannot leave a declaration untested.
+Every test that builds or runs the model takes the profile, so a test made
+from two declarations gets both in its id, the profile first:
+`test_declared_property_is_returned[latest-forces]` is the test that requests
+forces alone, with the `latest` profile. Declaring a new property, precision
+or profile therefore adds tests by itself, and a plugin cannot leave a
+declaration untested.
 
 The declarations are loaded at collection time. If one cannot be loaded (a
 wrong `module:attr` path, an import error), its tests become a single skipped
 test with id `[unloadable]` and the error as the reason, and the symbol contract
 reports the error as a failure.
 
-The physics checks are parametrized differently: by structure name, fixed in
-the contract rather than read from the manifest. Each check lists the reference
-structures it applies to: translation, the gradient, repeatability and per-atom
-energies on all three (`[molecule]`, `[slab]`, `[bulk]`), rotation and net force
-on the molecule only (the rotation turns the atoms but not the cell, so it is
-only rigid without periodic boundaries), and stress symmetry on the two
-periodic structures.
+The physics checks and the reference test are also parametrized by structure
+name, which is fixed in the contract rather than read from the manifest and
+follows the profile in the id (`[tested-bulk]`). Each check lists the
+reference structures it applies to: translation, the gradient, repeatability,
+per-atom energies and the reference values on all three (`molecule`, `slab`,
+`bulk`), rotation and net force on the molecule only (the rotation turns the
+atoms but not the cell, so it is only rigid without periodic boundaries), and
+stress symmetry on the two periodic structures.
 
 ### Gates
 
@@ -137,34 +146,34 @@ marker, and the plugin skips every marked test whose option is not given:
 | Marker | Option | Used by |
 |---|---|---|
 | `atomforge_environment` | `--atomforge-environment` | environment resolution |
-| `atomforge_runtime` | `--atomforge-runtime` | the single-point and physics contracts |
+| `atomforge_runtime` | `--atomforge-runtime` | the single-point, physics and reference contracts |
 | `atomforge_gpu` | `--atomforge-gpu` | resource combinations on `gpu` |
 | `atomforge_mps` | `--atomforge-mps` | resource combinations on `mps` |
 
 The GPU and MPS markers are added to individual parameters, so
-`[cpu-f32]` runs on any machine while `[gpu-f32]` waits for both
+`[tested-cpu-f32]` runs on any machine while `[tested-gpu-f32]` waits for both
 `--atomforge-runtime` and `--atomforge-gpu`. The options are the only switch:
 a marker given to `-m` selects tests but does not enable them.
 
 ```bash
 uv run pytest                                          # wiring only
 uv run pytest --atomforge-environment --atomforge-runtime   # everything this machine can run
-uv run pytest --atomforge-runtime -k "gradient and bulk"    # one check on one structure
+uv run pytest --atomforge-runtime -k "gradient and tested-bulk"   # one check, one profile, one structure
 ```
 
 ### Why a test is skipped
 
 A test that passed the gate can still skip itself when it starts, because the
 check does not apply. The reason is in the skip message (`pytest -rs` lists
-them). Running the template with both options gives 44 passed and 14 skipped:
+them). Running the template with both options gives 55 passed and 31 skipped:
 
 | Skip reason | Tests | Why |
 |---|---|---|
-| `pass --atomforge-gpu to run` | 2 | gated (the GPU combinations) |
-| `torch-lj does not declare energies` | 3 | the per-atom energy check needs a property the model does not declare |
-| `torch-lj does not declare stress` | 2 | likewise for stress symmetry |
-| `the case has no slab physics structure` | 3 | `physics_structures` left the slab out |
-| `the case has no bulk physics structure` | 3 | likewise for bulk |
+| `pass --atomforge-gpu to run` | 4 | gated (the GPU combinations, for both profiles) |
+| `torch-lj does not declare energies` | 6 | the per-atom energy check needs a property the model does not declare |
+| `torch-lj does not declare stress` | 4 | likewise for stress symmetry |
+| `the case has no slab physics structure` | 8 | `physics_structures` left the slab out (physics and reference tests) |
+| `the case has no bulk physics structure` | 8 | likewise for bulk |
 | `manifest does not declare task override executors` | 1 | nothing to check |
 
 A physics check can also skip because the case declares that the model lacks a
@@ -191,10 +200,10 @@ way, a property claimed that the model does not have, shows up as a failure.
 
 ## How a test runs the model
 
-The runtime and physics tests run the model the way a user would. Each run
-builds a `SinglePoint` task for the structure and the requested properties,
-takes the spec from `model_spec_factory`, and calls
-`backend.execute(task, model=spec, exec_resources=resources)`.
+The runtime, physics and reference tests run the model the way a user would.
+Each run builds a `SinglePoint` task for the structure and the requested
+properties, takes the spec from `model_spec_factory` with the test's profile,
+and calls `backend.execute(task, model=spec, exec_resources=resources)`.
 
 The backend comes from the `atomforge_backend` fixture: one `SubprocessBackend`
 for the whole pytest session, shut down at the end. The first run creates the
@@ -203,11 +212,12 @@ runs reuse both. Your own runtime tests can use the same fixture (mark them
 `@pytest.mark.atomforge_runtime`), and a `conftest.py` can override it to run
 the contracts on another backend.
 
-The resources are the case's `runtime_exec_resources`, except in two places:
-`test_declared_resources_execute_strictly` uses each declared combination with
-`strict=True`, so the run fails instead of falling back to another accelerator
-or precision; and the gradient check uses f64 when the model declares it, so
-the finite difference is not drowned in rounding.
+The resources are the case's `runtime_exec_resources`, except in three
+places: `test_declared_resources_execute_strictly` uses each declared
+combination with `strict=True`, so the run fails instead of falling back to
+another accelerator or precision; the gradient check uses f64 when the model
+declares it, so the finite difference is not drowned in rounding; and a
+reference is recorded on CPU at the highest declared precision.
 
 ## How the physics checks decide
 
@@ -234,6 +244,39 @@ failing physics check says how far off the model was:
 ```text
 energy of the molecule changed by 0.000721 eV/atom under a rigid rotation (tolerance 1e-05)
 ```
+
+## Reference values
+
+The reference test compares a model's results with values stored next to the
+plugin's tests, so that a change in a dependency, or a new `latest`
+environment, that changes the model's numbers is noticed. It uses
+[pytest-regressions](https://pytest-regressions.readthedocs.io/)'
+`ndarrays_regression`, installed with the `regression` extra
+(`atomforge-testing[runtime,regression]`); without it, the reference tests
+fail with a message that names the extra.
+
+**What is stored.** One file per structure, `<kind>-<structure>.npz`, in a
+directory named after the test module (`tests/test_contracts/` for the
+template). It holds the energy per atom and the forces, and the stress when
+the model declares it and the structure is periodic. Naming the file after
+the model's kind keeps two models in one test module apart.
+
+**Recording.** A missing reference fails the `[tested-…]` test, which runs
+the model on CPU with the `tested` profile at the highest declared precision
+and writes the file; commit it. After an intended change, rerun with
+`--force-regen` (rewrites references that differ, and fails so that the change
+is seen) or `--regen-all` (rewrites every reference). Only the `tested`
+profile records: a `[latest-…]` test with no reference fails and names the
+test that records it, and is skipped while references are regenerated.
+
+**Comparing.** Every profile runs the model with the case's resources and
+compares with the same reference, so `[latest-…]` is the check that the
+newest dependencies still give the recorded numbers. The tolerances are
+absolute (`REFERENCE_TOLERANCES` in `atomforge_testing.physics`, one set for
+every precision, since a reference recorded in f64 is compared with f32 runs
+and on other machines); a case replaces them with
+`reference_tolerances=ReferenceTolerances(...)`. A failure lists the values
+that differ.
 
 ## Using only some contracts
 
