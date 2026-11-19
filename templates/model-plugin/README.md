@@ -8,11 +8,12 @@ yours.
 The comments in the code explain what each piece is for. For the concepts behind
 them, see the docs:
 
-- [Models](https://github.com/atomfg/atomforge/blob/main/docs/docs/concepts/models.md):
+- [Models](https://atomfg.github.io/atomforge/concepts/models/):
   specs, executors and manifests
-- [Registries](https://github.com/atomfg/atomforge/blob/main/docs/docs/concepts/registries.md):
+- [Registries](https://atomfg.github.io/atomforge/concepts/registries/):
   how plugins are discovered
-- [Testing a model plugin](https://github.com/atomfg/atomforge/blob/main/packages/atomforge-testing/docs/model-plugin-testing.md)
+- [Testing a model plugin](https://atomfg.github.io/atomforge/development/plugin-testing/)
+  and [how the plugin tests work](https://atomfg.github.io/atomforge/development/plugin-tests/)
 
 ## Layout
 

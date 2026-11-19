@@ -48,6 +48,10 @@ nav = [
     { "Tasks" = "concepts/tasks.md" },
     { "Registries" = "concepts/registries.md" },
     { "Backend" = "concepts/backends.md" },
+  ]},
+  { "Development" = [
+    { "Testing a model plugin" = "development/plugin-testing.md" },
+    { "How the plugin tests work" = "development/plugin-tests.md" },
   ]}
 ]
 
