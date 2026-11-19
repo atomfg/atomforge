@@ -1,4 +1,4 @@
-# Testing a Model Plugin
+# Testing a model plugin
 
 Use `atomforge-testing` to check that a model plugin is wired the way AtomForge
 expects.
@@ -28,7 +28,7 @@ Adjust the relative paths if your plugin sits somewhere else relative to `atomfo
 ## 2. Add One Test Class Per Model
 
 Copy `tests/test_contracts.py` from the
-[model plugin template](../../../templates/model-plugin/) into your plugin's `tests/`
+[model plugin template](https://github.com/atomfg/atomforge/tree/main/templates/model-plugin) into your plugin's `tests/`
 directory and fill in:
 
 - the manifest import
@@ -165,6 +165,9 @@ Reference structures are available from `atomforge_testing.structures`:
   (diamond Si). A model that cannot run one of them, or needs others, sets
   `physics_structures={"molecule": ...}` in its case; the checks of a
   structure left out are skipped.
+
+For how the contracts turn this class into tests, and why a test runs, is
+skipped or fails, see [How the plugin tests work](plugin-tests.md).
 
 ## Common Failures
 

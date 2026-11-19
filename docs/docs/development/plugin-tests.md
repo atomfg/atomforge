@@ -7,8 +7,7 @@ the model runs, and that its results obey basic physics.
 
 This page explains how that happens: what the class gives you, where each test
 comes from, and why a test runs, is skipped or fails. For the steps to set up the
-tests in a new plugin, see the reference in
-`packages/atomforge-testing/docs/model-plugin-testing.md`.
+tests in a new plugin, see [Testing a model plugin](plugin-testing.md).
 
 ## The class you write
 

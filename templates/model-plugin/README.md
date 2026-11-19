@@ -12,7 +12,8 @@ them, see the docs:
   specs, executors and manifests
 - [Registries](https://github.com/atomfg/atomforge/blob/main/docs/docs/concepts/registries.md):
   how plugins are discovered
-- [Testing a model plugin](https://github.com/atomfg/atomforge/blob/main/packages/atomforge-testing/docs/model-plugin-testing.md)
+- [Testing a model plugin](https://atomfg.github.io/atomforge/development/plugin-testing/)
+  and [how the plugin tests work](https://atomfg.github.io/atomforge/development/plugin-tests/)
 
 ## Layout
 
