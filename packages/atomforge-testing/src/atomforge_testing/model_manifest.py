@@ -530,6 +530,175 @@ class ModelSinglePointRuntimeContract(_RuntimeContract):
         PROPERTY_CHECKS[prop](result, structure)
 
 
+@dataclass(frozen=True)
+class ResultDescription:
+    """The describe_model_result task's description of one request: which
+    properties were requested, on how many atoms, and the ``fields``
+    (property name to description)."""
+
+    properties: frozenset[Property]
+    n_atoms: int
+    fields: dict
+
+
+def _is_float_list(description: dict | None, length: int) -> bool:
+    """A list of ``length`` floats (``np.float64`` included)."""
+    return (
+        description is not None
+        and description["type"] == "list"
+        and description["length"] == length
+        and description["items"] is not None
+        and description["items"]["is_float"]
+    )
+
+
+def _is_float_rows(description: dict, n_rows: int, n_columns: int) -> bool:
+    return (
+        description["type"] == "list"
+        and description["length"] == n_rows
+        and _is_float_list(description["items"], n_columns)
+    )
+
+
+class ModelResultTypesContract(_RuntimeContract):
+    """Checks the types and shapes of the raw ``ModelResult`` that ``compute``
+    returns, before any task result coerces it. Runs the describe_model_result
+    task for each declared property on its own and for all of them together
+    (the ``atomforge_result_request`` parameter), and asserts one thing per
+    test. A number must be an instance of ``float``, which accepts
+    ``np.float64`` and rejects ``np.float32``."""
+
+    @pytest.fixture
+    def result_description(
+        self,
+        atomforge_backend,
+        atomforge_environment_profile,
+        atomforge_result_request,
+        atomforge_result_descriptions,
+    ) -> ResultDescription:
+        if self.case.runtime_skip_reason is not None:
+            pytest.skip(self.case.runtime_skip_reason)
+        properties = atomforge_result_request
+        key = (
+            id(atomforge_backend),
+            id(self.case),
+            atomforge_environment_profile,
+            properties,
+        )
+        if key not in atomforge_result_descriptions:
+            atomforge_result_descriptions[key] = self._describe(
+                atomforge_backend, atomforge_environment_profile, properties
+            )
+        return atomforge_result_descriptions[key]
+
+    def _describe(self, backend, profile, properties) -> ResultDescription:
+        from atomforge_builtins.task.describe_model_result import (
+            DescribeModelResult,
+        )
+
+        if Property.STRESS in properties:
+            structure = self._structure_for(Property.STRESS)
+        else:
+            structure = self._runtime_structure()
+        result = backend.execute(
+            DescribeModelResult(structure=structure, properties=properties),
+            model=self._build_model_spec(profile),
+            exec_resources=self._runtime_exec_resources(),
+        )
+        return ResultDescription(
+            properties=properties,
+            n_atoms=len(structure.numbers),
+            fields=result.fields,
+        )
+
+    def _field(self, description: ResultDescription, prop: Property) -> dict:
+        if prop not in description.properties:
+            pytest.skip(f"{prop.value} is not requested")
+        if prop.value not in description.fields:
+            pytest.skip(
+                f"{prop.value} was not returned; "
+                "see test_requested_properties_are_described"
+            )
+        return description.fields[prop.value]
+
+    @pytest.mark.atomforge_runtime
+    def test_requested_properties_are_described(self, result_description):
+        missing = sorted(
+            prop.value
+            for prop in result_description.properties
+            if prop.value not in result_description.fields
+        )
+        assert not missing, f"requested but returned as None: {missing}"
+
+    @pytest.mark.atomforge_runtime
+    def test_energy_is_a_float(self, result_description):
+        field = self._field(result_description, Property.ENERGY)
+        assert field["is_float"], f"energy must be a float, got {field}"
+
+    @pytest.mark.atomforge_runtime
+    def test_energy_is_finite(self, result_description):
+        field = self._field(result_description, Property.ENERGY)
+        assert field["finite"] is True, f"energy is not finite: {field}"
+
+    @pytest.mark.atomforge_runtime
+    def test_forces_have_one_row_per_atom(self, result_description):
+        field = self._field(result_description, Property.FORCES)
+        n_atoms = result_description.n_atoms
+        assert (field["type"], field.get("length")) == ("list", n_atoms), (
+            f"forces must be a list of {n_atoms} rows, got {field}"
+        )
+
+    @pytest.mark.atomforge_runtime
+    def test_forces_rows_are_three_floats(self, result_description):
+        field = self._field(result_description, Property.FORCES)
+        assert _is_float_list(field.get("items"), 3), (
+            f"each row of forces must be a list of 3 floats, got {field}"
+        )
+
+    @pytest.mark.atomforge_runtime
+    def test_forces_are_finite(self, result_description):
+        field = self._field(result_description, Property.FORCES)
+        assert field["finite"] is True, f"forces are not finite: {field}"
+
+    @pytest.mark.atomforge_runtime
+    def test_stress_is_three_rows_of_three_floats(self, result_description):
+        field = self._field(result_description, Property.STRESS)
+        assert _is_float_rows(field, 3, 3), (
+            f"stress must be a list of 3 lists of 3 floats, got {field}"
+        )
+
+    @pytest.mark.atomforge_runtime
+    def test_stress_is_finite(self, result_description):
+        field = self._field(result_description, Property.STRESS)
+        assert field["finite"] is True, f"stress is not finite: {field}"
+
+    @pytest.mark.atomforge_runtime
+    def test_energies_have_one_float_per_atom(self, result_description):
+        field = self._field(result_description, Property.ENERGIES)
+        n_atoms = result_description.n_atoms
+        assert _is_float_list(field, n_atoms), (
+            f"energies must be a list of {n_atoms} floats, got {field}"
+        )
+
+    @pytest.mark.atomforge_runtime
+    def test_energies_are_finite(self, result_description):
+        field = self._field(result_description, Property.ENERGIES)
+        assert field["finite"] is True, f"energies are not finite: {field}"
+
+    @pytest.mark.atomforge_runtime
+    def test_magmoms_have_one_float_per_atom(self, result_description):
+        field = self._field(result_description, Property.MAGMOMS)
+        n_atoms = result_description.n_atoms
+        assert _is_float_list(field, n_atoms), (
+            f"magmoms must be a list of {n_atoms} floats, got {field}"
+        )
+
+    @pytest.mark.atomforge_runtime
+    def test_magmoms_are_finite(self, result_description):
+        field = self._field(result_description, Property.MAGMOMS)
+        assert field["finite"] is True, f"magmoms are not finite: {field}"
+
+
 # Rigid motions used by the invariance checks; arbitrary but fixed.
 TRANSLATION = (0.37, -0.21, 0.13)
 ROTATION_AXIS = (1.0, 1.0, 1.0)
@@ -873,6 +1042,7 @@ class ModelPluginContract(
     ModelEnvironmentContract,
     ModelEnvironmentResolutionContract,
     ModelSinglePointRuntimeContract,
+    ModelResultTypesContract,
     ModelPhysicsContract,
     ModelReferenceContract,
 ):

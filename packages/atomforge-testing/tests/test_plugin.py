@@ -21,6 +21,7 @@ from atomforge_testing import (
     ModelPhysicsContract,
     ModelReferenceContract,
     ModelRegistryContract,
+    ModelResultTypesContract,
     ModelSinglePointRuntimeContract,
     ModelSpecContract,
 )
@@ -344,6 +345,7 @@ CONTRACTS = (
     ModelEnvironmentContract,
     ModelEnvironmentResolutionContract,
     ModelSinglePointRuntimeContract,
+    ModelResultTypesContract,
     ModelPhysicsContract,
     ModelReferenceContract,
 )
@@ -415,6 +417,7 @@ def test_bundle_marks_only_gated_tests(plugin_project):
 
     assert runtime == (
         contract_test_names(ModelSinglePointRuntimeContract)
+        | contract_test_names(ModelResultTypesContract)
         | contract_test_names(ModelPhysicsContract)
         | contract_test_names(ModelReferenceContract)
     )

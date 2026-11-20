@@ -1,5 +1,9 @@
 from typing import Annotated, Literal
 
+# Imported here, before any pytester inner session: an in-process inner run
+# drops the modules it imported, and numpy cannot be loaded twice.
+import numpy
+
 from pydantic import PlainSerializer
 
 from atomforge_core.env.env import EnvironmentSpec
@@ -505,3 +509,114 @@ class OtherKindFakeModel(ModelSpec):
 
 
 EnergyForcesStress = frozenset({Property.ENERGY, Property.FORCES, Property.STRESS})
+
+
+# Result types (the "Checking model results in tests" design entry)
+
+
+class TaskRunningBackend(InProcessBackend):
+    """Like ``InProcessBackend``, but runs the task's own executor and sends
+    the result through JSON, as the subprocess transport does. The result is
+    then what a real backend returns for the task."""
+
+    def execute(self, task, model=None, exec_resources=None, timeout=None):
+        from atomforge_core.resources.resource_models import (
+            ExecutionResources,
+            ResolvedResources,
+        )
+        from atomforge_runtime.registry.task.task_registry import TaskRegistry
+
+        exec_resources = exec_resources or ExecutionResources()
+        self.requests.append((task, model, exec_resources))
+        resolved = ResolvedResources(
+            accelerator=None
+            if exec_resources.accelerator == "default"
+            else exec_resources.accelerator,
+            precision=None
+            if exec_resources.precision == "default"
+            else exec_resources.precision,
+        )
+        model_executor = self.manifest.executor_cls.load_symbol()(model, resolved)
+        task_executor = TaskRegistry.default().get(task.kind).load_executor_class()()
+        result = task_executor.execute(
+            task,
+            TaskExecutionContext(
+                model_executor=model_executor, resolved_resources=resolved
+            ),
+        )
+        return type(result).model_validate_json(result.model_dump_json())
+
+
+class NdarrayForcesExecutor(ModelExecutor[FakeModel]):
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        if result.forces is not None:
+            result.forces = numpy.asarray(result.forces)
+        return result
+
+
+class ArrayRowsForcesExecutor(ModelExecutor[FakeModel]):
+    """A list with one row per atom, but each row an ndarray."""
+
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        if result.forces is not None:
+            result.forces = list(numpy.asarray(result.forces))
+        return result
+
+
+class ShortForcesExecutor(ModelExecutor[FakeModel]):
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        if result.forces is not None:
+            result.forces = result.forces[:-1]
+        return result
+
+
+class NanForcesExecutor(ModelExecutor[FakeModel]):
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        if result.forces is not None:
+            result.forces[0][0] = float("nan")
+        return result
+
+
+class MissingForcesExecutor(ModelExecutor[FakeModel]):
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        result.forces = None
+        return result
+
+
+class Float32EnergyExecutor(ModelExecutor[FakeModel]):
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        if result.energy is not None:
+            result.energy = numpy.float32(result.energy)
+        return result
+
+
+class Float64EnergyExecutor(ModelExecutor[FakeModel]):
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        if result.energy is not None:
+            result.energy = numpy.float64(result.energy)
+        return result
+
+
+class Float32MagmomsExecutor(ModelExecutor[FakeModel]):
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        if result.magmoms is not None:
+            result.magmoms = [numpy.float32(m) for m in result.magmoms]
+        return result
+
+
+class BranchingForcesExecutor(ModelExecutor[FakeModel]):
+    """Wrong forces only when forces are requested on their own."""
+
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        if frozenset(properties) == frozenset({Property.FORCES}):
+            result.forces = numpy.asarray(result.forces)
+        return result

@@ -88,3 +88,10 @@ def atomforge_backend():
 
     with subprocess_backend.SubprocessBackend() as backend:
         yield backend
+
+
+@pytest.fixture(scope="session")
+def atomforge_result_descriptions() -> dict:
+    """Descriptions computed by ``ModelResultTypesContract``, kept for the
+    session so that its checks share one task run per request."""
+    return {}
