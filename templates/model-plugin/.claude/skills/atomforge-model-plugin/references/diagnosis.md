@@ -43,7 +43,7 @@ print(description.fields)
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Worker init timeout | Weights still downloading | Raise `ATOMFORGE_WORKER_INIT_TIMEOUT_S`, or download them once beforehand |
+| Worker init timeout | Weights still downloading (the worker waits 30 minutes by default) | Download them once beforehand, with the library or the script of SKILL.md step 4 |
 | `... was declared but not returned` | `compute` ignores a requested property, or reads the wrong output key | Return every requested, declared property |
 | Wrong shape for stress | Voigt (6,) returned instead of 3×3 | Convert, in the order the library documents |
 | A strict `cpu-f64` (or `cuda-...`, `mps-...`) run fails | The executor ignores `resolved_resources`, or the library cannot do that pair | Translate the resources (see the template's `resources.py`). If the library really cannot, remove that precision for that accelerator only (the mapping is per accelerator) and record why in the model notes |

@@ -27,6 +27,9 @@ Read these when you need detail (published docs, current with the template):
 - The template: this repository, if it was started from the template, and
   otherwise https://github.com/atomfg/atomforge-model-plugin-template. Its
   code comments explain each piece.
+- The fields of `ModelManifestCase`, `ModelPhysics` and the tolerances: the
+  installed source, `atomforge_testing/model_manifest.py` and
+  `atomforge_testing/physics.py` in the project's `.venv`.
 
 ## Rules
 
@@ -94,7 +97,8 @@ justify the declarations, and a reviewer checks them there.
   wheels (dgl, torch-scatter, h5py, ...).
 - **Loading:** the function or class that loads a pretrained model; the
   available checkpoints or variants and their names; where the weights are
-  downloaded to; whether a download needs an account or a token.
+  downloaded from and to; whether a download needs an account or a token;
+  whether the download is pinned to a revision (see step 2, "Weights").
 - **Calling:** the documented inference API. An ASE calculator is acceptable
   and often simplest. A lower-level API gives more control over dtype and
   device.
@@ -161,6 +165,16 @@ them. When a declared property is missing for some spec values (a checkpoint
 without a stress head), keep the declaration, raise a clear error for those
 values, and record it in the model notes.
 
+**Weights.** Pin the weights where the library allows it: if it accepts a
+file path, or a revision or URL, download the checkpoint yourself (for
+example with `huggingface_hub.hf_hub_download`) at a fixed commit for the
+`tested` profile and at the newest for `latest`, and pass the result to the
+library. A re-upload under the same name then changes only `latest`, where
+the reference contract catches it. Keep the mapping (file names, revisions)
+in a host-side module, so it can be tested without the model's packages.
+Where the library allows no pinning, say in the model notes that the weights
+are unpinned.
+
 ### 3. Implement in gate order
 
 Each gate is slower than the one before it. Get one green before moving on.
@@ -181,6 +195,9 @@ uv run pytest --atomforge-runtime -rfEs -k "<group>" > run.log 2>&1   # see the 
    torch index first, which mirrors some packages (numpy, markupsafe) only up
    to some version. Check the pins as CI will:
    `UV_INDEX=https://download.pytorch.org/whl/cpu uv run pytest --atomforge-environment`.
+   Resolution uses the newest Python the profile's constraint allows, so a
+   `latest` profile without an upper bound meets each new CPython first,
+   often before its dependencies have wheels for it.
 3. **Executor:** `--atomforge-runtime`, one group of contracts at a time:
 
    | Group | `-k` expression |
@@ -202,9 +219,15 @@ uv run pytest --atomforge-runtime -rfEs -k "<group>" > run.log 2>&1   # see the 
    `precision={"cpu": ["f32", "f64"], "cuda": ["f32", "f64"], "mps": ["f32"]}`
    (torch has no float64 on MPS). The contracts test exactly the declared
    pairs. Add `--atomforge-cuda` on an NVIDIA machine, `--atomforge-rocm` on
-   an AMD one and `--atomforge-mps` on Apple silicon. Declare `rocm` only
-   after the model has run on an AMD GPU; ROCm builds of torch still call
-   the device `"cuda"`, so the translation maps `rocm` to `"cuda"`.
+   an AMD one and `--atomforge-mps` on Apple silicon.
+   - `cuda` may be declared before the model has run on an NVIDIA GPU, when
+     the library supports CUDA and the device code is plain torch. Say in the
+     model notes and the report that it has not run there.
+   - `rocm` only after the model has run on an AMD GPU: libraries often
+     depend on NVIDIA-only packages. ROCm builds of torch still call the
+     device `"cuda"`, so the translation maps `rocm` to `"cuda"`.
+   - With precision declared, the resolved precision is never `None`; a
+     `None` mapping only matters for models that do not use the knob.
 
 When a test fails, read [references/diagnosis.md](references/diagnosis.md)
 before you change anything.
@@ -229,7 +252,10 @@ values that the model's own package computes outside atomforge:
   printing: libraries print banners to stdout. Include at least one periodic
   structure if stress is declared.
 - The test reads the JSON file. Compare the **absolute** energy, not only
-  differences, and cover each variant the spec offers if you can.
+  differences, and cover each variant the spec offers. If that downloads a
+  lot, say how much in the README. The contracts run only the default
+  variant, so check the physics claims of the others (a rotation, say)
+  outside atomforge too, and record the result in the model notes.
 - Compare at f64 if declared, otherwise at f32, with tolerances that reflect
   that precision.
 

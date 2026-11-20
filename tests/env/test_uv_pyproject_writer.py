@@ -43,3 +43,44 @@ def test_uv_pyproject_writer_emits_find_links():
 
     assert "[tool.uv]" in pyproject
     assert 'find-links = ["https://data.pyg.org/whl/torch-2.4.1+cpu.html"]' in pyproject
+
+
+# A fixed project name (engineering log: "A fixed project name for worker
+# environments, design").
+
+
+def _project_name(pyproject: str) -> str:
+    import tomllib
+
+    return tomllib.loads(pyproject)["project"]["name"]
+
+
+def test_worker_project_name_is_fixed():
+    names = {
+        _project_name(
+            UVPyprojectWriter(
+                env_name=env_name, python_version=">=3.12", dependencies=[]
+            ).to_pyproject()
+        )
+        for env_name in ("torch-lj", "orb-v3", "mace")
+    }
+
+    assert names == {"atomforge-worker"}
+
+
+def test_environment_named_like_a_requirement_is_not_its_own_dependency():
+    writer = UVPyprojectWriter(
+        env_name="tace",
+        python_version=">=3.12",
+        dependencies=[ResolvedDependency("tace>=0.2.4", exact=False)],
+    )
+
+    assert _project_name(writer.to_pyproject()) == "atomforge-worker"
+
+
+def test_environment_name_is_kept_as_a_comment():
+    writer = UVPyprojectWriter(
+        env_name="tace", python_version=">=3.12", dependencies=[]
+    )
+
+    assert writer.to_pyproject().startswith("# atomforge environment: tace\n")
