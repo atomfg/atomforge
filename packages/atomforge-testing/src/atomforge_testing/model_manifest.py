@@ -533,31 +533,33 @@ class ModelSinglePointRuntimeContract(_RuntimeContract):
 @dataclass(frozen=True)
 class ResultDescription:
     """The describe_model_result task's description of one request: which
-    properties were requested, on how many atoms, and the ``fields``
-    (property name to description)."""
+    properties were requested, on how many atoms, the ``fields`` (property
+    name to description), and the fields that a compute on a later structure
+    changed."""
 
     properties: frozenset[Property]
     n_atoms: int
     fields: dict
+    changed_by_later_compute: list[str]
 
 
-def _is_float_list(description: dict | None, length: int) -> bool:
-    """A list of ``length`` floats (``np.float64`` included)."""
-    return (
-        description is not None
-        and description["type"] == "list"
-        and description["length"] == length
-        and description["items"] is not None
-        and description["items"]["is_float"]
-    )
+# How far the later structure moves the first atom (along x, in Å).
+LATER_DISPLACEMENT = 0.1
 
 
-def _is_float_rows(description: dict, n_rows: int, n_columns: int) -> bool:
-    return (
-        description["type"] == "list"
-        and description["length"] == n_rows
-        and _is_float_list(description["items"], n_columns)
-    )
+def _moved(structure: StructureData) -> StructureData:
+    """The same atoms, cell and periodicity, with the first atom moved."""
+    positions = [list(position) for position in structure.positions]
+    positions[0][0] += LATER_DISPLACEMENT
+    return structure.model_copy(update={"positions": positions})
+
+
+def _array_of(field: dict) -> tuple:
+    return (field["type"], field.get("dtype"), field.get("shape"))
+
+
+def _float64_array(*shape: int) -> tuple:
+    return ("numpy.ndarray", "float64", list(shape))
 
 
 class ModelResultTypesContract(_RuntimeContract):
@@ -565,8 +567,12 @@ class ModelResultTypesContract(_RuntimeContract):
     returns, before any task result coerces it. Runs the describe_model_result
     task for each declared property on its own and for all of them together
     (the ``atomforge_result_request`` parameter), and asserts one thing per
-    test. A number must be an instance of ``float``, which accepts
-    ``np.float64`` and rejects ``np.float32``."""
+    test.
+
+    ``energy`` must be a ``float`` (``np.float64`` qualifies, ``np.float32``
+    does not); the other properties float64 arrays of their declared shapes.
+    A result must not change when the model computes again: each request
+    computes a second time on a moved copy of the structure."""
 
     @pytest.fixture
     def result_description(
@@ -601,7 +607,11 @@ class ModelResultTypesContract(_RuntimeContract):
         else:
             structure = self._runtime_structure()
         result = backend.execute(
-            DescribeModelResult(structure=structure, properties=properties),
+            DescribeModelResult(
+                structure=structure,
+                properties=properties,
+                later_structure=_moved(structure),
+            ),
             model=self._build_model_spec(profile),
             exec_resources=self._runtime_exec_resources(),
         )
@@ -609,6 +619,7 @@ class ModelResultTypesContract(_RuntimeContract):
             properties=properties,
             n_atoms=len(structure.numbers),
             fields=result.fields,
+            changed_by_later_compute=result.changed_by_later_compute,
         )
 
     def _field(self, description: ResultDescription, prop: Property) -> dict:
@@ -641,18 +652,11 @@ class ModelResultTypesContract(_RuntimeContract):
         assert field["finite"] is True, f"energy is not finite: {field}"
 
     @pytest.mark.atomforge_runtime
-    def test_forces_have_one_row_per_atom(self, result_description):
+    def test_forces_are_a_float64_array_of_shape_n_by_3(self, result_description):
         field = self._field(result_description, Property.FORCES)
-        n_atoms = result_description.n_atoms
-        assert (field["type"], field.get("length")) == ("list", n_atoms), (
-            f"forces must be a list of {n_atoms} rows, got {field}"
-        )
-
-    @pytest.mark.atomforge_runtime
-    def test_forces_rows_are_three_floats(self, result_description):
-        field = self._field(result_description, Property.FORCES)
-        assert _is_float_list(field.get("items"), 3), (
-            f"each row of forces must be a list of 3 floats, got {field}"
+        expected = _float64_array(result_description.n_atoms, 3)
+        assert _array_of(field) == expected, (
+            f"forces must be a float64 array of shape {expected[2]}, got {field}"
         )
 
     @pytest.mark.atomforge_runtime
@@ -661,10 +665,10 @@ class ModelResultTypesContract(_RuntimeContract):
         assert field["finite"] is True, f"forces are not finite: {field}"
 
     @pytest.mark.atomforge_runtime
-    def test_stress_is_three_rows_of_three_floats(self, result_description):
+    def test_stress_is_a_float64_array_of_shape_3_by_3(self, result_description):
         field = self._field(result_description, Property.STRESS)
-        assert _is_float_rows(field, 3, 3), (
-            f"stress must be a list of 3 lists of 3 floats, got {field}"
+        assert _array_of(field) == _float64_array(3, 3), (
+            f"stress must be a float64 array of shape [3, 3], got {field}"
         )
 
     @pytest.mark.atomforge_runtime
@@ -673,11 +677,11 @@ class ModelResultTypesContract(_RuntimeContract):
         assert field["finite"] is True, f"stress is not finite: {field}"
 
     @pytest.mark.atomforge_runtime
-    def test_energies_have_one_float_per_atom(self, result_description):
+    def test_energies_are_a_float64_array_of_shape_n(self, result_description):
         field = self._field(result_description, Property.ENERGIES)
-        n_atoms = result_description.n_atoms
-        assert _is_float_list(field, n_atoms), (
-            f"energies must be a list of {n_atoms} floats, got {field}"
+        expected = _float64_array(result_description.n_atoms)
+        assert _array_of(field) == expected, (
+            f"energies must be a float64 array of shape {expected[2]}, got {field}"
         )
 
     @pytest.mark.atomforge_runtime
@@ -686,17 +690,25 @@ class ModelResultTypesContract(_RuntimeContract):
         assert field["finite"] is True, f"energies are not finite: {field}"
 
     @pytest.mark.atomforge_runtime
-    def test_magmoms_have_one_float_per_atom(self, result_description):
+    def test_magmoms_are_a_float64_array_of_shape_n(self, result_description):
         field = self._field(result_description, Property.MAGMOMS)
-        n_atoms = result_description.n_atoms
-        assert _is_float_list(field, n_atoms), (
-            f"magmoms must be a list of {n_atoms} floats, got {field}"
+        expected = _float64_array(result_description.n_atoms)
+        assert _array_of(field) == expected, (
+            f"magmoms must be a float64 array of shape {expected[2]}, got {field}"
         )
 
     @pytest.mark.atomforge_runtime
     def test_magmoms_are_finite(self, result_description):
         field = self._field(result_description, Property.MAGMOMS)
         assert field["finite"] is True, f"magmoms are not finite: {field}"
+
+    @pytest.mark.atomforge_runtime
+    def test_result_is_not_changed_by_a_later_compute(self, result_description):
+        changed = result_description.changed_by_later_compute
+        assert changed == [], (
+            f"a later compute changed the returned {changed}: the result "
+            "shares memory with state the model reuses"
+        )
 
 
 # Rigid motions used by the invariance checks; arbitrary but fixed.

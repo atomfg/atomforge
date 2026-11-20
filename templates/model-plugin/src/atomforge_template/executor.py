@@ -48,11 +48,14 @@ class TorchLJExecutor(ModelExecutor[TorchLJ]):
 
         forces = None
         if want_forces:
-            (gradient,) = torch.autograd.grad(energy, positions)
-            forces = (-gradient).detach().cpu().tolist()
+            import numpy as np
 
-        # Return plain Python types. Results are serialized back to the host, which
-        # does not have torch.
+            (gradient,) = torch.autograd.grad(energy, positions)
+            # ModelResult holds a float64 numpy array whatever dtype the model
+            # ran in. astype copies, so the result does not share memory with
+            # torch.
+            forces = (-gradient).detach().cpu().numpy().astype(np.float64)
+
         return ModelResult(
             energy=float(energy.detach().cpu()),
             forces=forces,

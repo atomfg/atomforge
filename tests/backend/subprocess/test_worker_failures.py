@@ -1,7 +1,7 @@
 """Backend behaviour when workers crash, hang or are killed.
 
 The end-to-end tests run the real worker module with the current interpreter
-(no uv environment is created) and the built-in ``no-dep`` model.
+(no uv environment is created) and the built-in ``trivial`` model.
 """
 
 import os
@@ -18,7 +18,7 @@ from atomforge.backend.subprocess.backend import SubprocessBackend
 from atomforge.env.base.handle import EnvironmentHandle
 from atomforge.env.base.info import EnvironmentInfo
 from atomforge.settings.settings import AtomforgeSettings
-from atomforge_builtins.model.nodep_model import NoDep
+from atomforge_builtins.model.trivial_model import Trivial
 from atomforge_builtins.task.single_point import SinglePoint
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.provenance import EnvironmentProvenance
@@ -154,7 +154,7 @@ def test_end_to_end_success_carries_worker_diagnostics(
     real_worker_backend, example_structure
 ):
     record = real_worker_backend.try_execute(
-        SinglePoint(structure=example_structure), model=NoDep()
+        SinglePoint(structure=example_structure), model=Trivial()
     )
 
     assert record.status == "success", record.error
@@ -169,7 +169,7 @@ def test_end_to_end_recovers_after_worker_is_killed(
     real_worker_backend, example_structure
 ):
     task = SinglePoint(structure=example_structure)
-    first = real_worker_backend.try_execute(task, model=NoDep())
+    first = real_worker_backend.try_execute(task, model=Trivial())
     assert first.status == "success", first.error
 
     ((env_key, session),) = real_worker_backend.prepared_environments.items()
@@ -177,7 +177,7 @@ def test_end_to_end_recovers_after_worker_is_killed(
     os.kill(first_process._process.pid, signal.SIGKILL)
     first_process._process.wait()
 
-    second = real_worker_backend.try_execute(task, model=NoDep())
+    second = real_worker_backend.try_execute(task, model=Trivial())
 
     assert second.status == "success", second.error
     new_process = real_worker_backend.prepared_environments[env_key].env_subprocess
@@ -189,7 +189,7 @@ def test_end_to_end_recovers_after_worker_is_killed(
 
 def test_end_to_end_shutdown_stops_all_workers(real_worker_backend, example_structure):
     real_worker_backend.try_execute(
-        SinglePoint(structure=example_structure), model=NoDep()
+        SinglePoint(structure=example_structure), model=Trivial()
     )
     processes = list(real_worker_backend.env_subprocesses.values())
     assert processes

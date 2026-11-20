@@ -222,4 +222,140 @@ def test_lennard_jones_is_described_as_declared(model_executor, example_structur
         ),
         TaskExecutionContext(model_executor=model_executor),
     )
-    assert described.fields["forces"]["items"]["items"]["is_float"] is True
+    forces = described.fields["forces"]
+    assert (forces["type"], forces["dtype"], forces["shape"]) == (
+        "numpy.ndarray",
+        "float64",
+        [len(example_structure.numbers), 3],
+    )
+
+
+# A later compute ("Model results as float64 arrays, design"): the task can
+# compute a second time on a later structure and report which fields of the
+# first result changed, i.e. shared memory with state the model reused.
+
+
+def _moved(structure):
+    positions = [list(p) for p in structure.positions]
+    positions[0][0] += 0.1
+    return structure.model_copy(update={"positions": positions})
+
+
+class _StructureRecordingExecutor:
+    """Fresh arrays from the positions on every call."""
+
+    def __init__(self):
+        self.calls = []
+
+    def compute(self, structure, properties):
+        self.calls.append((structure, frozenset(properties)))
+        return ModelResult(
+            energy=float(np.sum(structure.positions)),
+            forces=np.array(structure.positions, dtype=np.float64),
+        )
+
+
+class _BufferReusingExecutor:
+    """Writes every result into the same forces array."""
+
+    def __init__(self):
+        self.forces = None
+
+    def compute(self, structure, properties):
+        positions = np.array(structure.positions, dtype=np.float64)
+        if self.forces is None:
+            self.forces = np.empty_like(positions)
+        self.forces[...] = positions
+        return ModelResult(energy=1.0, forces=self.forces)
+
+
+class _ListReusingExecutor:
+    """Writes every result into the same nested list."""
+
+    def __init__(self):
+        self.forces = None
+
+    def compute(self, structure, properties):
+        if self.forces is None:
+            self.forces = [[0.0, 0.0, 0.0] for _ in structure.numbers]
+        for row, position in zip(self.forces, structure.positions):
+            row[:] = [float(x) for x in position]
+        return ModelResult(energy=1.0, forces=self.forces)
+
+
+class _NanForcesExecutor:
+    def compute(self, structure, properties):
+        return ModelResult(forces=np.full((len(structure.numbers), 3), np.nan))
+
+
+def _describe_with_later(example_structure, model_executor):
+    return DescribeModelResultExecutor().execute(
+        DescribeModelResult(
+            structure=example_structure,
+            properties=frozenset({Property.ENERGY, Property.FORCES}),
+            later_structure=_moved(example_structure),
+        ),
+        TaskExecutionContext(model_executor=model_executor),
+    )
+
+
+def test_spec_has_no_later_structure_by_default(example_structure):
+    task = DescribeModelResult(
+        structure=example_structure, properties=frozenset({Property.ENERGY})
+    )
+    assert task.later_structure is None
+
+
+def test_without_a_later_structure_changes_are_not_checked(example_structure):
+    described, _ = _describe(
+        example_structure, ModelResult(energy=1.0), frozenset({Property.ENERGY})
+    )
+    assert described.changed_by_later_compute is None
+
+
+def test_later_structure_is_computed_second(example_structure):
+    model_executor = _StructureRecordingExecutor()
+    _describe_with_later(example_structure, model_executor)
+    structures = [structure for structure, _ in model_executor.calls]
+    assert structures == [example_structure, _moved(example_structure)]
+
+
+def test_later_compute_requests_the_same_properties(example_structure):
+    model_executor = _StructureRecordingExecutor()
+    _describe_with_later(example_structure, model_executor)
+    properties = frozenset({Property.ENERGY, Property.FORCES})
+    assert [p for _, p in model_executor.calls] == [properties, properties]
+
+
+def test_the_first_result_is_described(example_structure):
+    described = _describe_with_later(example_structure, _StructureRecordingExecutor())
+    first = describe_field(np.array(example_structure.positions, dtype=float))
+    assert described.fields["forces"] == first
+
+
+def test_fresh_results_are_not_changed(example_structure):
+    described = _describe_with_later(example_structure, _StructureRecordingExecutor())
+    assert described.changed_by_later_compute == []
+
+
+def test_a_reused_array_is_changed(example_structure):
+    described = _describe_with_later(example_structure, _BufferReusingExecutor())
+    assert described.changed_by_later_compute == ["forces"]
+
+
+def test_a_reused_list_is_changed(example_structure):
+    described = _describe_with_later(example_structure, _ListReusingExecutor())
+    assert described.changed_by_later_compute == ["forces"]
+
+
+def test_nan_values_that_stay_nan_are_not_changed(example_structure):
+    described = _describe_with_later(example_structure, _NanForcesExecutor())
+    assert described.changed_by_later_compute == []
+
+
+def test_later_compute_round_trips_through_json(example_structure):
+    described = _describe_with_later(example_structure, _BufferReusingExecutor())
+    restored = DescribeModelResultResult.model_validate_json(
+        described.model_dump_json()
+    )
+    assert restored.changed_by_later_compute == ["forces"]

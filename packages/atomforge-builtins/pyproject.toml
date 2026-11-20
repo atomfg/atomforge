@@ -21,7 +21,7 @@ describe_model_result = "atomforge_builtins.task.describe_model_result.manifest:
 
 [project.entry-points.'atomforge.model']
 lennard_jones = "atomforge_builtins.model.ase_lj.manifest:lennard_jones_manifest"
-no_dep = "atomforge_builtins.model.nodep_model:no_dep_manifest"
+trivial = "atomforge_builtins.model.trivial_model:trivial_manifest"
 
 
 [build-system]

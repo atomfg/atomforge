@@ -39,7 +39,8 @@ class LennardJonesExecutor(ModelExecutor[LennardJones]):
         atoms.calc = self._calc
 
         if Property.FORCES in properties:
-            forces = atoms.get_forces().tolist()
+            # ASE returns a float64 copy, which the result can own.
+            forces = atoms.get_forces()
         else:
             forces = None
 

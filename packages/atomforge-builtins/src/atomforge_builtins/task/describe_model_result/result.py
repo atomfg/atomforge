@@ -10,3 +10,6 @@ class DescribeModelResultResult(TaskResult):
     # Field name (energy, forces, ...) to its description; see
     # ``executor.describe_field``.
     fields: dict[str, dict[str, Any]]
+    # Fields of the first result that the compute on the later structure
+    # changed; None when no later structure was given.
+    changed_by_later_compute: list[str] | None = None

@@ -13,6 +13,7 @@ A description is JSON-ready, so it survives the transport from the worker:
   is finite, or ``None`` if it holds no floats.
 """
 
+import copy
 import math
 from dataclasses import fields as dataclass_fields
 from typing import Any
@@ -86,14 +87,39 @@ def describe_field(value: Any) -> dict[str, Any]:
     return {**describe_value(value), "finite": all(finite) if finite else None}
 
 
-def describe_model_result(result: ModelResult) -> dict[str, dict[str, Any]]:
-    """Describe the property fields of the result that have a value."""
+def _property_values(result: ModelResult) -> dict[str, Any]:
+    """The property fields of the result that have a value."""
     names = [f.name for f in dataclass_fields(result) if f.name in DESCRIBED_FIELDS]
     return {
-        name: describe_field(getattr(result, name))
+        name: getattr(result, name)
         for name in names
         if getattr(result, name) is not None
     }
+
+
+def describe_model_result(result: ModelResult) -> dict[str, dict[str, Any]]:
+    """Describe the property fields of the result that have a value."""
+    return {
+        name: describe_field(value) for name, value in _property_values(result).items()
+    }
+
+
+def same_value(a: Any, b: Any) -> bool:
+    """Equal in type, shape and value; NaN equals NaN."""
+    if type(a) is not type(b):
+        return False
+    if isinstance(a, (list, tuple)):
+        return len(a) == len(b) and all(same_value(x, y) for x, y in zip(a, b))
+    if isinstance(a, float):
+        return a == b or (math.isnan(a) and math.isnan(b))
+    if _has_array_shape(a):
+        import numpy as np
+
+        a, b = np.asarray(a), np.asarray(b)
+        if a.shape != b.shape or a.dtype != b.dtype:
+            return False
+        return bool(np.array_equal(a, b, equal_nan=np.issubdtype(a.dtype, np.inexact)))
+    return a == b
 
 
 class DescribeModelResultExecutor(
@@ -110,4 +136,18 @@ class DescribeModelResultExecutor(
     ) -> DescribeModelResultResult:
         model_executor = require_model_executor(context, task_kind=spec.kind)
         result = model_executor.compute(spec.structure, spec.properties)
-        return DescribeModelResultResult(fields=describe_model_result(result))
+        fields = describe_model_result(result)
+        if spec.later_structure is None:
+            return DescribeModelResultResult(fields=fields)
+
+        before = copy.deepcopy(_property_values(result))
+        model_executor.compute(spec.later_structure, spec.properties)
+        after = _property_values(result)
+        changed = [
+            name
+            for name, value in before.items()
+            if name not in after or not same_value(value, after[name])
+        ]
+        return DescribeModelResultResult(
+            fields=fields, changed_by_later_compute=changed
+        )

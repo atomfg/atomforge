@@ -64,6 +64,24 @@ class LennardJonesExecutor(ModelExecutor[LennardJones]):
 
 The host process can work with `LennardJones(...)`. The worker process instantiates `LennardJonesExecutor(...)` and imports ASE.
 
+## ModelResult
+
+`compute` returns a `ModelResult`. It is not validated at runtime, because `compute` is on the hot path. The result types contract in `atomforge-testing` checks it instead. Whatever precision the model ran in, the fields have these types:
+
+| field | type |
+|---|---|
+| `energy` | `float` (`np.float64` qualifies, `np.float32` does not) |
+| `forces` | float64 `numpy.ndarray`, shape `(n_atoms, 3)` |
+| `stress` | float64 `numpy.ndarray`, shape `(3, 3)` |
+| `energies` | float64 `numpy.ndarray`, shape `(n_atoms,)` |
+| `magmoms` | float64 `numpy.ndarray`, shape `(n_atoms,)` |
+
+Properties that were not computed are `None`. Widening float32 to float64 is exact, so a float32 model loses nothing by converting. The precision that ran is recorded in the result's provenance.
+
+Returned arrays must not share memory with state the model reuses: a later call must not change a result returned earlier. With torch, `tensor.detach().cpu().numpy()` is a view of the tensor. `.astype(np.float64)` copies it.
+
+Since `ModelResult` holds numpy arrays, the worker environment needs numpy. Declare it in the environment factory if the model library does not require it; torch, for example, does not.
+
 ## Supported Properties
 
 Models advertise the properties they can compute, such as:

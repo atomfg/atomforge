@@ -1,12 +1,15 @@
 """Acceptance tests for the result types contract (the "Checking model results
-in tests, design" entry in the engineering log).
+in tests, design" and "Model results as float64 arrays, design" entries in
+the engineering log).
 
 `ModelResultTypesContract` runs the describe_model_result task for each
 declared property on its own and for all declared properties together, and
 checks the description of the raw ``ModelResult`` with one assert per test.
 Each test here runs the contract in an inner pytest session, against a
 backend that runs the real task executor in process with a fake model
-executor that is correct or broken in one way.
+executor that is correct or broken in one way. A correct model returns a
+float energy and float64 arrays of the declared shapes, and does not change
+a result it returned on a later call.
 """
 
 from pathlib import Path
@@ -64,12 +67,12 @@ CONFTEST = """\
 import pytest
 
 from fake_case import CASE
-from testing_fakes import TaskRunningBackend
+from testing_fakes import InProcessBackend
 
 
 @pytest.fixture(scope="session")
 def atomforge_backend():
-    return TaskRunningBackend(CASE.manifest)
+    return InProcessBackend(CASE.manifest)
 """
 
 TESTS = """\
@@ -85,15 +88,15 @@ CHECKS = (
     "test_requested_properties_are_described",
     "test_energy_is_a_float",
     "test_energy_is_finite",
-    "test_forces_have_one_row_per_atom",
-    "test_forces_rows_are_three_floats",
+    "test_forces_are_a_float64_array_of_shape_n_by_3",
     "test_forces_are_finite",
-    "test_stress_is_three_rows_of_three_floats",
+    "test_stress_is_a_float64_array_of_shape_3_by_3",
     "test_stress_is_finite",
-    "test_energies_have_one_float_per_atom",
+    "test_energies_are_a_float64_array_of_shape_n",
     "test_energies_are_finite",
-    "test_magmoms_have_one_float_per_atom",
+    "test_magmoms_are_a_float64_array_of_shape_n",
     "test_magmoms_are_finite",
+    "test_result_is_not_changed_by_a_later_compute",
 )
 
 PROPERTY_REQUESTS = ("energy", "forces", "stress", "energies", "magmoms")
@@ -195,6 +198,30 @@ def test_stress_is_requested_on_a_periodic_structure(pytester):
     assert with_stress and all(any(t.structure.pbc) for t in with_stress)
 
 
+def test_each_request_has_a_later_structure_with_the_same_atoms(pytester):
+    write_project(pytester)
+
+    run(pytester, "--atomforge-runtime")
+
+    assert all(
+        t.later_structure is not None
+        and t.later_structure.numbers == t.structure.numbers
+        and t.later_structure.pbc == t.structure.pbc
+        and t.later_structure.cell == t.structure.cell
+        for t in requests_made()
+    )
+
+
+def test_later_structure_has_moved_atoms(pytester):
+    write_project(pytester)
+
+    run(pytester, "--atomforge-runtime")
+
+    assert all(
+        t.later_structure.positions != t.structure.positions for t in requests_made()
+    )
+
+
 def test_undeclared_properties_are_not_requested(pytester):
     write_project(pytester, properties="FakeSupportedProperties")
 
@@ -243,7 +270,7 @@ def test_checks_for_undeclared_properties_are_skipped(pytester):
 
     found = run(pytester, "--atomforge-runtime")
 
-    assert found[("test_stress_is_three_rows_of_three_floats", "all")] == "SKIPPED"
+    assert found[("test_stress_is_a_float64_array_of_shape_3_by_3", "all")] == "SKIPPED"
 
 
 @pytest.mark.parametrize(
@@ -252,14 +279,18 @@ def test_checks_for_undeclared_properties_are_skipped(pytester):
         ("MissingForcesExecutor", "test_requested_properties_are_described"),
         ("Float32EnergyExecutor", "test_energy_is_a_float"),
         ("NanEnergyExecutor", "test_energy_is_finite"),
-        ("ShortForcesExecutor", "test_forces_have_one_row_per_atom"),
-        ("NdarrayForcesExecutor", "test_forces_have_one_row_per_atom"),
-        ("NdarrayForcesExecutor", "test_forces_rows_are_three_floats"),
-        ("ArrayRowsForcesExecutor", "test_forces_rows_are_three_floats"),
+        ("ListForcesExecutor", "test_forces_are_a_float64_array_of_shape_n_by_3"),
+        ("ArrayRowsForcesExecutor", "test_forces_are_a_float64_array_of_shape_n_by_3"),
+        ("Float32ForcesExecutor", "test_forces_are_a_float64_array_of_shape_n_by_3"),
+        ("ShortForcesExecutor", "test_forces_are_a_float64_array_of_shape_n_by_3"),
         ("NanForcesExecutor", "test_forces_are_finite"),
-        ("VoigtStressExecutor", "test_stress_is_three_rows_of_three_floats"),
-        ("ShortEnergiesExecutor", "test_energies_have_one_float_per_atom"),
-        ("Float32MagmomsExecutor", "test_magmoms_have_one_float_per_atom"),
+        ("VoigtStressExecutor", "test_stress_is_a_float64_array_of_shape_3_by_3"),
+        ("ShortEnergiesExecutor", "test_energies_are_a_float64_array_of_shape_n"),
+        ("Float32MagmomsExecutor", "test_magmoms_are_a_float64_array_of_shape_n"),
+        (
+            "BufferReusingForcesExecutor",
+            "test_result_is_not_changed_by_a_later_compute",
+        ),
     ],
 )
 def test_each_defect_fails_its_check(pytester, executor, failing):
@@ -273,12 +304,20 @@ def test_each_defect_fails_its_check(pytester, executor, failing):
 @pytest.mark.parametrize(
     ("executor", "passing"),
     [
-        # Rows that are arrays still give one row per atom.
-        ("ArrayRowsForcesExecutor", "test_forces_have_one_row_per_atom"),
         # A defect in the forces does not fail the energy.
-        ("NdarrayForcesExecutor", "test_energy_is_a_float"),
+        ("ListForcesExecutor", "test_energy_is_a_float"),
+        # Lists of finite floats are still finite.
+        ("ListForcesExecutor", "test_forces_are_finite"),
         # np.float64 is a float.
         ("Float64EnergyExecutor", "test_energy_is_a_float"),
+        # A reused buffer still has the right type and shape.
+        (
+            "BufferReusingForcesExecutor",
+            "test_forces_are_a_float64_array_of_shape_n_by_3",
+        ),
+        # Fresh lists are not changed by a later call, although they fail
+        # the type check.
+        ("ListForcesExecutor", "test_result_is_not_changed_by_a_later_compute"),
     ],
 )
 def test_check_is_not_failed_by_other_defects(pytester, executor, passing):
@@ -295,7 +334,9 @@ def test_defect_in_one_request_branch_is_found(pytester):
 
     found = run(pytester, "--atomforge-runtime")
 
-    assert found[("test_forces_rows_are_three_floats", "forces")] == "FAILED"
+    assert (
+        found[("test_forces_are_a_float64_array_of_shape_n_by_3", "forces")] == "FAILED"
+    )
 
 
 def test_defect_in_one_request_branch_is_hidden_from_the_others(pytester):
@@ -303,4 +344,4 @@ def test_defect_in_one_request_branch_is_hidden_from_the_others(pytester):
 
     found = run(pytester, "--atomforge-runtime")
 
-    assert found[("test_forces_rows_are_three_floats", "all")] == "PASSED"
+    assert found[("test_forces_are_a_float64_array_of_shape_n_by_3", "all")] == "PASSED"
