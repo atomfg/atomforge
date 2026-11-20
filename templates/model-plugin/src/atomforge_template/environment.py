@@ -5,9 +5,10 @@ from atomforge_template.spec import TorchLJ
 
 # The worker environment. These are the model's real dependencies; the host never
 # installs them. "tested" pins what the plugin is tested against, "latest" lets
-# users opt into newer versions.
-TESTED_REQUIREMENTS = ("torch==2.15.0",)
-LATEST_REQUIREMENTS = ("torch>=2.15.0",)
+# users opt into newer versions. numpy is listed because ModelResult holds numpy
+# arrays and torch does not require numpy.
+TESTED_REQUIREMENTS = ("torch==2.15.0", "numpy==2.5.5")
+LATEST_REQUIREMENTS = ("torch>=2.15.0", "numpy>=2.5.5")
 
 ENVIRONMENT_PROFILES = {
     "tested": EnvironmentSpec(

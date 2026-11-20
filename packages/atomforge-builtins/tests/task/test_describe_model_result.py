@@ -222,7 +222,12 @@ def test_lennard_jones_is_described_as_declared(model_executor, example_structur
         ),
         TaskExecutionContext(model_executor=model_executor),
     )
-    assert described.fields["forces"]["items"]["items"]["is_float"] is True
+    forces = described.fields["forces"]
+    assert (forces["type"], forces["dtype"], forces["shape"]) == (
+        "numpy.ndarray",
+        "float64",
+        [len(example_structure.numbers), 3],
+    )
 
 
 # A later compute ("Model results as float64 arrays, design"): the task can

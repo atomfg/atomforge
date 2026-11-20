@@ -27,7 +27,7 @@ import atomforge_testing
 task_names = {entry_point.name for entry_point in metadata.entry_points(group="atomforge.task")}
 model_names = {entry_point.name for entry_point in metadata.entry_points(group="atomforge.model")}
 missing_tasks = {"single_point", "bfgs", "optimize", "analyze_symmetry", "atomic_descriptor"} - task_names
-missing_models = {"lennard_jones", "no_dep"} - model_names
+missing_models = {"lennard_jones", "trivial"} - model_names
 if missing_tasks or missing_models:
     raise SystemExit(
         f"Missing entry points: tasks={sorted(missing_tasks)}, models={sorted(missing_models)}"

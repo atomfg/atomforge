@@ -1,6 +1,6 @@
 import pytest
 
-from atomforge_builtins.model.nodep_model import NoDep, NoDepExecutor
+from atomforge_builtins.model.trivial_model import Trivial, TrivialExecutor
 from atomforge_builtins.task.single_point import SinglePoint
 from atomforge_builtins.task.single_point.executor import SinglePointExecutor
 from atomforge_core.property import Property
@@ -10,10 +10,10 @@ from atomforge_core.task.executor import TaskExecutionContext
 
 
 @pytest.fixture
-def nodep_executor():
-    spec = NoDep()
+def trivial_executor():
+    spec = Trivial()
     resources = ResolvedResources(accelerator="cpu", precision=None, messages={})
-    return NoDepExecutor(spec=spec, resolved_resources=resources)
+    return TrivialExecutor(spec=spec, resolved_resources=resources)
 
 
 def test_single_point_creation(example_structure):
@@ -74,12 +74,12 @@ def test_single_point_creation_with_mixed_case_string_properties(example_structu
     assert task.properties == frozenset([Property.ENERGY, Property.FORCES])
 
 
-def test_single_point_executor(nodep_executor, example_structure):
+def test_single_point_executor(trivial_executor, example_structure):
     task = SinglePoint(
         structure=example_structure, properties=[Property.ENERGY, Property.FORCES]
     )
     result = SinglePointExecutor().execute(
-        task, TaskExecutionContext(model_executor=nodep_executor)
+        task, TaskExecutionContext(model_executor=trivial_executor)
     )
     assert result.kind == "single_point"
     assert isinstance(result.energy, float)
