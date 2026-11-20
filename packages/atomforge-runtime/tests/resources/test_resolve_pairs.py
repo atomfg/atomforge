@@ -86,9 +86,7 @@ def test_resolution_table(requested, machine, expected, message):
     STRICT_ERRORS,
     ids=[f"{a}-{p}-on-{m}" for (a, p), m in STRICT_ERRORS],
 )
-def test_strict_requests_for_unsupported_or_unavailable_pairs_raise(
-    requested, machine
-):
+def test_strict_requests_for_unsupported_or_unavailable_pairs_raise(requested, machine):
     with pytest.raises(ValueError):
         resolve(requested, machine, strict=True)
 

@@ -177,13 +177,13 @@ FakeMetadata = ModelMetadata(
     description="Runtime test double",
 )
 FakeResourceCapabilities = ResourceCapabilities(
-    accelerator=["cpu", "gpu"],
-    precision=["f32", "f64"],
+    accelerator=["cpu", "cuda"],
+    precision={"cpu": ["f32", "f64"], "cuda": ["f32", "f64"]},
 )
 
 
 def fake_probe(spec: FakeModel) -> ProbeResult:
-    return ProbeResult(available_accelerators=frozenset({"cpu", "gpu"}))
+    return ProbeResult(available_accelerators=frozenset({"cpu", "cuda"}))
 
 
 def build_model_registration() -> ModelRegistration:

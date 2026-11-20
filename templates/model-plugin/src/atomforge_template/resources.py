@@ -1,14 +1,16 @@
 """Translate atomforge's resource names into the ones the model uses.
 
-atomforge describes resources with its own names ("gpu", "f32", ...). Each plugin
-owns the translation to its framework. Rewrite these functions for yours.
+atomforge describes resources with its own names ("cuda", "mps", "f32", ...).
+Each plugin owns the translation to its framework. Rewrite these functions for
+yours. ROCm builds of torch call an AMD GPU "cuda", so a model that declares
+"rocm" maps it to "cuda" here.
 
 The functions return plain strings, so they can be tested on the host without torch.
 """
 
 from atomforge_core.resources.resource_models import ResolvedResources
 
-_DEVICES = {"cpu": "cpu", "gpu": "cuda"}
+_DEVICES = {"cpu": "cpu", "cuda": "cuda", "mps": "mps"}
 _DTYPES = {"f32": "float32", "f64": "float64"}
 
 

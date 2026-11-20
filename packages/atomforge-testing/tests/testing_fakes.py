@@ -438,7 +438,9 @@ class LargeForceNoiseExecutor(_ForceNoiseExecutor):
 F32F64Capabilities = ResourceCapabilities(
     accelerator=["cpu"], precision={"cpu": ["f32", "f64"]}
 )
-F32OnlyCapabilities = ResourceCapabilities(accelerator=["cpu"], precision={"cpu": ["f32"]})
+F32OnlyCapabilities = ResourceCapabilities(
+    accelerator=["cpu"], precision={"cpu": ["f32"]}
+)
 # float64 only on a GPU: the reference is recorded on CPU, so in f32.
 CpuF32CudaF64Capabilities = ResourceCapabilities(
     accelerator=["cpu", "cuda"],

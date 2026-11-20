@@ -24,7 +24,8 @@ from atomforge_core.structure import StructureData
 # Accelerators that need hardware a test machine may not have, and the
 # marker (enabled by the matching option) that gates them.
 ACCELERATOR_MARKERS = {
-    "gpu": pytest.mark.atomforge_gpu,
+    "cuda": pytest.mark.atomforge_cuda,
+    "rocm": pytest.mark.atomforge_rocm,
     "mps": pytest.mark.atomforge_mps,
 }
 
@@ -52,21 +53,22 @@ def declared_resources_params(case) -> list:
         capabilities = case.manifest.resource_capabilities.load_symbol()
     except Exception as exc:  # noqa: BLE001 - reported by the symbol contract
         return _unloadable("resource capabilities", exc)
-    accelerators = capabilities.accelerator or ["default"]
-    precisions = capabilities.precision or ["default"]
+    # Only the declared pairs: a model may support a precision on some
+    # accelerators only. A knob the model does not use runs as "default".
     params = []
-    for accelerator in accelerators:
+    for accelerator, precision in capabilities.pairs():
+        accelerator = accelerator or "default"
+        precision = precision or "default"
         marker = ACCELERATOR_MARKERS.get(accelerator)
-        for precision in precisions:
-            params.append(
-                pytest.param(
-                    ExecutionResources(
-                        accelerator=accelerator, precision=precision, strict=True
-                    ),
-                    id=f"{accelerator}-{precision}",
-                    marks=[marker] if marker is not None else [],
-                )
+        params.append(
+            pytest.param(
+                ExecutionResources(
+                    accelerator=accelerator, precision=precision, strict=True
+                ),
+                id=f"{accelerator}-{precision}",
+                marks=[marker] if marker is not None else [],
             )
+        )
     return params
 
 

@@ -314,9 +314,7 @@ def test_reference_is_recorded_in_f32_without_f64(pytester):
 
 def test_reference_is_recorded_at_the_highest_precision_cpu_supports(pytester):
     # f64 is declared, but only on CUDA.
-    write_project(
-        pytester, precision="f32", capabilities="CpuF32CudaF64Capabilities"
-    )
+    write_project(pytester, precision="f32", capabilities="CpuF32CudaF64Capabilities")
 
     run(pytester)
 

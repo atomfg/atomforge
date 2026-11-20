@@ -19,9 +19,13 @@ GATES = {
         "--atomforge-runtime",
         "execute models through a backend in their worker environment",
     ),
-    "atomforge_gpu": (
-        "--atomforge-gpu",
-        "execute models on a CUDA GPU (needs a machine with one)",
+    "atomforge_cuda": (
+        "--atomforge-cuda",
+        "execute models on an NVIDIA GPU through CUDA (needs a machine with one)",
+    ),
+    "atomforge_rocm": (
+        "--atomforge-rocm",
+        "execute models on an AMD GPU through ROCm (needs a machine with one)",
     ),
     "atomforge_mps": (
         "--atomforge-mps",

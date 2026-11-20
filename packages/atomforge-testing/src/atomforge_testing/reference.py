@@ -38,23 +38,23 @@ def reference_name(kind: str, structure_name: str) -> str:
 
 
 def recording_resources(capabilities: ResourceCapabilities) -> ExecutionResources:
-    """CPU, at the highest declared precision. A knob the model does not use
-    (``None``) is left at ``default``."""
+    """CPU, at the highest precision the model supports there. A knob the model
+    does not use (``None``) is left at ``default``."""
     accelerators = capabilities.accelerator
-    precisions = capabilities.precision
     if accelerators is None:
-        accelerator = "default"
+        accelerator = None
     elif "cpu" in accelerators:
         accelerator = "cpu"
     else:
         accelerator = accelerators[0]
+    precisions = capabilities.precisions_on(accelerator)
     if precisions is None:
         precision = "default"
     elif "f64" in precisions:
         precision = "f64"
     else:
         precision = precisions[0]
-    return ExecutionResources(accelerator=accelerator, precision=precision)
+    return ExecutionResources(accelerator=accelerator or "default", precision=precision)
 
 
 def arrays(result, n_atoms: int) -> dict:

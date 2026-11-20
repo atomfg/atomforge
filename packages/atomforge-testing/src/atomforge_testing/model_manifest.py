@@ -749,7 +749,17 @@ class ModelPhysicsContract(_RuntimeContract):
     def _finite_difference_resources(self) -> ExecutionResources:
         resources = self._runtime_exec_resources()
         capabilities = self.case.manifest.resource_capabilities.load_symbol()
-        if "f64" in (capabilities.precision or []):
+        if capabilities.precision is None:
+            return resources
+        if capabilities.accelerator is None:
+            precisions = capabilities.precisions_on(None)
+        elif resources.accelerator in capabilities.accelerator:
+            precisions = capabilities.precisions_on(resources.accelerator)
+        else:
+            # "default" or "gpu": the accelerator is not known before
+            # resolution, so keep the case's precision.
+            precisions = []
+        if "f64" in (precisions or []):
             return resources.model_copy(update={"precision": "f64"})
         return resources
 
