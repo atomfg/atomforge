@@ -29,7 +29,7 @@ class TestTorchLJ(ModelPluginContract):  # (1)!
     )
 ```
 
-1.  `ModelPluginContract` contains no tests of its own. It inherits from nine
+1.  `ModelPluginContract` contains no tests of its own. It inherits from ten
     *contracts*, classes of test methods that know nothing about any particular
     model. Pytest collects inherited `test_*` methods, so `TestTorchLJ` gets all
     of them.
@@ -64,7 +64,7 @@ the physics checks' default tolerances for a precision; and
 
 ## What it gives
 
-For the template, the class collects 86 tests. They come from the nine
+For the template, the class collects 158 tests. They come from the ten
 contracts; the template's spec has two environment profiles, `tested` and
 `latest`, and every contract that builds or runs the model does so once per
 profile:
@@ -78,11 +78,12 @@ profile:
 | `ModelEnvironmentContract` | 6 × 2 profiles | the environment factory builds an `EnvironmentSpec`, the same one twice, and only from requirements, Python and channels its `DependencySummary` declares | |
 | `ModelEnvironmentResolutionContract` | 1 × 2 profiles | the environment provider (uv) resolves that environment | `--atomforge-environment` |
 | `ModelSinglePointRuntimeContract` | (2 properties + 4 resource combinations) × 2 profiles | each declared property comes back finite and in the right shape; each declared accelerator and precision runs with `strict=True` | `--atomforge-runtime` (GPU: also `--atomforge-gpu`) |
+| `ModelResultTypesContract` | 12 checks × (2 properties + all) × 2 profiles | what `compute` itself returns, before a task result converts it: a `float` energy, float64 arrays of the declared shapes, finite values, and a result that a later call does not change (see [Result types](#how-the-result-types-are-checked)) | `--atomforge-runtime` |
 | `ModelPhysicsContract` | 16 × 2 profiles | rigid-motion invariance, zero net force, forces against the energy gradient, repeatability, per-atom energies and symmetric stress | `--atomforge-runtime` |
 | `ModelReferenceContract` | 3 structures × 2 profiles | energy, forces and stress match the references stored with the plugin's tests (see [Reference values](#reference-values)) | `--atomforge-runtime` and the `regression` extra |
 
 The first five contracts only import the plugin; they run in a second, with a
-plain `uv run pytest`. The last four create the model's environment or run the
+plain `uv run pytest`. The last five create the model's environment or run the
 model, and are switched on by command-line options (see [Gates](#gates)).
 
 ## How a class becomes tests
@@ -115,6 +116,7 @@ one test per value:
 | `atomforge_environment_profile` | the values of the spec's `environment_profile` `Literal`, or only `tested` | `tested`, `latest` |
 | `atomforge_declared_property` | the supported properties | `energy`, `forces` |
 | `atomforge_declared_resources` | every accelerator × precision in the resource capabilities; a knob set to `None` gives `default` | `cpu-f32`, `cpu-f64`, `gpu-f32`, `gpu-f64` |
+| `atomforge_result_request` | each supported property on its own, and all of them together | `energy`, `forces`, `all` |
 
 Every test that builds or runs the model takes the profile, so a test made
 from two declarations gets both in its id, the profile first:
@@ -201,9 +203,10 @@ way, a property claimed that the model does not have, shows up as a failure.
 ## How a test runs the model
 
 The runtime, physics and reference tests run the model the way a user would.
-Each run builds a `SinglePoint` task for the structure and the requested
-properties, takes the spec from `model_spec_factory` with the test's profile,
-and calls `backend.execute(task, model=spec, exec_resources=resources)`.
+Each run builds a task for the structure and the requested properties (a
+`SinglePoint`, or a `DescribeModelResult` for the result types), takes the
+spec from `model_spec_factory` with the test's profile, and calls
+`backend.execute(task, model=spec, exec_resources=resources)`.
 
 The backend comes from the `atomforge_backend` fixture: one `SubprocessBackend`
 for the whole pytest session, shut down at the end. The first run creates the
@@ -218,6 +221,67 @@ combination with `strict=True`, so the run fails instead of falling back to
 another accelerator or precision; the gradient check uses f64 when the model
 declares it, so the finite difference is not drowned in rounding; and a
 reference is recorded on CPU at the highest declared precision.
+
+## How the result types are checked
+
+`compute` returns a `ModelResult`, which atomforge does not validate, because
+validating every call would cost time on the hot path. Its declared types are
+a rule for the model to follow (see [Models](../concepts/models.md)):
+
+| field | type |
+|---|---|
+| `energy` | `float` (`np.float64` qualifies, `np.float32` does not) |
+| `forces` | float64 `numpy.ndarray`, shape `(n_atoms, 3)` |
+| `stress` | float64 `numpy.ndarray`, shape `(3, 3)` |
+| `energies`, `magmoms` | float64 `numpy.ndarray`, shape `(n_atoms,)` |
+
+The single-point tests cannot check this, because the `SinglePoint` result is
+a pydantic model that converts what `compute` returned (an array of float32
+becomes a list of floats) before the test sees it. Other tasks, such as the
+ASE adapter in `optimize`, use the `ModelResult` as it is, so a wrong type
+fails there instead.
+
+`ModelResultTypesContract` therefore runs the `describe_model_result` task. It
+calls `compute` and returns a description of the raw result: for every field
+with a value, its type, shape, dtype and whether it is finite. It then calls
+`compute` again on a copy of the structure with the first atom moved by 0.1 Å,
+and reports which fields of the first result changed. A field that changed
+shares memory with something the model reuses, for example a view of a torch
+tensor whose buffer is overwritten, and a caller that kept the first result,
+such as an optimiser, would see it change.
+
+The task runs once per profile and request (each declared property on its
+own, and all of them together, since an executor can branch on what was
+requested), and the twelve checks read the same description, one assert each:
+whether every requested property was returned; for each property, its type
+and shape, and whether it is finite; and whether the later call changed the
+result. A check for a property that was not requested is skipped. So is a check for a
+property that was requested but not returned, so that the missing property
+fails only `test_requested_properties_are_described`.
+
+A failure shows the description, which says what to convert:
+
+```text
+forces must be a float64 array of shape [2, 3], got {'type': 'numpy.ndarray', 'is_float': False, 'shape': [2, 3], 'dtype': 'float32', 'finite': True}
+```
+
+Here `np.array(forces, dtype=np.float64)` or, from torch,
+`tensor.detach().cpu().numpy().astype(np.float64)` fixes it; both copy, which
+also keeps the result from sharing memory with the model. The model may run in
+float32: widening to float64 is exact, and the precision that ran is recorded
+in the result's provenance.
+
+The same task is useful outside the tests:
+
+```python
+from atomforge_builtins.task.describe_model_result import DescribeModelResult
+
+description = backend.execute(
+    DescribeModelResult(structure=structure, properties={"energy", "forces"}),
+    model=spec,
+)
+print(description.fields["forces"])
+```
 
 ## How the physics checks decide
 
