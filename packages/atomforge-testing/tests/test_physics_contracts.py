@@ -57,7 +57,7 @@ CASE = ModelManifestCase(
     pyproject_path=PYPROJECT,
     expected_entry_point_target="testing_fakes:fake_manifest",
     runtime_exec_resources=ExecutionResources(
-        accelerator="cpu", precision="{precision}"
+        accelerator="{accelerator}", precision="{precision}"
     ),
     tolerances={tolerances},
     physics={physics},
@@ -104,6 +104,7 @@ def write_project(
     properties="SpringSupportedProperties",
     capabilities="F32F64Capabilities",
     precision="f64",
+    accelerator="cpu",
     tolerances="None",
     physics="ModelPhysics()",
     physics_structures="None",
@@ -115,6 +116,7 @@ def write_project(
             properties=properties,
             capabilities=capabilities,
             precision=precision,
+            accelerator=accelerator,
             tolerances=tolerances,
             physics=physics,
             physics_structures=physics_structures,
@@ -258,6 +260,26 @@ def test_finite_differences_use_the_case_precision_without_f64(pytester):
     assert found == {"test_forces_match_energy_gradient": "PASSED"}
     precisions = {resources.precision for _, _, resources in requests_made()}
     assert precisions == {"f32"}
+
+
+def test_finite_differences_stay_in_f32_where_the_accelerator_has_no_f64(
+    pytester,
+):
+    # The case runs on MPS, which the model declares in f32 only.
+    write_project(
+        pytester,
+        precision="f32",
+        accelerator="mps",
+        capabilities="CpuF64MpsF32Capabilities",
+    )
+
+    run(pytester, "-k", "energy_gradient")
+
+    used = {
+        (resources.accelerator, resources.precision)
+        for _, _, resources in requests_made()
+    }
+    assert used == {("mps", "f32")}
 
 
 def test_checks_of_undeclared_properties_are_skipped(pytester):

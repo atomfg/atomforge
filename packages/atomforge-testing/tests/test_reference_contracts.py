@@ -64,7 +64,7 @@ def case(kind, model_spec):
         pyproject_path=PYPROJECT,
         expected_entry_point_target="testing_fakes:fake_manifest",
         runtime_exec_resources=ExecutionResources(
-            accelerator="cpu", precision="{precision}"
+            accelerator="{accelerator}", precision="{precision}"
         ),
         reference_tolerances={reference_tolerances},
         physics_structures={physics_structures},
@@ -122,6 +122,7 @@ def write_project(
     properties="EnergyForcesStress",
     capabilities="F32F64Capabilities",
     precision="f64",
+    accelerator="cpu",
     reference_tolerances="None",
     physics_structures="None",
 ):
@@ -133,6 +134,7 @@ def write_project(
             properties=properties,
             capabilities=capabilities,
             precision=precision,
+            accelerator=accelerator,
             reference_tolerances=reference_tolerances,
             physics_structures=physics_structures,
         )
@@ -308,6 +310,21 @@ def test_reference_is_recorded_in_f32_without_f64(pytester):
 
     precisions = {resources.precision for _, _, resources in requests_made()}
     assert precisions == {"f32"}
+
+
+def test_reference_is_recorded_at_the_highest_precision_cpu_supports(pytester):
+    # f64 is declared, but only on CUDA.
+    write_project(
+        pytester, precision="f32", capabilities="CpuF32CudaF64Capabilities"
+    )
+
+    run(pytester)
+
+    recorded = {
+        (resources.accelerator, resources.precision)
+        for _, _, resources in requests_made()
+    }
+    assert recorded == {("cpu", "f32")}
 
 
 def test_reference_in_place_passes(pytester):

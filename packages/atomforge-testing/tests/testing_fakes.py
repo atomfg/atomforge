@@ -116,7 +116,7 @@ FakeMetadata = ModelMetadata(
 )
 FakeResourceCapabilities = ResourceCapabilities(
     accelerator=["cpu"],
-    precision=["f32"],
+    precision={"cpu": ["f32"]},
 )
 
 
@@ -191,10 +191,21 @@ class F64FailingExecutor(ModelExecutor[FakeModel]):
 
 AllSupportedProperties = ALL_PROPERTIES
 
-CpuGpuF32F64Capabilities = ResourceCapabilities(
-    accelerator=["cpu", "gpu"], precision=["f32", "f64"]
+CpuCudaF32F64Capabilities = ResourceCapabilities(
+    accelerator=["cpu", "cuda"],
+    precision={"cpu": ["f32", "f64"], "cuda": ["f32", "f64"]},
 )
-CpuMpsCapabilities = ResourceCapabilities(accelerator=["cpu", "mps"], precision=["f32"])
+CpuMpsCapabilities = ResourceCapabilities(
+    accelerator=["cpu", "mps"], precision={"cpu": ["f32"], "mps": ["f32"]}
+)
+# MPS without float64, as with torch.
+CpuF64MpsF32Capabilities = ResourceCapabilities(
+    accelerator=["cpu", "mps"],
+    precision={"cpu": ["f32", "f64"], "mps": ["f32"]},
+)
+CpuRocmCapabilities = ResourceCapabilities(
+    accelerator=["cpu", "rocm"], precision={"cpu": ["f32"], "rocm": ["f32"]}
+)
 CpuWithoutPrecisionCapabilities = ResourceCapabilities(accelerator=["cpu"])
 
 
@@ -424,8 +435,15 @@ class LargeForceNoiseExecutor(_ForceNoiseExecutor):
     fraction_of_f64_tolerance = 1.0
 
 
-F32F64Capabilities = ResourceCapabilities(accelerator=["cpu"], precision=["f32", "f64"])
-F32OnlyCapabilities = ResourceCapabilities(accelerator=["cpu"], precision=["f32"])
+F32F64Capabilities = ResourceCapabilities(
+    accelerator=["cpu"], precision={"cpu": ["f32", "f64"]}
+)
+F32OnlyCapabilities = ResourceCapabilities(accelerator=["cpu"], precision={"cpu": ["f32"]})
+# float64 only on a GPU: the reference is recorded on CPU, so in f32.
+CpuF32CudaF64Capabilities = ResourceCapabilities(
+    accelerator=["cpu", "cuda"],
+    precision={"cpu": ["f32"], "cuda": ["f32", "f64"]},
+)
 SpringSupportedProperties = frozenset(
     {Property.ENERGY, Property.FORCES, Property.ENERGIES, Property.STRESS}
 )
