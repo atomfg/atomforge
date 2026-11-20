@@ -14,7 +14,8 @@ def resolved(accelerator=None, precision=None):
 
 
 @pytest.mark.parametrize(
-    ("accelerator", "expected"), [("cpu", "cpu"), ("gpu", "cuda"), (None, "cpu")]
+    ("accelerator", "expected"),
+    [("cpu", "cpu"), ("cuda", "cuda"), ("mps", "mps"), (None, "cpu")],
 )
 def test_torch_device(accelerator, expected):
     assert torch_device(resolved(accelerator=accelerator)) == expected
@@ -29,12 +30,11 @@ def test_torch_dtype(precision, expected):
 
 
 def test_every_declared_capability_has_a_translation():
-    for accelerator in TorchLJResourceCapabilities.accelerator:
+    for accelerator, precision in TorchLJResourceCapabilities.pairs():
         torch_device(resolved(accelerator=accelerator))
-    for precision in TorchLJResourceCapabilities.precision:
         torch_dtype(resolved(precision=precision))
 
 
 def test_undeclared_accelerator_is_rejected():
-    with pytest.raises(ValueError, match="mps"):
-        torch_device(resolved(accelerator="mps"))
+    with pytest.raises(ValueError, match="rocm"):
+        torch_device(resolved(accelerator="rocm"))

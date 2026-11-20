@@ -96,6 +96,43 @@ Tasks declare the model properties they need. Before Atomforge starts a worker c
 
 This makes model capability part of the registry contract rather than an error discovered only after importing the model package.
 
+## Resource Capabilities
+
+A model declares the execution resources it can use: the accelerators it runs
+on, and the numerical precisions it supports on each of them.
+
+```python
+from atomforge_core.resources.resource_caps import ResourceCapabilities
+
+ResourceCapabilities(
+    accelerator=["cpu", "cuda", "mps"],
+    precision={"cpu": ["f32", "f64"], "cuda": ["f32", "f64"], "mps": ["f32"]},
+)
+```
+
+Accelerators are named by backend: `cpu`, `cuda` (NVIDIA GPUs), `rocm` (AMD
+GPUs) and `mps` (Apple silicon). Precisions are given per accelerator because
+an accelerator may not support every precision; torch, for example, has no
+float64 on MPS. A knob the model does not use is `None`, and a model that does
+not use the accelerator knob gives its precisions as a plain list.
+
+`f32` means float32 storage and computation without reduced-precision matrix
+multiplication (torch's `set_float32_matmul_precision("highest")`). A model
+that offers a faster mode, such as TF32 on NVIDIA GPUs, does so through a
+`matmul_precision` field in its spec, which refines `f32` on `cuda` only.
+
+Users request resources with `ExecutionResources`. Besides a backend, a
+request may name `gpu`, the first of `cuda`, `rocm` and `mps` that the model
+supports and the machine has, or leave a knob at `default`. The two knobs are
+resolved together:
+
+- Defaults pick the accelerator first (`cuda`, `rocm`, `mps`, `cpu`), then the
+  highest precision it supports.
+- An explicit precision is kept in preference to an explicit accelerator: a
+  request for float64 on MPS, for a model without it there, runs on CPU in
+  float64, and the result records a message.
+- With `strict=True`, a request that cannot be honoured raises instead.
+
 ## Model Manifests
 
 Models are discovered through manifests. A `ModelManifest` is the [registry](registries.md) contract for a model kind. It points Atomforge to the pieces needed to use the model:
@@ -106,7 +143,7 @@ Models are discovered through manifests. A `ModelManifest` is the [registry](reg
 - `supported_properties`: the set of properties the model can provide.
 - `environment_factory_cls`: the factory that describes the model's runtime dependencies.
 - `metadata`: human-facing model metadata.
-- `resource_capabilities`: the resources the model can use or resolve.
+- `resource_capabilities`: the accelerators and precisions the model supports (see [Resource Capabilities](#resource-capabilities)).
 - `task_overrides`: optional model-specific task executors.
 
 For a user, the manifest is usually invisible. For a model plugin author, it is the place where the model becomes discoverable by Atomforge.

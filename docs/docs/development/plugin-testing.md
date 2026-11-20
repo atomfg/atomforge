@@ -81,13 +81,14 @@ available without any configuration in your `pyproject.toml` or `conftest.py`.
 uv run pytest                            # wiring checks
 uv run pytest --atomforge-environment    # + resolve the model environment
 uv run pytest --atomforge-runtime        # + execute the model
-uv run pytest --atomforge-runtime --atomforge-gpu   # + CUDA GPU combinations
-uv run pytest --atomforge-runtime --atomforge-mps   # + Apple MPS combinations
+uv run pytest --atomforge-runtime --atomforge-cuda  # + NVIDIA GPU (CUDA) pairs
+uv run pytest --atomforge-runtime --atomforge-rocm  # + AMD GPU (ROCm) pairs
+uv run pytest --atomforge-runtime --atomforge-mps   # + Apple MPS pairs
 ```
 
 The options are the only way to enable the slower checks. The markers
-`atomforge_environment`, `atomforge_runtime`, `atomforge_gpu` and
-`atomforge_mps` only select:
+`atomforge_environment`, `atomforge_runtime`, `atomforge_cuda`,
+`atomforge_rocm` and `atomforge_mps` only select:
 `uv run pytest --atomforge-runtime -m atomforge_runtime` runs just the runtime
 checks.
 
@@ -116,10 +117,11 @@ marks through inheritance.
     the case's `runtime_structure` if it is periodic, otherwise
     `structures.periodic_bulk()`.
   - `test_declared_resources_execute_strictly[<profile>-<accelerator>-<precision>]`:
-    a single point runs with `strict=True` for every combination your
-    `ResourceCapabilities` declares. A capability left as `None` runs as
-    `default`. `gpu` combinations need `--atomforge-gpu`, `mps` combinations
-    `--atomforge-mps`.
+    a single point runs with `strict=True` for every accelerator and
+    precision pair your `ResourceCapabilities` declares (each accelerator with
+    the precisions declared for it). A capability left as `None` runs as
+    `default`. `cuda` pairs need `--atomforge-cuda`, `rocm` pairs
+    `--atomforge-rocm` and `mps` pairs `--atomforge-mps`.
 - `ModelResultTypesContract`: opt-in checks of what `compute` itself returns,
   before a task result converts it. Runs the `describe_model_result` task for
   each declared property on its own and for all of them together

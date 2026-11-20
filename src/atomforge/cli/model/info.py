@@ -34,11 +34,16 @@ def _get_source(model_registration):
 
 
 def _get_accelerators(model_registration):
-    accelerators = model_registration.load_resource_capabilities().accelerator
-    if accelerators:
-        return "\n".join(f"- [blue]{accel}[/blue]" for accel in accelerators) + "\n"
-    else:
+    capabilities = model_registration.load_resource_capabilities()
+    accelerators = capabilities.accelerator
+    if not accelerators:
         return "No accelerator information available." + "\n"
+    lines = []
+    for accel in accelerators:
+        precisions = capabilities.precisions_on(accel)
+        suffix = f" ({', '.join(precisions)})" if precisions else ""
+        lines.append(f"- [blue]{accel}[/blue]{suffix}")
+    return "\n".join(lines) + "\n"
 
 
 def _get_parameters(model_registration):

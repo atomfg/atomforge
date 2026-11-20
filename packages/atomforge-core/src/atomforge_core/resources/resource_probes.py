@@ -3,7 +3,7 @@ from typing import Callable, Literal
 
 from atomforge_core.model.spec import ModelSpecT
 
-Accelerator = Literal["cpu", "gpu", "mps"]
+Accelerator = Literal["cpu", "cuda", "rocm", "mps"]
 
 
 class ProbeResult(BaseModel):

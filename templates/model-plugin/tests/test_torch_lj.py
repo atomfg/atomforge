@@ -6,7 +6,8 @@ whole test session. Replace the reference values with ones for your model, e.g.
 computed with the model's own package.
 
     uv run pytest --atomforge-runtime
-    uv run pytest --atomforge-runtime --atomforge-gpu
+    uv run pytest --atomforge-runtime --atomforge-cuda
+    uv run pytest --atomforge-runtime --atomforge-mps
 """
 
 import pytest
@@ -93,12 +94,23 @@ def test_f32_agrees_with_f64(atomforge_backend):
     assert f32.energy == pytest.approx(f64.energy, rel=1e-5)
 
 
-@pytest.mark.atomforge_gpu
-def test_gpu_agrees_with_cpu(atomforge_backend):
-    gpu = ExecutionResources(accelerator="gpu", precision="f64", strict=True)
-    on_gpu = single_point(atomforge_backend, trimer(), gpu)
+@pytest.mark.atomforge_cuda
+def test_cuda_agrees_with_cpu(atomforge_backend):
+    cuda = ExecutionResources(accelerator="cuda", precision="f64", strict=True)
+    on_cuda = single_point(atomforge_backend, trimer(), cuda)
     on_cpu = single_point(atomforge_backend, trimer(), cpu("f64"))
 
-    assert on_gpu.energy == pytest.approx(on_cpu.energy, rel=1e-10)
-    for gpu_force, cpu_force in zip(on_gpu.forces, on_cpu.forces):
-        assert gpu_force == pytest.approx(cpu_force, abs=1e-10)
+    assert on_cuda.energy == pytest.approx(on_cpu.energy, rel=1e-10)
+    for cuda_force, cpu_force in zip(on_cuda.forces, on_cpu.forces):
+        assert cuda_force == pytest.approx(cpu_force, abs=1e-10)
+
+
+@pytest.mark.atomforge_mps
+def test_mps_agrees_with_cpu_in_f32(atomforge_backend):
+    mps = ExecutionResources(accelerator="mps", precision="f32", strict=True)
+    on_mps = single_point(atomforge_backend, trimer(), mps)
+    on_cpu = single_point(atomforge_backend, trimer(), cpu("f32"))
+
+    assert on_mps.energy == pytest.approx(on_cpu.energy, rel=1e-5)
+    for mps_force, cpu_force in zip(on_mps.forces, on_cpu.forces):
+        assert mps_force == pytest.approx(cpu_force, rel=1e-4, abs=1e-5)

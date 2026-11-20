@@ -4,9 +4,11 @@ from dataclasses import dataclass
 from enum import Enum
 
 
-Accelerator: TypeAlias = Literal["cpu", "gpu", "mps"]
+Accelerator: TypeAlias = Literal["cpu", "cuda", "rocm", "mps"]
 Precision: TypeAlias = Literal["f32", "f64"]
-RequestedAccelerator: TypeAlias = Literal["default", "cpu", "gpu", "mps"]
+RequestedAccelerator: TypeAlias = Literal[
+    "default", "gpu", "cpu", "cuda", "rocm", "mps"
+]
 RequestedPrecision: TypeAlias = Literal["default", "f32", "f64"]
 RequestedResource: TypeAlias = Union[RequestedAccelerator, RequestedPrecision]
 

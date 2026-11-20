@@ -239,19 +239,30 @@ def test_runtime_contracts_run_with_option(plugin_project):
     assert_all(result, "passed")
 
 
-def test_gpu_marker_is_gated_by_gpu_option(plugin_project):
+@pytest.mark.parametrize("backend", ["cuda", "rocm", "mps"])
+def test_backend_marker_is_gated_by_its_option(plugin_project, backend):
     plugin_project.makepyfile(
-        test_gpu="""
+        test_backend=f"""
         import pytest
 
-        @pytest.mark.atomforge_gpu
-        def test_on_gpu():
+        @pytest.mark.atomforge_{backend}
+        def test_on_backend():
             pass
         """
     )
 
     plugin_project.runpytest_inprocess().assert_outcomes(skipped=1)
-    plugin_project.runpytest_inprocess("--atomforge-gpu").assert_outcomes(passed=1)
+    plugin_project.runpytest_inprocess(f"--atomforge-{backend}").assert_outcomes(
+        passed=1
+    )
+
+
+def test_gpu_option_is_gone(plugin_project):
+    plugin_project.makepyfile(test_nothing="def test_nothing():\n    pass\n")
+
+    result = plugin_project.runpytest_inprocess("--atomforge-gpu")
+
+    assert result.ret != 0
 
 
 # Markers
@@ -264,7 +275,9 @@ def test_markers_are_registered_by_the_plugin(plugin_project):
         [
             "@pytest.mark.atomforge_environment*",
             "@pytest.mark.atomforge_runtime*",
-            "@pytest.mark.atomforge_gpu*",
+            "@pytest.mark.atomforge_cuda*",
+            "@pytest.mark.atomforge_rocm*",
+            "@pytest.mark.atomforge_mps*",
         ],
         consecutive=False,
     )

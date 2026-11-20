@@ -3,8 +3,14 @@ from typing import Mapping
 
 from atomforge.env.base.dependency import ResolvedDependency
 
-pyproject_template = """[project]
-name = "{env_name}"
+# Every worker project has this name. uv refuses a project that depends on a
+# package of its own name, so the environment's name (a display name, which a
+# plugin may set to its package's name) is kept in a comment instead.
+WORKER_PROJECT_NAME = "atomforge-worker"
+
+pyproject_template = """# atomforge environment: {env_name}
+[project]
+name = "{project_name}"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = "{python_spec}"
@@ -46,6 +52,7 @@ class PyprojectWriter:
 
         return pyproject_template.format(
             env_name=self.env_name,
+            project_name=WORKER_PROJECT_NAME,
             python_spec=python_spec,
             dependencies=dependencies_str,
             extras=extras,

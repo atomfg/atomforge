@@ -64,7 +64,7 @@ the physics checks' default tolerances for a precision; and
 
 ## What it gives
 
-For the template, the class collects 158 tests. They come from the ten
+For the template, the class collects 160 tests. They come from the ten
 contracts; the template's spec has two environment profiles, `tested` and
 `latest`, and every contract that builds or runs the model does so once per
 profile:
@@ -77,7 +77,7 @@ profile:
 | `ModelRegistryContract` | 4 | the installed package is found by `ModelRegistry.default()`, with the same kind, source and spec class | |
 | `ModelEnvironmentContract` | 6 × 2 profiles | the environment factory builds an `EnvironmentSpec`, the same one twice, and only from requirements, Python and channels its `DependencySummary` declares | |
 | `ModelEnvironmentResolutionContract` | 1 × 2 profiles | the environment provider (uv) resolves that environment | `--atomforge-environment` |
-| `ModelSinglePointRuntimeContract` | (2 properties + 4 resource combinations) × 2 profiles | each declared property comes back finite and in the right shape; each declared accelerator and precision runs with `strict=True` | `--atomforge-runtime` (GPU: also `--atomforge-gpu`) |
+| `ModelSinglePointRuntimeContract` | (2 properties + 5 resource pairs) × 2 profiles | each declared property comes back finite and in the right shape; each declared accelerator and precision runs with `strict=True` | `--atomforge-runtime` (CUDA, ROCm, MPS: also `--atomforge-cuda`, `--atomforge-rocm`, `--atomforge-mps`) |
 | `ModelResultTypesContract` | 12 checks × (2 properties + all) × 2 profiles | what `compute` itself returns, before a task result converts it: a `float` energy, float64 arrays of the declared shapes, finite values, and a result that a later call does not change (see [Result types](#how-the-result-types-are-checked)) | `--atomforge-runtime` |
 | `ModelPhysicsContract` | 16 × 2 profiles | rigid-motion invariance, zero net force, forces against the energy gradient, repeatability, per-atom energies and symmetric stress | `--atomforge-runtime` |
 | `ModelReferenceContract` | 3 structures × 2 profiles | energy, forces and stress match the references stored with the plugin's tests (see [Reference values](#reference-values)) | `--atomforge-runtime` and the `regression` extra |
@@ -115,7 +115,7 @@ one test per value:
 |---|---|---|
 | `atomforge_environment_profile` | the values of the spec's `environment_profile` `Literal`, or only `tested` | `tested`, `latest` |
 | `atomforge_declared_property` | the supported properties | `energy`, `forces` |
-| `atomforge_declared_resources` | every accelerator × precision in the resource capabilities; a knob set to `None` gives `default` | `cpu-f32`, `cpu-f64`, `gpu-f32`, `gpu-f64` |
+| `atomforge_declared_resources` | each declared accelerator with each precision declared for it; a knob set to `None` gives `default` | `cpu-f32`, `cpu-f64`, `cuda-f32`, `cuda-f64`, `mps-f32` |
 | `atomforge_result_request` | each supported property on its own, and all of them together | `energy`, `forces`, `all` |
 
 Every test that builds or runs the model takes the profile, so a test made
@@ -149,12 +149,13 @@ marker, and the plugin skips every marked test whose option is not given:
 |---|---|---|
 | `atomforge_environment` | `--atomforge-environment` | environment resolution |
 | `atomforge_runtime` | `--atomforge-runtime` | the single-point, physics and reference contracts |
-| `atomforge_gpu` | `--atomforge-gpu` | resource combinations on `gpu` |
-| `atomforge_mps` | `--atomforge-mps` | resource combinations on `mps` |
+| `atomforge_cuda` | `--atomforge-cuda` | resource pairs on `cuda` (NVIDIA GPUs) |
+| `atomforge_rocm` | `--atomforge-rocm` | resource pairs on `rocm` (AMD GPUs) |
+| `atomforge_mps` | `--atomforge-mps` | resource pairs on `mps` (Apple silicon) |
 
-The GPU and MPS markers are added to individual parameters, so
-`[tested-cpu-f32]` runs on any machine while `[tested-gpu-f32]` waits for both
-`--atomforge-runtime` and `--atomforge-gpu`. The options are the only switch:
+The accelerator markers are added to individual parameters, so
+`[tested-cpu-f32]` runs on any machine while `[tested-cuda-f32]` waits for both
+`--atomforge-runtime` and `--atomforge-cuda`. The options are the only switch:
 a marker given to `-m` selects tests but does not enable them.
 
 ```bash
@@ -167,15 +168,17 @@ uv run pytest --atomforge-runtime -k "gradient and tested-bulk"   # one check, o
 
 A test that passed the gate can still skip itself when it starts, because the
 check does not apply. The reason is in the skip message (`pytest -rs` lists
-them). Running the template with both options gives 55 passed and 31 skipped:
+them). Running the template with both options gives 83 passed and 77 skipped:
 
 | Skip reason | Tests | Why |
 |---|---|---|
-| `pass --atomforge-gpu to run` | 4 | gated (the GPU combinations, for both profiles) |
+| `pass --atomforge-cuda to run` | 4 | gated (the CUDA pairs, for both profiles) |
+| `pass --atomforge-mps to run` | 2 | gated (the MPS pair, for both profiles) |
 | `torch-lj does not declare energies` | 6 | the per-atom energy check needs a property the model does not declare |
 | `torch-lj does not declare stress` | 4 | likewise for stress symmetry |
 | `the case has no slab physics structure` | 8 | `physics_structures` left the slab out (physics and reference tests) |
 | `the case has no bulk physics structure` | 8 | likewise for bulk |
+| `<property> is not requested` | 44 | a result types check of a property the request left out (e.g. the stress checks when only `forces` is requested) |
 | `manifest does not declare task override executors` | 1 | nothing to check |
 
 A physics check can also skip because the case declares that the model lacks a
