@@ -64,6 +64,7 @@ requires-dist = [{ name = "atomforge-core", editable = "../../packages/atomforge
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "ase", specifier = ">=3.29.0" },
     { name = "atomforge-runtime", editable = "../../packages/atomforge-runtime" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },

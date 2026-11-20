@@ -39,12 +39,12 @@ class LennardJonesExecutor(ModelExecutor[LennardJones]):
         atoms.calc = self._calc
 
         if Property.FORCES in properties:
-            forces = atoms.get_forces()
+            forces = atoms.get_forces().tolist()
         else:
             forces = None
 
         if Property.ENERGY in properties:
-            energy = atoms.get_potential_energy()
+            energy = float(atoms.get_potential_energy())
         else:
             energy = None
 
