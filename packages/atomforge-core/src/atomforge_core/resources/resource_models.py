@@ -4,9 +4,13 @@ from typing import Literal
 
 class ExecutionResources(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    accelerator: Literal["default", "cpu", "gpu", "mps"] = Field(
+    accelerator: Literal["default", "gpu", "cpu", "cuda", "rocm", "mps"] = Field(
         default="default",
-        description="The type of hardware accelerator to use for execution.",
+        description=(
+            "The accelerator to use: a backend (cpu, cuda, rocm, mps), 'gpu' for the "
+            "first of cuda, rocm and mps that the model supports and the machine has, "
+            "or 'default'."
+        ),
     )
     precision: Literal["default", "f32", "f64"] = Field(
         default="default", description="The numerical precision to use for execution."
@@ -25,8 +29,8 @@ class ResolvedResources(BaseModel):
     """
 
     model_config = ConfigDict(extra="forbid")
-    accelerator: Literal["cpu", "gpu", "mps"] | None = Field(
-        description="The type of hardware accelerator to use for execution."
+    accelerator: Literal["cpu", "cuda", "rocm", "mps"] | None = Field(
+        description="The accelerator backend to use for execution."
     )
     precision: Literal["f32", "f64"] | None = Field(
         description="The numerical precision to use for execution."

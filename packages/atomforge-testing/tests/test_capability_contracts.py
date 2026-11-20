@@ -258,24 +258,24 @@ def test_property_tests_are_runtime_gated(pytester):
 RESOURCES_TEST = "test_declared_resources_execute_strictly"
 
 
-def test_cpu_combinations_run_and_gpu_needs_its_option(pytester):
-    write_project(pytester, RUNTIME_TESTS, capabilities="CpuGpuF32F64Capabilities")
+def test_cpu_combinations_run_and_cuda_needs_its_option(pytester):
+    write_project(pytester, RUNTIME_TESTS, capabilities="CpuCudaF32F64Capabilities")
 
     result = pytester.runpytest_inprocess("--atomforge-runtime", "-v")
 
     assert matching(outcomes(result), RESOURCES_TEST) == {
         "tested-cpu-f32": "PASSED",
         "tested-cpu-f64": "PASSED",
-        "tested-gpu-f32": "SKIPPED",
-        "tested-gpu-f64": "SKIPPED",
+        "tested-cuda-f32": "SKIPPED",
+        "tested-cuda-f64": "SKIPPED",
     }
 
 
-def test_gpu_combinations_run_with_gpu_option(pytester):
-    write_project(pytester, RUNTIME_TESTS, capabilities="CpuGpuF32F64Capabilities")
+def test_cuda_combinations_run_with_cuda_option(pytester):
+    write_project(pytester, RUNTIME_TESTS, capabilities="CpuCudaF32F64Capabilities")
 
     result = pytester.runpytest_inprocess(
-        "--atomforge-runtime", "--atomforge-gpu", "-v"
+        "--atomforge-runtime", "--atomforge-cuda", "-v"
     )
 
     assert set(matching(outcomes(result), RESOURCES_TEST).values()) == {"PASSED"}
@@ -284,14 +284,14 @@ def test_gpu_combinations_run_with_gpu_option(pytester):
 def test_mps_needs_its_own_option(pytester):
     write_project(pytester, RUNTIME_TESTS, capabilities="CpuMpsCapabilities")
 
-    gpu_only = pytester.runpytest_inprocess(
-        "--atomforge-runtime", "--atomforge-gpu", "-v"
+    cuda_only = pytester.runpytest_inprocess(
+        "--atomforge-runtime", "--atomforge-cuda", "-v"
     )
     with_mps = pytester.runpytest_inprocess(
         "--atomforge-runtime", "--atomforge-mps", "-v"
     )
 
-    assert matching(outcomes(gpu_only), RESOURCES_TEST) == {
+    assert matching(outcomes(cuda_only), RESOURCES_TEST) == {
         "tested-cpu-f32": "PASSED",
         "tested-mps-f32": "SKIPPED",
     }
@@ -301,8 +301,43 @@ def test_mps_needs_its_own_option(pytester):
     }
 
 
+def test_rocm_needs_its_own_option(pytester):
+    write_project(pytester, RUNTIME_TESTS, capabilities="CpuRocmCapabilities")
+
+    cuda_only = pytester.runpytest_inprocess(
+        "--atomforge-runtime", "--atomforge-cuda", "-v"
+    )
+    with_rocm = pytester.runpytest_inprocess(
+        "--atomforge-runtime", "--atomforge-rocm", "-v"
+    )
+
+    assert matching(outcomes(cuda_only), RESOURCES_TEST) == {
+        "tested-cpu-f32": "PASSED",
+        "tested-rocm-f32": "SKIPPED",
+    }
+    assert matching(outcomes(with_rocm), RESOURCES_TEST) == {
+        "tested-cpu-f32": "PASSED",
+        "tested-rocm-f32": "PASSED",
+    }
+
+
+def test_only_declared_pairs_are_tested(pytester):
+    # Precision per accelerator: MPS has no f64, so there is no mps-f64 test.
+    write_project(pytester, RUNTIME_TESTS, capabilities="CpuF64MpsF32Capabilities")
+
+    result = pytester.runpytest_inprocess(
+        "--atomforge-runtime", "--atomforge-mps", "-v"
+    )
+
+    assert matching(outcomes(result), RESOURCES_TEST) == {
+        "tested-cpu-f32": "PASSED",
+        "tested-cpu-f64": "PASSED",
+        "tested-mps-f32": "PASSED",
+    }
+
+
 def test_resources_are_requested_strictly(pytester):
-    write_project(pytester, RUNTIME_TESTS, capabilities="CpuGpuF32F64Capabilities")
+    write_project(pytester, RUNTIME_TESTS, capabilities="CpuCudaF32F64Capabilities")
 
     pytester.runpytest_inprocess("--atomforge-runtime", "-k", RESOURCES_TEST)
 
@@ -330,7 +365,7 @@ def test_declared_precision_that_fails_strictly_fails_its_test(pytester):
         pytester,
         RUNTIME_TESTS,
         executor="F64FailingExecutor",
-        capabilities="CpuGpuF32F64Capabilities",
+        capabilities="CpuCudaF32F64Capabilities",
     )
 
     result = pytester.runpytest_inprocess("--atomforge-runtime", "-v")

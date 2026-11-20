@@ -5,7 +5,7 @@ from atomforge_core.resources.resource_models import (
 
 
 def test_resolved_resources_init():
-    resources = ResolvedResources(accelerator="gpu", precision="f32")
+    resources = ResolvedResources(accelerator="cuda", precision="f32")
     assert resources is not None
 
 

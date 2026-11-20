@@ -41,7 +41,8 @@ uv run pytest --atomforge-environment    # + the model environment resolves
 uv run pytest --atomforge-runtime        # + runs the model
 ```
 
-The options combine. Add `--atomforge-gpu` on a machine with a CUDA GPU, and
+The options combine. Add `--atomforge-cuda` on a machine with an NVIDIA GPU,
+`--atomforge-rocm` on one with an AMD GPU if your model declares `rocm`, and
 `--atomforge-mps` on a Mac with Apple silicon if your model declares `mps`. Use `-m`
 to select, e.g. `uv run pytest --atomforge-runtime -m atomforge_runtime` runs only
 the tests that execute the model.
