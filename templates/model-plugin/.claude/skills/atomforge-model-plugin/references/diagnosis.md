@@ -46,7 +46,7 @@ print(description.fields)
 | Worker init timeout | Weights still downloading | Raise `ATOMFORGE_WORKER_INIT_TIMEOUT_S`, or download them once beforehand |
 | `... was declared but not returned` | `compute` ignores a requested property, or reads the wrong output key | Return every requested, declared property |
 | Wrong shape for stress | Voigt (6,) returned instead of 3×3 | Convert, in the order the library documents |
-| A strict `cpu-f64` (or `gpu-...`) run fails | The executor ignores `resolved_resources`, or the library cannot do that combination | Translate the resources (see the template's `resources.py`). If the library really cannot, remove that value from the capabilities and record why in the model notes |
+| A strict `cpu-f64` (or `cuda-...`, `mps-...`) run fails | The executor ignores `resolved_resources`, or the library cannot do that pair | Translate the resources (see the template's `resources.py`). If the library really cannot, remove that precision for that accelerator only (the mapping is per accelerator) and record why in the model notes |
 
 ## Result types
 
@@ -67,7 +67,7 @@ print(description.fields)
 | Gradient mismatch, and the model has a direct force head | Direct forces are not gradients | `ModelPhysics(conservative_forces=False)` with the evidence cited, or use the conservative mode if the spec offers one |
 | Gradient check `uninformative` | The forces on that structure are too small to tell right from wrong | Do not loosen anything. Report it: the contract's structure may need larger forces for this model |
 | Repeated request differs | Dropout or other training-mode behaviour (`model.eval()` not called), nondeterministic kernels, or state carried between calls | `eval()`, `torch.no_grad()` where forces do not need autograd, reset per-call state |
-| Results differ after another precision or session loaded in the same worker | The library changes process-wide state (for example `torch.set_default_dtype`) on load | Save the state after loading, and set and restore it around every `compute` (a context manager) |
+| Results differ after another precision or session loaded in the same worker | The library changes process-wide state (for example `torch.set_default_dtype` or `torch.set_float32_matmul_precision`) on load | Save the state after loading, and set and restore it around every `compute` (a context manager) |
 | Net force not zero | Not translation invariant or not conservative, or a conversion bug | As for translation and gradient |
 | Stress not symmetric | Wrong Voigt order, or a non-conservative stress head | Check the order against the library's docs |
 | Per-atom energies do not sum to the energy | Per-atom energies exclude a reference or dispersion term that the total includes | Declare `energies` only if they sum to the total. Otherwise drop the declaration and note why |

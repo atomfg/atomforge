@@ -68,6 +68,18 @@ and these rules exclude each one.
    inspect the machine. Pin exact versions in `tested`, including torch and
    numpy, and use lower bounds in `latest`. Every requirement and Python
    constraint must also be listed in the `DependencySummary`.
+7. **`f32` is strict float32**: float32 storage and computation, without
+   reduced-precision matrix multiplication (torch's
+   `set_float32_matmul_precision("highest")`). If the library defaults to
+   TF32 or similar, switch it off for `f32`. To offer the faster mode, add
+   `matmul_precision: Literal["highest", "high"] = "highest"` to the spec,
+   and apply `"high"` only on `cuda` with `f32`. Use exactly this name.
+8. **Process-wide state is set around every `compute`.** One worker holds
+   several model sessions (the same model at two precisions, or two models
+   whose environments are identical). If loading the model changes
+   process-wide state (torch's default dtype, the float32 matmul precision),
+   read it after loading, and set it before and restore it after each
+   `compute`, with a context manager. It costs nothing measurable.
 
 ## Workflow
 
@@ -89,16 +101,26 @@ justify the declarations, and a reviewer checks them there.
 - **Outputs:** which of energy, forces, stress, per-atom energies and magnetic
   moments it returns. Their units, the stress sign convention, and whether
   stress comes as a 3×3 array or in Voigt order (and which order).
+  Stress requested for a structure that is not fully periodic: raise a clear
+  error.
 - **Forces:** gradients of the energy (conservative), or a direct output head.
   Some models offer both, as a spec option.
 - **Symmetry:** rotation invariance or equivariance built into the
   architecture, or learned from data (for example through augmentation).
 - **Inputs:** periodic and non-periodic systems; element coverage; whether it
   needs charge or spin (`StructureData` has `charge` and
-  `spin_multiplicity`).
-- **Resources:** CPU, CUDA and MPS support; float32 and float64 support. Note
-  any global state that loading changes (torch's default dtype, random seeds,
-  thread counts) and whether it is restored afterwards.
+  `spin_multiplicity`, both optional). atomforge has no rule yet for a model
+  that needs them when they are `None`: record what the plugin does in the
+  model notes and list it as an open question.
+- **Resources:** which accelerators it runs on (CPU, NVIDIA through CUDA, AMD
+  through ROCm, Apple MPS), and which precisions on each. Libraries that
+  depend on NVIDIA-only packages (warp, cuEquivariance, ...) do not run on
+  ROCm. Note any global state that loading changes (torch's default dtype,
+  float32 matmul precision, random seeds, thread counts) and whether it is
+  restored afterwards.
+- **Files outside the environment:** where weights and kernel caches are
+  written (for example `~/.cache`). Record them in the model notes; do not
+  redirect them.
 - **Spec fields:** the choices a user makes (variant, dataset, dispersion
   correction, ...) and which combinations are invalid.
 
@@ -129,6 +151,16 @@ a copy of it). Then follow "Make it yours" in its README:
 To add a model to an existing plugin, add its subpackage (moving a flat model
 into its own subpackage first), its entry point and a second test class.
 
+**Spec variants.** One kind can cover several checkpoints or modes chosen
+by spec fields. The contracts run the spec that `model_spec_factory`
+returns. When variants differ in what the test class declares (for example
+direct and conservative forces need different `ModelPhysics`), add a test
+class per variant, each in its own test module: references are stored per
+module and named by kind only, so two classes in one module would share
+them. When a declared property is missing for some spec values (a checkpoint
+without a stress head), keep the declaration, raise a clear error for those
+values, and record it in the model notes.
+
 ### 3. Implement in gate order
 
 Each gate is slower than the one before it. Get one green before moving on.
@@ -145,7 +177,10 @@ uv run pytest --atomforge-runtime -rfEs -k "<group>" > run.log 2>&1   # see the 
    entry point, test class. Run `uv run pytest`.
 2. **Environment:** `--atomforge-environment`. Fix version and Python
    constraints here. A cap (`<3.14`, say) needs a comment that names the
-   dependency that forces it.
+   dependency that forces it. The template's CI resolves with the CPU-only
+   torch index first, which mirrors some packages (numpy, markupsafe) only up
+   to some version. Check the pins as CI will:
+   `UV_INDEX=https://download.pytorch.org/whl/cpu uv run pytest --atomforge-environment`.
 3. **Executor:** `--atomforge-runtime`, one group of contracts at a time:
 
    | Group | `-k` expression |
@@ -163,10 +198,13 @@ uv run pytest --atomforge-runtime -rfEs -k "<group>" > run.log 2>&1   # see the 
    that the recorded values are plausible (an energy per atom of a few eV
    with a negative sign for a molecule, forces of order 0.01 to 1 eV/Å), then
    run again.
-5. **Accelerators:** add `--atomforge-gpu` on a CUDA machine, and
-   `--atomforge-mps` on Apple silicon if `mps` is declared. Torch has no
-   float64 on MPS. Do not declare `mps` together with `f64` unless the
-   executor handles that combination.
+5. **Accelerators:** declare the precisions per accelerator, for example
+   `precision={"cpu": ["f32", "f64"], "cuda": ["f32", "f64"], "mps": ["f32"]}`
+   (torch has no float64 on MPS). The contracts test exactly the declared
+   pairs. Add `--atomforge-cuda` on an NVIDIA machine, `--atomforge-rocm` on
+   an AMD one and `--atomforge-mps` on Apple silicon. Declare `rocm` only
+   after the model has run on an AMD GPU; ROCm builds of torch still call
+   the device `"cuda"`, so the translation maps `rocm` to `"cuda"`.
 
 When a test fails, read [references/diagnosis.md](references/diagnosis.md)
 before you change anything.
@@ -174,17 +212,24 @@ before you change anything.
 ### 4. Check the numbers independently
 
 The reference contract only detects drift from the plugin's own first
-recording. A wrong unit, stress sign or Voigt order gets recorded as the
-reference and then passes. So add a test, marked
+recording. A wrong unit, stress sign or Voigt order, or an energy missing a
+constant, gets recorded as the reference and then passes. (A real case: an
+Orb plugin called the model's forward pass, which leaves out the per-element
+reference energies that the library's `predict()` and ASE calculator add.
+Forces were right, absolute energies were off by several eV per atom, and
+every contract passed.) So add a test, marked
 `@pytest.mark.atomforge_runtime`, that compares atomforge's single point with
 values that the model's own package computes outside atomforge:
 
-- Write a small script, `tests/<model>_values.py`, that builds a fixed
-  structure with ASE, runs the model through its own documented API (step 1's
-  scratch environment), and prints energy, forces and stress. Include at least
-  one periodic structure if stress is declared.
-- Store the printed values in the test, and keep the script next to it so the
-  values can be reproduced.
+- Write a small script, `tests/<model>_values.py`, that builds fixed
+  structures with ASE, runs the model through its own documented calculator
+  or API (step 1's scratch environment, with the `tested` pins), and writes
+  energy, forces and stress, the structures and the package versions to
+  `tests/<model>_values.json`. Write the file from the script rather than
+  printing: libraries print banners to stdout. Include at least one periodic
+  structure if stress is declared.
+- The test reads the JSON file. Compare the **absolute** energy, not only
+  differences, and cover each variant the spec offers if you can.
 - Compare at f64 if declared, otherwise at f32, with tolerances that reflect
   that precision.
 
