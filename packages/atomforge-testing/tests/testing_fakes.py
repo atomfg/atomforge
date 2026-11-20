@@ -48,7 +48,7 @@ class FakeModelExecutor(ModelExecutor[FakeModel]):
     ) -> ModelResult:
         energy = 1.0 if Property.ENERGY in properties else None
         forces = (
-            [[0.0, 0.0, 0.0] for _ in structure.numbers]
+            numpy.zeros((len(structure.numbers), 3))
             if Property.FORCES in properties
             else None
         )
@@ -139,14 +139,10 @@ def well_formed_result(
     n_atoms = len(structure.numbers)
     return ModelResult(
         energy=-1.0 * n_atoms if Property.ENERGY in properties else None,
-        forces=[[0.0, 0.0, 0.0] for _ in range(n_atoms)]
-        if Property.FORCES in properties
-        else None,
-        stress=[[0.1, 0.0, 0.0], [0.0, 0.1, 0.0], [0.0, 0.0, 0.1]]
-        if Property.STRESS in properties
-        else None,
-        energies=[-1.0] * n_atoms if Property.ENERGIES in properties else None,
-        magmoms=[0.0] * n_atoms if Property.MAGMOMS in properties else None,
+        forces=numpy.zeros((n_atoms, 3)) if Property.FORCES in properties else None,
+        stress=numpy.diag([0.1, 0.1, 0.1]) if Property.STRESS in properties else None,
+        energies=numpy.full(n_atoms, -1.0) if Property.ENERGIES in properties else None,
+        magmoms=numpy.zeros(n_atoms) if Property.MAGMOMS in properties else None,
     )
 
 
@@ -174,7 +170,7 @@ class VoigtStressExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if result.stress is not None:
-            result.stress = [[0.1, 0.1, 0.1, 0.0, 0.0, 0.0]]
+            result.stress = numpy.array([[0.1, 0.1, 0.1, 0.0, 0.0, 0.0]])
         return result
 
 
@@ -203,8 +199,10 @@ CpuWithoutPrecisionCapabilities = ResourceCapabilities(accelerator=["cpu"])
 
 
 class InProcessBackend:
-    """Runs the case's model executor in this process, resolving resources
-    the simplest way. Records every request."""
+    """Runs the case's model executor and the task's own executor in this
+    process, resolving resources the simplest way, and sends the result
+    through JSON as the subprocess transport does. The result is then what a
+    real backend returns for the task. Records every request."""
 
     instances: list["InProcessBackend"] = []
 
@@ -229,8 +227,17 @@ class InProcessBackend:
             if exec_resources.precision == "default"
             else exec_resources.precision,
         )
-        executor_cls = self.manifest.executor_cls.load_symbol()
-        return executor_cls(model, resolved).compute(task.structure, task.properties)
+        from atomforge_runtime.registry.task.task_registry import TaskRegistry
+
+        model_executor = self.manifest.executor_cls.load_symbol()(model, resolved)
+        task_executor = TaskRegistry.default().get(task.kind).load_executor_class()()
+        result = task_executor.execute(
+            task,
+            TaskExecutionContext(
+                model_executor=model_executor, resolved_resources=resolved
+            ),
+        )
+        return type(result).model_validate_json(result.model_dump_json())
 
 
 # Environment profiles
@@ -300,12 +307,12 @@ def spring_result(structure: StructureData, properties) -> ModelResult:
                 forces[j][k] -= scale * d[k]
     return ModelResult(
         energy=energy if Property.ENERGY in properties else None,
-        forces=forces if Property.FORCES in properties else None,
-        energies=energies if Property.ENERGIES in properties else None,
-        stress=[[0.1, 0.02, 0.0], [0.02, 0.1, 0.0], [0.0, 0.0, 0.1]]
+        forces=numpy.array(forces) if Property.FORCES in properties else None,
+        energies=numpy.array(energies) if Property.ENERGIES in properties else None,
+        stress=numpy.array([[0.1, 0.02, 0.0], [0.02, 0.1, 0.0], [0.0, 0.0, 0.1]])
         if Property.STRESS in properties
         else None,
-        magmoms=[0.0] * n_atoms if Property.MAGMOMS in properties else None,
+        magmoms=numpy.zeros(n_atoms) if Property.MAGMOMS in properties else None,
     )
 
 
@@ -511,47 +518,15 @@ class OtherKindFakeModel(ModelSpec):
 EnergyForcesStress = frozenset({Property.ENERGY, Property.FORCES, Property.STRESS})
 
 
-# Result types (the "Checking model results in tests" design entry)
+# Result types ("Checking model results in tests" and "Model results as
+# float64 arrays" design entries). Each fake breaks one rule.
 
 
-class TaskRunningBackend(InProcessBackend):
-    """Like ``InProcessBackend``, but runs the task's own executor and sends
-    the result through JSON, as the subprocess transport does. The result is
-    then what a real backend returns for the task."""
-
-    def execute(self, task, model=None, exec_resources=None, timeout=None):
-        from atomforge_core.resources.resource_models import (
-            ExecutionResources,
-            ResolvedResources,
-        )
-        from atomforge_runtime.registry.task.task_registry import TaskRegistry
-
-        exec_resources = exec_resources or ExecutionResources()
-        self.requests.append((task, model, exec_resources))
-        resolved = ResolvedResources(
-            accelerator=None
-            if exec_resources.accelerator == "default"
-            else exec_resources.accelerator,
-            precision=None
-            if exec_resources.precision == "default"
-            else exec_resources.precision,
-        )
-        model_executor = self.manifest.executor_cls.load_symbol()(model, resolved)
-        task_executor = TaskRegistry.default().get(task.kind).load_executor_class()()
-        result = task_executor.execute(
-            task,
-            TaskExecutionContext(
-                model_executor=model_executor, resolved_resources=resolved
-            ),
-        )
-        return type(result).model_validate_json(result.model_dump_json())
-
-
-class NdarrayForcesExecutor(ModelExecutor[FakeModel]):
+class ListForcesExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if result.forces is not None:
-            result.forces = numpy.asarray(result.forces)
+            result.forces = result.forces.tolist()
         return result
 
 
@@ -561,7 +536,15 @@ class ArrayRowsForcesExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if result.forces is not None:
-            result.forces = list(numpy.asarray(result.forces))
+            result.forces = list(result.forces)
+        return result
+
+
+class Float32ForcesExecutor(ModelExecutor[FakeModel]):
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        if result.forces is not None:
+            result.forces = result.forces.astype(numpy.float32)
         return result
 
 
@@ -577,7 +560,7 @@ class NanForcesExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if result.forces is not None:
-            result.forces[0][0] = float("nan")
+            result.forces[0, 0] = numpy.nan
         return result
 
 
@@ -608,7 +591,7 @@ class Float32MagmomsExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if result.magmoms is not None:
-            result.magmoms = [numpy.float32(m) for m in result.magmoms]
+            result.magmoms = result.magmoms.astype(numpy.float32)
         return result
 
 
@@ -618,5 +601,24 @@ class BranchingForcesExecutor(ModelExecutor[FakeModel]):
     def compute(self, structure, properties):
         result = well_formed_result(structure, properties)
         if frozenset(properties) == frozenset({Property.FORCES}):
-            result.forces = numpy.asarray(result.forces)
+            result.forces = result.forces.tolist()
+        return result
+
+
+class BufferReusingForcesExecutor(ModelExecutor[FakeModel]):
+    """Writes the forces of every call into the same array, so a result kept
+    by the caller changes on the next call."""
+
+    def __init__(self, spec, resolved_resources):
+        super().__init__(spec, resolved_resources)
+        self._forces = None
+
+    def compute(self, structure, properties):
+        result = well_formed_result(structure, properties)
+        if result.forces is not None:
+            positions = numpy.array(structure.positions, dtype=numpy.float64)
+            if self._forces is None or self._forces.shape != positions.shape:
+                self._forces = numpy.empty_like(positions)
+            self._forces[...] = positions
+            result.forces = self._forces
         return result
