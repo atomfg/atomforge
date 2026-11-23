@@ -41,9 +41,12 @@ def variants_command(model_kind: str):
         table.add_column("Level of theory", style="magenta")
         table.add_column("Description")
 
-    default = handle.model_spec()
+    try:
+        default_name = handle.model_spec().variant_name
+    except Exception:  # noqa: BLE001 - a spec with required fields has no default
+        default_name = None
     for spec in handle.model_spec.variants():
-        is_default = "*" if spec.variant_name == default.variant_name else ""
+        is_default = "*" if spec.variant_name == default_name else ""
         table.add_row(spec.variant_id, is_default, *_info_cells(variant_info, spec))
 
     console.print(table)

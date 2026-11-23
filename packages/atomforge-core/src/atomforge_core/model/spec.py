@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import types
+import warnings
 from itertools import product
 from typing import Any, Literal, TypeVar, Union, get_args, get_origin
 
@@ -164,10 +165,14 @@ class ModelSpec(BaseModel):
         values = [enumerate_values(cls.model_fields[name].annotation) for name in names]
         found: dict[str, ModelSpecT] = {}
         for combination in product(*values):
-            try:
-                spec = cls(**dict(zip(names, combination)))
-            except ValidationError:
-                continue
+            # Warnings are for users who pass a value; here every combination
+            # is tried on purpose.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                try:
+                    spec = cls(**dict(zip(names, combination)))
+                except ValidationError:
+                    continue
             key = json.dumps(spec.variant_payload(mode="json"), sort_keys=True)
             found.setdefault(key, spec)
         return tuple(found.values())

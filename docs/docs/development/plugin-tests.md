@@ -26,10 +26,11 @@ class TestTorchLJ(ModelPluginContract):  # (1)!
         runtime_structure=structures.small_molecule(),  # (6)!
         runtime_exec_resources=ExecutionResources(accelerator="cpu", precision="f32"),  # (7)!
         physics_structures={"molecule": structures.ethanol()},  # (8)!
+        local_weights_factory=torch_lj_local_weights,  # (9)!
     )
 ```
 
-1.  `ModelPluginContract` contains no tests of its own. It inherits from nine
+1.  `ModelPluginContract` contains no tests of its own. It inherits from ten
     *contracts*, classes of test methods that know nothing about any particular
     model. Pytest collects inherited `test_*` methods, so `TestTorchLJ` gets all
     of them.
@@ -55,8 +56,14 @@ class TestTorchLJ(ModelPluginContract):  # (1)!
     they are all three reference structures, a molecule, a slab and a bulk
     crystal; this model only handles non-periodic systems, so it keeps the
     molecule, and the tests on the slab and bulk are skipped.
+9.  The spec declares `weights`, so the case gives a function that writes the
+    variant's own parameters as local weights (see the local weights row
+    below).
 
-Four fields are not used here: `runtime_skip_reason` skips every test that
+Five fields are not used here: `variants` names the variants the runtime,
+physics and reference tests run, by variant name, with the settings of the
+factory's spec (by default the factory's spec only; `--atomforge-all-variants`
+runs every generated variant). The other four: `runtime_skip_reason` skips every test that
 runs the model, with that reason; `physics` declares physical properties the
 model does not have (see [Skips](#why-a-test-is-skipped)); `tolerances` replaces
 the physics checks' default tolerances for a precision; and
@@ -64,7 +71,7 @@ the physics checks' default tolerances for a precision; and
 
 ## What it gives
 
-For the template, the class collects 86 tests. They come from the nine
+For the template, the class collects 168 tests. They come from the ten
 contracts; the template's spec has two environment profiles, `tested` and
 `latest`, and every contract that builds or runs the model does so once per
 profile:
@@ -73,16 +80,17 @@ profile:
 |---|---|---|---|
 | `ModelManifestContract` | 4 | the manifest is a `ModelManifest`; the `pyproject.toml` entry point targets it; it converts to a registration and every path in it loads | |
 | `ModelManifestSymbolContract` | 8 | each symbol the manifest names loads and has the right type (spec, executor, properties, environment factory, metadata, resource capabilities, optional probe and task overrides) | |
-| `ModelSpecContract` | 6 | the factory's spec has the manifest's `kind`, survives a round trip through Python and JSON (specs reach the worker as JSON), defaults to the `tested` profile and rejects an unknown one | |
+| `ModelSpecContract` | 12 | the factory's spec has the manifest's `kind`, survives a round trip through Python and JSON (specs reach the worker as JSON), defaults to the `tested` profile and rejects an unknown one; the spec generates variants with unique names that survive JSON, the factory's spec is one of them, and `variant_info`, if given, covers every variant with distinct checkpoints | |
 | `ModelRegistryContract` | 4 | the installed package is found by `ModelRegistry.default()`, with the same kind, source and spec class | |
 | `ModelEnvironmentContract` | 6 × 2 profiles | the environment factory builds an `EnvironmentSpec`, the same one twice, and only from requirements, Python and channels its `DependencySummary` declares | |
 | `ModelEnvironmentResolutionContract` | 1 × 2 profiles | the environment provider (uv) resolves that environment | `--atomforge-environment` |
 | `ModelSinglePointRuntimeContract` | (2 properties + 5 resource pairs) × 2 profiles | each declared property comes back finite and in the right shape; each declared accelerator and precision runs with `strict=True` | `--atomforge-runtime` (CUDA, ROCm, MPS: also `--atomforge-cuda`, `--atomforge-rocm`, `--atomforge-mps`) |
 | `ModelPhysicsContract` | 16 × 2 profiles | rigid-motion invariance, zero net force, forces against the energy gradient, repeatability, per-atom energies and symmetric stress | `--atomforge-runtime` |
 | `ModelReferenceContract` | 3 structures × 2 profiles | energy, forces and stress match the references stored with the plugin's tests (see [Reference values](#reference-values)) | `--atomforge-runtime` and the `regression` extra |
+| `ModelLocalWeightsContract` | 2, only when the spec declares `weights` | the variant's own parameters, written by the case's `local_weights_factory` and loaded as `LocalWeights`, give the variant's results within the reference tolerances; weights whose recorded hash no longer matches their contents are rejected | `--atomforge-runtime` |
 
 The first five contracts only import the plugin; they run in a second, with a
-plain `uv run pytest`. The last four create the model's environment or run the
+plain `uv run pytest`. The last five create the model's environment or run the
 model, and are switched on by command-line options (see [Gates](#gates)).
 
 ## How a class becomes tests
@@ -146,7 +154,7 @@ marker, and the plugin skips every marked test whose option is not given:
 | Marker | Option | Used by |
 |---|---|---|
 | `atomforge_environment` | `--atomforge-environment` | environment resolution |
-| `atomforge_runtime` | `--atomforge-runtime` | the single-point, physics and reference contracts |
+| `atomforge_runtime` | `--atomforge-runtime` | the single-point, physics, reference and local weights contracts |
 | `atomforge_cuda` | `--atomforge-cuda` | resource pairs on `cuda` (NVIDIA GPUs) |
 | `atomforge_rocm` | `--atomforge-rocm` | resource pairs on `rocm` (AMD GPUs) |
 | `atomforge_mps` | `--atomforge-mps` | resource pairs on `mps` (Apple silicon) |
@@ -257,11 +265,13 @@ environment, that changes the model's numbers is noticed. It uses
 (`atomforge-testing[runtime,regression]`); without it, the reference tests
 fail with a message that names the extra.
 
-**What is stored.** One file per structure, `<kind>-<structure>.npz`, in a
+**What is stored.** One file per variant and structure,
+`<kind>-<variant>-<structure>.npz` (`torch-lj-default-molecule.npz`), in a
 directory named after the test module (`tests/test_contracts/` for the
 template). It holds the energy per atom and the forces, and the stress when
 the model declares it and the structure is periodic. Naming the file after
-the model's kind keeps two models in one test module apart.
+the kind and the variant keeps two models, or two variants of one, in one
+test module apart.
 
 **Recording.** A missing reference fails the `[tested-…]` test, which runs
 the model on CPU with the `tested` profile at the highest declared precision

@@ -230,3 +230,21 @@ def test_variant_id_with_local_weights(weights_file):
 
     assert spec.variant_name == "large"
     assert spec.variant_id == f"weighted/large+local:{weights.sha256[:8]}"
+
+
+def test_generating_variants_does_not_warn():
+    import warnings
+
+    class Warns(ModelSpec):
+        kind: Literal["warns"] = "warns"
+        model: Annotated[Literal["a", "b"], Variant] = "a"
+
+        @model_validator(mode="after")
+        def warn_for_b(self):
+            if self.model == "b":
+                warnings.warn("b is deprecated")
+            return self
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert len(Warns.variants()) == 2
