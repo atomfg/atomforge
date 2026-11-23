@@ -50,6 +50,11 @@ test-template:
 test-template-export:
     uv run pytest scripts/template/tests --run-exported-tests
 
+# Builds the container image (containers/Dockerfile) from the working tree and
+# runs single points in it. Slow, needs docker; not part of test-all.
+test-image:
+    uv run pytest tests/image --image -rfE
+
 test-all:
     just test-core
     just test-runtime

@@ -44,6 +44,9 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests/"]
+markers = [
+    "image: builds the container image and runs in it (run with --image)",
+]
 addopts = [
 #   "--cov-report", "term",
 #   "--cov-report", "html:.coverage-html",
