@@ -4,6 +4,10 @@ __all__ = [
     "Reference",
     "ModelMetadata",
     "ModelSpec",
+    "Variant",
+    "Setting",
+    "LocalWeights",
+    "VariantInfo",
     "ModelExecutor",
     "ModelSpecT",
     "ResourceCapabilities",
@@ -31,6 +35,18 @@ def __getattr__(name: str):
         from .spec import ModelSpec
 
         return ModelSpec
+    if name in ("Variant", "Setting"):
+        from . import spec
+
+        return getattr(spec, name)
+    if name == "LocalWeights":
+        from .weights import LocalWeights
+
+        return LocalWeights
+    if name == "VariantInfo":
+        from .metadata import VariantInfo
+
+        return VariantInfo
     if name == "ModelExecutor":
         from .executor import ModelExecutor
 

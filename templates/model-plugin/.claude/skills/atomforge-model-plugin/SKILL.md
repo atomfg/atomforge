@@ -125,8 +125,13 @@ justify the declarations, and a reviewer checks them there.
 - **Files outside the environment:** where weights and kernel caches are
   written (for example `~/.cache`). Record them in the model notes; do not
   redirect them.
-- **Spec fields:** the choices a user makes (variant, dataset, dispersion
-  correction, ...) and which combinations are invalid.
+- **Spec fields:** the choices a user makes (checkpoint, dataset, task head,
+  dispersion correction, ...), which of them choose trained parameters and
+  which are settings, which combinations are invalid, and which fields have
+  no effect for some values of others (Orb's cutoff for OMol models).
+- **Local weights:** whether the library loads parameters from a local file
+  or directory (a fine-tuned model), in what format, and whether it needs the
+  base architecture to load them (a state dict) or not (a whole model).
 
 To try the package, use a scratch environment that is not the plugin's:
 
@@ -155,15 +160,50 @@ a copy of it). Then follow "Make it yours" in its README:
 To add a model to an existing plugin, add its subpackage (moving a flat model
 into its own subpackage first), its entry point and a second test class.
 
-**Spec variants.** One kind can cover several checkpoints or modes chosen
-by spec fields. The contracts run the spec that `model_spec_factory`
-returns. When variants differ in what the test class declares (for example
-direct and conservative forces need different `ModelPhysics`), add a test
-class per variant, each in its own test module: references are stored per
-module and named by kind only, so two classes in one module would share
-them. When a declared property is missing for some spec values (a checkpoint
-without a stress head), keep the declaration, raise a clear error for those
-values, and record it in the model notes.
+**Spec fields and variants.** Every spec field has a role, given with
+`Annotated` (see the template's `spec.py`):
+
+- `Variant` for a field that chooses trained parameters (checkpoint, training
+  set, task head). Its type must be a `Literal` or `bool` (or their union with
+  `None`), so `Spec.variants()` can list every trained model. A free `str` for
+  a checkpoint name is not allowed: list the names the tested version knows.
+- `Setting` for everything else, even when it changes the numbers (precision
+  modes, dispersion).
+- `kind` and `environment_profile` take no marker.
+
+Bring every input to a canonical form: where a variant field has no effect
+for some values of another, set it to `None` in a `mode="before"` validator,
+so each trained model is one variant. Check with
+`[v.variant_id for v in Spec.variants()]` that there is one entry per
+checkpoint. Order the variant fields so that the generated names read like
+the library's names, or override `variant_name`.
+
+Declare `variant_info` in the manifest: a function returning a `VariantInfo`
+(training data, level of theory, `checkpoint` with its revision or URL) for
+each variant. The spec contract checks that it covers every variant and that
+no two share a checkpoint, which catches a missed canonical form.
+
+The contracts run the spec that `model_spec_factory` returns. To run other
+variants, name them in the case (`variants=(...)`), or run once with
+`--atomforge-all-variants` (say in the model notes how much it downloads).
+When variants differ in what the test class declares (for example direct and
+conservative forces need different `ModelPhysics`), add a test class per
+variant, each naming its variants; references are named
+`<kind>-<variant>-<structure>`, so the classes can share a module. When a
+declared property is missing for some variants (a checkpoint without a stress
+head), keep the declaration, raise a clear error for those variants, and
+record it in the model notes.
+
+**Local weights.** If the library loads parameters from a local file (step
+1), declare `weights: LocalWeights | None = None` in the spec and pass
+`spec.weights.path` to the library in the executor; atomforge has checked the
+hash before the executor is made. With a state-dict format, the variant
+fields select the architecture to load into. Give the case a
+`local_weights_factory(spec, directory) -> LocalWeights` that writes the
+variant's own parameters (download its checkpoint, using the URL in
+`variant_info`, into a cache, and copy it under `directory`); the local
+weights contract checks that they give the variant's results. If the library
+cannot load local parameters, leave the field out.
 
 **Weights.** Pin the weights where the library allows it: if it accepts a
 file path, or a revision or URL, download the checkpoint yourself (for
@@ -206,12 +246,13 @@ uv run pytest --atomforge-runtime -rfEs -k "<group>" > run.log 2>&1   # see the 
    | result types | `"is_a_float or float64 or finite or described or later_compute"` |
    | physics | `"invariant or gradient or repeated or sum_to or symmetric"` |
    | references | `matches_reference` |
+   | local weights | `local_weights` |
 
    The first runtime run builds the environment and downloads the weights,
    which can take many minutes. Run it in the background and read the log
    when it finishes.
 4. **References:** the first full runtime run records
-   `tests/test_contracts/<kind>-<structure>.npz` and fails on purpose. Check
+   `tests/test_contracts/<kind>-<variant>-<structure>.npz` and fails on purpose. Check
    that the recorded values are plausible (an energy per atom of a few eV
    with a negative sign for a molecule, forces of order 0.01 to 1 eV/Å), then
    run again.
@@ -253,9 +294,10 @@ values that the model's own package computes outside atomforge:
   structure if stress is declared.
 - The test reads the JSON file. Compare the **absolute** energy, not only
   differences, and cover each variant the spec offers. If that downloads a
-  lot, say how much in the README. The contracts run only the default
-  variant, so check the physics claims of the others (a rotation, say)
-  outside atomforge too, and record the result in the model notes.
+  lot, say how much in the README. The contracts run only the case's variants
+  unless `--atomforge-all-variants` is given, so check the physics claims of
+  the others (a rotation, say) outside atomforge too, and record the result in
+  the model notes.
 - Compare at f64 if declared, otherwise at f32, with tolerances that reflect
   that precision.
 

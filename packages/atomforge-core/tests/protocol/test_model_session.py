@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from atomforge_core.model.spec import ModelSpec
+from atomforge_core.model.spec import ModelSpec, Setting
 from atomforge_core.protocol.session import model_session_key
 from atomforge_core.resources.resource_models import ExecutionResources
 
@@ -8,7 +8,7 @@ from atomforge_core.resources.resource_models import ExecutionResources
 class ProfiledModel(ModelSpec):
     kind: Literal["profiled"] = "profiled"
     environment_profile: Literal["tested", "latest"] = "tested"
-    parameter: float = 1.0
+    parameter: Annotated[float, Setting] = 1.0
 
 
 def test_environment_profile_is_serialized_but_not_scientific():

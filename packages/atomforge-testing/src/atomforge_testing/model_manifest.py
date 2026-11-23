@@ -11,8 +11,9 @@ from pydantic import ValidationError
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.env.factory import EnvironmentFactory
 from atomforge_core.model.executor import ModelExecutor
-from atomforge_core.model.metadata import ModelMetadata
+from atomforge_core.model.metadata import ModelMetadata, VariantInfo
 from atomforge_core.model.spec import ModelSpec
+from atomforge_core.model.weights import LocalWeights
 from atomforge_core.property import Property
 from atomforge_core.registry.model_manifest import ModelManifest
 from atomforge_core.resources.resource_caps import ResourceCapabilities
@@ -83,6 +84,13 @@ class ModelManifestCase:
     # Replacement for the reference comparison's tolerances
     # (atomforge_testing.physics.REFERENCE_TOLERANCES).
     reference_tolerances: ReferenceTolerances | None = None
+    # The variants (by variant name) the runtime contracts run, with the
+    # settings of the case's spec. None runs the case's spec only, or every
+    # generated variant under --atomforge-all-variants.
+    variants: tuple[str, ...] | None = None
+    # For a spec that declares ``weights``: writes the given variant's own
+    # parameters under ``directory`` and returns them as LocalWeights.
+    local_weights_factory: Callable[[ModelSpec, Path], LocalWeights] | None = None
 
     def __post_init__(self) -> None:
         if self.physics_structures is not None:
@@ -100,10 +108,35 @@ def build_model_spec(case: ModelManifestCase, registration) -> ModelSpec:
     return model_spec
 
 
+def with_variant(model_spec: ModelSpec, variant_name: str) -> ModelSpec:
+    """``model_spec`` with the variant fields of the named variant, keeping
+    its settings."""
+    if variant_name == model_spec.variant_name:
+        return model_spec
+    spec_cls = type(model_spec)
+    variants = spec_cls.variants()
+    for variant in variants:
+        if variant.variant_name == variant_name:
+            payload = {**model_spec.model_dump(), **variant.variant_payload()}
+            return spec_cls.model_validate(payload)
+    known = ", ".join(v.variant_name for v in variants)
+    raise AssertionError(
+        f"the case names variant '{variant_name}', which {model_spec.kind} does "
+        f"not generate (its variants: {known})"
+    )
+
+
 class _ManifestCaseContract:
     """Helpers shared by every contract. Subclasses set ``manifest_case``."""
 
     manifest_case: ModelManifestCase
+    # The variant this test runs (set by the atomforge_variant fixture); None
+    # is the case's own spec.
+    _variant_name: str | None = None
+
+    @pytest.fixture(autouse=True)
+    def _atomforge_select_variant(self, atomforge_variant):
+        self._variant_name = atomforge_variant
 
     @property
     def case(self) -> ModelManifestCase:
@@ -127,6 +160,8 @@ class _ManifestCaseContract:
         environment profile."""
         registration, _ = self._convert_manifest()
         model_spec = build_model_spec(self.case, registration)
+        if self._variant_name is not None:
+            model_spec = with_variant(model_spec, self._variant_name)
         if environment_profile is None:
             return model_spec
         payload = model_spec.model_dump()
@@ -383,6 +418,82 @@ class ModelSpecContract(_ManifestCaseContract):
         with pytest.raises(ValidationError):
             registration.model_spec.model_validate(payload)
 
+    def _spec_class(self) -> type[ModelSpec]:
+        registration, _ = self._convert_manifest()
+        return registration.model_spec
+
+    def test_model_spec_generates_variants(self):
+        variants = self._spec_class().variants()
+
+        assert variants, (
+            f"{self._spec_class().__name__}.variants() is empty: no combination "
+            "of its variant fields validates with default settings"
+        )
+
+    def test_variant_names_are_unique(self):
+        names = [v.variant_name for v in self._spec_class().variants()]
+        duplicates = sorted({name for name in names if names.count(name) > 1})
+
+        assert not duplicates, (
+            f"variants share the names {duplicates}: variant_name must tell "
+            "every generated variant apart"
+        )
+
+    def test_variants_round_trip_through_json(self):
+        spec_cls = self._spec_class()
+        for variant in spec_cls.variants():
+            restored = spec_cls.model_validate_json(variant.model_dump_json())
+            assert restored == variant, (
+                f"variant {variant.variant_id} changes in a JSON round trip: "
+                f"{variant!r} became {restored!r}"
+            )
+
+    def test_model_spec_is_a_generated_variant(self):
+        model_spec = self._build_model_spec()
+        names = [v.variant_name for v in type(model_spec).variants()]
+
+        assert model_spec.variant_name in names, (
+            f"the case's spec is variant '{model_spec.variant_name}', which is "
+            f"not among the generated variants {names}. Its variant fields are "
+            "probably not in canonical form: a mode='before' validator must set "
+            "a variant field that has no effect to None, for defaults too"
+        )
+
+    def test_variant_info_covers_every_variant(self):
+        registration, _ = self._convert_manifest()
+        variant_info = registration.load_variant_info()
+        if variant_info is None:
+            return
+        for variant in registration.model_spec.variants():
+            try:
+                info = variant_info(variant)
+            except Exception as exc:  # noqa: BLE001 - reported as the failure
+                raise AssertionError(
+                    f"variant_info raised for {variant.variant_id}: {exc!r}"
+                ) from exc
+            assert isinstance(info, VariantInfo), (
+                f"variant_info returned {info!r} for {variant.variant_id}, "
+                "not a VariantInfo"
+            )
+
+    def test_variant_info_checkpoints_are_unique(self):
+        registration, _ = self._convert_manifest()
+        variant_info = registration.load_variant_info()
+        if variant_info is None:
+            return
+        by_checkpoint: dict[str, list[str]] = {}
+        for variant in registration.model_spec.variants():
+            checkpoint = variant_info(variant).checkpoint
+            if checkpoint is not None:
+                by_checkpoint.setdefault(checkpoint, []).append(variant.variant_id)
+        shared = {c: ids for c, ids in by_checkpoint.items() if len(ids) > 1}
+
+        assert not shared, (
+            f"variants share checkpoints {shared}: each generated variant should "
+            "be one trained model. A variant field with no effect for some values "
+            "should be set to None by a mode='before' validator"
+        )
+
 
 class ModelRegistryContract(_ManifestCaseContract):
     def _discovered_registration(self):
@@ -588,6 +699,7 @@ class ModelResultTypesContract(_RuntimeContract):
         key = (
             id(atomforge_backend),
             id(self.case),
+            self._variant_name,
             atomforge_environment_profile,
             properties,
         )
@@ -988,7 +1100,8 @@ class ModelReferenceContract(_RuntimeContract):
     to the plugin's tests (pytest-regressions' ``ndarrays_regression``; needs
     ``atomforge-testing[regression]``).
 
-    One reference per structure, named ``<kind>-<structure>.npz``. The
+    One reference per variant and structure, named
+    ``<kind>-<variant>-<structure>.npz``. The
     ``tested`` profile's test records it when it is missing, or under
     ``--force-regen`` or ``--regen-all``: on CPU, at the highest declared
     precision. Every profile compares its result, at the case's runtime
@@ -1010,7 +1123,11 @@ class ModelReferenceContract(_RuntimeContract):
         self._require(Property.ENERGY)
         structure = self._physics_structure(structure_name)
         regression = reference.ndarrays_regression(request)
-        name = reference.reference_name(self.case.manifest.kind, structure_name)
+        name = reference.reference_name(
+            self.case.manifest.kind,
+            self._build_model_spec().variant_name,
+            structure_name,
+        )
         path = request.getfixturevalue("original_datadir") / f"{name}.npz"
         regenerating = request.config.getoption(
             "force_regen"
@@ -1056,6 +1173,123 @@ class ModelReferenceContract(_RuntimeContract):
         )
 
 
+def _close(first, second, tolerance: float) -> float:
+    """The largest absolute difference between two nested sequences of
+    numbers, or between two numbers."""
+    if isinstance(first, (int, float)):
+        return abs(float(first) - float(second))
+    if len(first) != len(second):
+        return float("inf")
+    return max((_close(a, b, tolerance) for a, b in zip(first, second)), default=0.0)
+
+
+class ModelLocalWeightsContract(_RuntimeContract):
+    """For a spec that declares ``weights: LocalWeights | None``: the case's
+    ``local_weights_factory`` writes a variant's own parameters to a file,
+    and the spec with these weights must give the variant's results. A file
+    changed after the weights were made must be rejected. Collected only when
+    the spec declares ``weights``."""
+
+    def _local_weights(self, model_spec: ModelSpec, directory: Path) -> LocalWeights:
+        factory = self.case.local_weights_factory
+        if factory is None:
+            pytest.fail(
+                f"{type(model_spec).__name__} declares weights, so the case needs "
+                "a local_weights_factory(spec, directory) -> LocalWeights that "
+                "writes the variant's own parameters",
+                pytrace=False,
+            )
+        weights = factory(model_spec, directory)
+        assert isinstance(weights, LocalWeights), (
+            f"local_weights_factory returned {weights!r}, not LocalWeights"
+        )
+        return weights
+
+    def _properties_and_structure(self):
+        structure = self._runtime_structure()
+        properties = set(self._supported_properties()) & {
+            Property.ENERGY,
+            Property.FORCES,
+            Property.STRESS,
+        }
+        if not any(structure.pbc):
+            properties.discard(Property.STRESS)
+        return frozenset(properties), structure
+
+    def _single_point(self, backend, model_spec, properties, structure):
+        if self.case.runtime_skip_reason is not None:
+            pytest.skip(self.case.runtime_skip_reason)
+        from atomforge_builtins.task.single_point import SinglePoint
+
+        return backend.execute(
+            SinglePoint(structure=structure, properties=properties),
+            model=model_spec,
+            exec_resources=self._runtime_exec_resources(),
+        )
+
+    @pytest.mark.atomforge_runtime
+    @pytest.mark.atomforge_local_weights
+    def test_local_weights_give_the_variant_results(self, atomforge_backend, tmp_path):
+        model_spec = self._build_model_spec()
+        weights = self._local_weights(model_spec, tmp_path)
+        with_weights = type(model_spec).model_validate(
+            {**model_spec.model_dump(), "weights": weights.model_dump()}
+        )
+        properties, structure = self._properties_and_structure()
+        tolerances = self.case.reference_tolerances or physics.REFERENCE_TOLERANCES
+
+        expected = self._single_point(
+            atomforge_backend, model_spec, properties, structure
+        )
+        actual = self._single_point(
+            atomforge_backend, with_weights, properties, structure
+        )
+
+        n_atoms = len(structure.numbers)
+        if Property.ENERGY in properties:
+            difference = abs(actual.energy - expected.energy) / n_atoms
+            assert difference <= tolerances.energy_per_atom, (
+                f"energy per atom with the local weights of {model_spec.variant_id} "
+                f"differs by {difference:.3g} eV (tolerance "
+                f"{tolerances.energy_per_atom:.3g})"
+            )
+        if Property.FORCES in properties:
+            difference = _close(actual.forces, expected.forces, tolerances.forces)
+            assert difference <= tolerances.forces, (
+                f"forces with the local weights of {model_spec.variant_id} differ "
+                f"by {difference:.3g} eV/Å (tolerance {tolerances.forces:.3g})"
+            )
+        if Property.STRESS in properties:
+            difference = _close(actual.stress, expected.stress, tolerances.stress)
+            assert difference <= tolerances.stress, (
+                f"stress with the local weights of {model_spec.variant_id} differs "
+                f"by {difference:.3g} (tolerance {tolerances.stress:.3g})"
+            )
+
+    @pytest.mark.atomforge_runtime
+    @pytest.mark.atomforge_local_weights
+    def test_changed_local_weights_are_rejected(self, atomforge_backend, tmp_path):
+        model_spec = self._build_model_spec()
+        weights = self._local_weights(model_spec, tmp_path)
+        # The weights as recorded before their file changed: a hash their
+        # contents no longer have. Changing the file instead would not test
+        # the check when a worker session already holds these contents, which
+        # it rightly reuses.
+        recorded = weights.model_copy(update={"sha256": "0" * 64})
+        with_weights = type(model_spec).model_validate(
+            {**model_spec.model_dump(), "weights": recorded.model_dump()}
+        )
+        properties, structure = self._properties_and_structure()
+
+        with pytest.raises(Exception) as raised:
+            self._single_point(atomforge_backend, with_weights, properties, structure)
+
+        assert "sha256" in str(raised.value), (
+            "running with local weights changed after they were made failed, "
+            f"but not because their hash was checked: {raised.value!r}"
+        )
+
+
 class ModelPluginContract(
     ModelManifestContract,
     ModelManifestSymbolContract,
@@ -1067,6 +1301,7 @@ class ModelPluginContract(
     ModelResultTypesContract,
     ModelPhysicsContract,
     ModelReferenceContract,
+    ModelLocalWeightsContract,
 ):
     """Every model plugin contract. Subclass it once per model and set
     ``manifest_case``; the environment and runtime contracts run only with

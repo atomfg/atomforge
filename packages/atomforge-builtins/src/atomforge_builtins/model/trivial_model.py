@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Annotated, Literal
 
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.model.executor import ModelExecutor
@@ -7,7 +7,7 @@ from atomforge_core.property import Property
 from atomforge_core.registry.model_manifest import ModelManifest
 from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.model.result import ModelResult
-from atomforge_core.model.spec import ModelSpec
+from atomforge_core.model.spec import ModelSpec, Setting
 from atomforge_core.structure import StructureData
 from atomforge_core.resources.resource_models import ResolvedResources
 from atomforge_core.env.factory import EnvironmentFactory, DependencySummary
@@ -22,7 +22,7 @@ TrivialSupportedProperties = frozenset({Property.ENERGY, Property.FORCES})
 class Trivial(ModelSpec):
     environment_profile: Literal["tested"] = "tested"
     kind: Literal["trivial"] = model_kind
-    scale: float = 1.0
+    scale: Annotated[float, Setting] = 1.0
 
 
 TrivialMetadata = ModelMetadata(

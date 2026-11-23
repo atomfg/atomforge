@@ -66,6 +66,8 @@ class ModelProvenance(BaseModel):
 
     kind: str
     payload_hash: str
+    variant_id: str | None = None
+    weights_sha256: str | None = None
     distributions: tuple[str, ...] = Field(default_factory=tuple)
     versions: dict[str, str] = Field(default_factory=dict)
 

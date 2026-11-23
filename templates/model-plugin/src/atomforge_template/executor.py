@@ -25,6 +25,21 @@ class TorchLJExecutor(ModelExecutor[TorchLJ]):
         self._torch = torch
         self.device = torch.device(torch_device(resolved_resources))
         self.dtype = getattr(torch, torch_dtype(resolved_resources))
+        self.epsilon, self.sigma = self._parameters(spec)
+
+    @staticmethod
+    def _parameters(spec: TorchLJ) -> tuple[float, float]:
+        """The model's parameters: from the local weights when the spec has
+        them, from the spec otherwise. atomforge has checked the weights'
+        hash before the executor is made. A real model would load its
+        checkpoint format here (for example torch.load of a state dict into
+        the architecture that the spec's variant fields select)."""
+        if spec.weights is None:
+            return spec.epsilon, spec.sigma
+        import json
+
+        parameters = json.loads(spec.weights.path.read_text())
+        return float(parameters["epsilon"]), float(parameters["sigma"])
 
     def compute(
         self, structure: StructureData, properties: frozenset[Property]
@@ -66,5 +81,5 @@ class TorchLJExecutor(ModelExecutor[TorchLJ]):
         n = positions.shape[0]
         i, j = torch.triu_indices(n, n, offset=1, device=self.device)
         r = torch.linalg.vector_norm(positions[i] - positions[j], dim=-1)
-        sr6 = (self.spec.sigma / r) ** 6
-        return (4.0 * self.spec.epsilon * (sr6**2 - sr6)).sum()
+        sr6 = (self.sigma / r) ** 6
+        return (4.0 * self.epsilon * (sr6**2 - sr6)).sum()

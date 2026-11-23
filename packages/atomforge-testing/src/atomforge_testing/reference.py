@@ -33,8 +33,8 @@ def ndarrays_regression(request: pytest.FixtureRequest):
         pytest.fail(EXTRA_MESSAGE, pytrace=False)
 
 
-def reference_name(kind: str, structure_name: str) -> str:
-    return f"{kind}-{structure_name}"
+def reference_name(kind: str, variant_name: str, structure_name: str) -> str:
+    return f"{kind}-{variant_name}-{structure_name}"
 
 
 def recording_resources(capabilities: ResourceCapabilities) -> ExecutionResources:

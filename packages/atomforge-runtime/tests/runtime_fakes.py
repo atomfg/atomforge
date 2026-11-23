@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Literal
+from typing import Annotated, Literal
 
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.env.factory import DependencySummary, EnvironmentFactory
 from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.model.metadata import ModelMetadata
 from atomforge_core.model.result import ModelResult
-from atomforge_core.model.spec import ModelSpec
+from atomforge_core.model.spec import ModelSpec, Setting
 from atomforge_core.property import Property
 from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.resources.resource_models import ResolvedResources
@@ -27,7 +27,7 @@ from atomforge_runtime.registry.task.task_registration import TaskRegistration
 
 class FakeModel(ModelSpec):
     kind: Literal["fake-model"] = "fake-model"
-    scale: float = 1.0
+    scale: Annotated[float, Setting] = 1.0
 
 
 class FakeEnvironmentFactory(EnvironmentFactory[object]):

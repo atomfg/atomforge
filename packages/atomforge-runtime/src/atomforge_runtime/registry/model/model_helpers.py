@@ -25,6 +25,7 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             "metadata": manifest.metadata,
             "resource_capabilities": manifest.resource_capabilities,
             "probe": manifest.probe,
+            "variant_info": manifest.variant_info,
             "task_overrides": manifest.task_overrides,
         }
 
@@ -42,6 +43,7 @@ class ManifestToRegistrationConverter(ManifestToRegistrationConverterBase):
             environment_factory_path=components["environment_factory_cls"],
             resource_capabilities_path=components["resource_capabilities"],
             probe_path=components["probe"],
+            variant_info_path=components["variant_info"],
             task_overrides=components["task_overrides"],
             source=manifest.distribution,
         )

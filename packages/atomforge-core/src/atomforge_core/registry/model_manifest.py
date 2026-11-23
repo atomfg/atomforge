@@ -33,6 +33,11 @@ class ModelManifest(RegistryManifestBase):
         description="Optional dotted path to a resource probe callable.",
     )
 
+    variant_info: SymbolPath | None = Field(
+        default=None,
+        description="Optional dotted path to a callable that takes a spec of each variant and returns its VariantInfo.",
+    )
+
     task_overrides: dict[str, SymbolPath] = Field(
         default_factory=dict,
         description="Optional mapping of task kinds to model-specific TaskSpec overrides, where the value is a dotted path to a TaskExecutor subclass.",

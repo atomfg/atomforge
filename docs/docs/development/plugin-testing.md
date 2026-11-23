@@ -103,7 +103,12 @@ marks through inheritance.
 - `ModelManifestContract`: manifest type, entry point text, and strict loading.
 - `ModelManifestSymbolContract`: one checklist test per manifest symbol.
 - `ModelSpecContract`: representative spec construction, and round trips through
-  Python and JSON dumps (specs reach the worker as JSON).
+  Python and JSON dumps (specs reach the worker as JSON). The generated
+  variants (`Spec.variants()`): there is at least one, their names are unique,
+  each survives JSON, and the factory's spec is one of them (a failure here
+  usually means a variant field is not brought to canonical form). With a
+  `variant_info` in the manifest, it covers every variant and no two variants
+  share a `checkpoint`.
 - `ModelRegistryContract`: installed package discovery through `ModelRegistry`.
 - `ModelEnvironmentContract`: environment factory determinism, provider
   requirements, and dependency summary consistency.
@@ -178,13 +183,30 @@ marks through inheritance.
   extra):
   - `test_matches_reference[<profile>-<structure>]`: energy per atom, forces,
     and stress (when declared, on periodic structures) on each physics
-    structure, against `tests/<test module>/<kind>-<structure>.npz`, within
+    structure, against `tests/<test module>/<kind>-<variant>-<structure>.npz`, within
     `atomforge_testing.physics.REFERENCE_TOLERANCES` (absolute; replace with
     the case's `reference_tolerances=ReferenceTolerances(...)`).
   - A missing reference fails the `[tested-…]` test, which records it on CPU
     at the highest declared precision; commit the file. `--force-regen`
     rewrites references that differ, `--regen-all` all of them. Other
     profiles compare with the `tested` reference and never write.
+- `ModelLocalWeightsContract`: opt-in, collected only when the spec declares
+  `weights: LocalWeights | None`. The case's
+  `local_weights_factory(spec, directory) -> LocalWeights` writes the
+  variant's own parameters (for example the pretrained checkpoint it
+  downloads) under `directory`:
+  - `test_local_weights_give_the_variant_results`: the spec with these
+    weights gives the variant's energy, forces and stress within the reference
+    tolerances.
+  - `test_changed_local_weights_are_rejected`: weights whose recorded hash no
+    longer matches their contents fail with a message about the hash.
+
+The runtime, physics, reference and local weights contracts run the factory's
+spec. To run other variants, name them in the case
+(`variants=("conservative-inf-omat", "direct-inf-omat")`), which keeps the
+factory's settings, or pass `--atomforge-all-variants` to run every variant
+the spec generates. With more than one variant, the variant comes first in
+the test id.
 
 Every contract that builds or runs the model runs once per environment
 profile: the values of your spec's `environment_profile` `Literal` (e.g.

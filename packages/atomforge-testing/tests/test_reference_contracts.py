@@ -163,7 +163,7 @@ def run(pytester, *args):
 
 
 def reference_file(pytester, kind, structure):
-    return pytester.path / "test_contracts" / f"{kind}-{structure}.npz"
+    return pytester.path / "test_contracts" / f"{kind}-default-{structure}.npz"
 
 
 def load(path):
@@ -263,7 +263,7 @@ def test_missing_reference_fails_and_writes_it(pytester):
     assert found == {f"tested-{s}": "FAILED" for s in STRUCTURES}
     for structure in STRUCTURES:
         assert reference_file(pytester, "fake-model", structure).is_file()
-    result.stdout.fnmatch_lines(["*fake-model-molecule.npz*"])
+    result.stdout.fnmatch_lines(["*fake-model-default-molecule.npz*"])
 
 
 def test_reference_holds_energy_per_atom_forces_and_stress(pytester):

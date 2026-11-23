@@ -14,21 +14,100 @@ A `ModelSpec` is the user-facing description of a model choice. It is a small Py
 For example, the built-in Lennard-Jones model is configured by a spec like this:
 
 ```python
-from typing import Literal
+from typing import Annotated, Literal
 
-from atomforge_core.model.spec import ModelSpec
+from atomforge_core.model.spec import ModelSpec, Setting
 
 
 class LennardJones(ModelSpec):
     kind: Literal["ase-lj"] = "ase-lj"
-    sigma: float = 1.0
-    epsilon: float = 1.0
-    rc: float | None = None
-    ro: float | None = None
-    smooth: bool = False
+    sigma: Annotated[float, Setting] = 1.0
+    epsilon: Annotated[float, Setting] = 1.0
+    rc: Annotated[float | None, Setting] = None
+    ro: Annotated[float | None, Setting] = None
+    smooth: Annotated[bool, Setting] = False
 ```
 
 The `kind` field identifies the model in the [model registry](registries.md). The other fields are model configuration. Creating this object should not require importing ASE, PyTorch, CHGNet, MACE, Orb, or any other model runtime dependency.
+
+### Variants and settings
+
+Every field of a spec has one role, given with `Annotated`:
+
+- `Variant`: the field chooses the trained parameters, such as a checkpoint.
+  Its type must be enumerable (`Literal`, `bool`, and their unions with
+  `None`).
+- `Setting`: everything else the executor uses, including what changes the
+  numbers without changing the parameters (precision modes, a dispersion
+  correction, the parameters of an empirical potential).
+- `kind` and `environment_profile` are reserved and take no marker, and the
+  optional `weights` field is recognised by its type (see
+  [Local weights](#local-weights)).
+
+A field without a role, or a variant field that cannot be enumerated, raises
+`TypeError` when the class is defined.
+
+A *variant* is one trained model of a kind. `Spec.variants()` lists them: the
+combinations of the variant fields' values that validate, each with default
+settings. Orb v3, for example:
+
+```python
+class OrbV3(ModelSpec):
+    kind: Literal["orb-v3"] = "orb-v3"
+    force_mode: Annotated[Literal["direct", "conservative"], Variant] = "conservative"
+    cutoff: Annotated[Literal["inf", "20"] | None, Variant] = "inf"
+    training_data: Annotated[Literal["omat", "mpa", "omol"], Variant] = "omat"
+    matmul_precision: Annotated[Literal["highest", "high"], Setting] = "highest"
+```
+
+OMol models have no cutoff, so the spec sets `cutoff` to `None` for them in a
+`mode="before"` validator. This is the one rule for variant fields: **a spec
+brings every input to a canonical form**, so that each trained model is one
+variant. Orb v3 accepts 14 combinations, which load 10 checkpoints, and
+`OrbV3.variants()` has 10 entries.
+
+Each spec has a `variant_name`, the variant fields' values joined by `-` in
+field order with `None` left out (`conservative-inf-omat`,
+`conservative-omol`), or `default` for a spec without variant fields. A plugin
+may override the property for nicer names. The `variant_id`,
+`<kind>/<variant_name>` (`orb-v3/conservative-inf-omat`), identifies a trained
+model across atomforge: it is recorded in the provenance, names the reference
+files of the plugin tests, and gives the spec back with
+`ModelRegistry.default().variant("orb-v3/conservative-omol")`. On the command
+line:
+
+```bash
+atomforge model variants orb-v3
+```
+
+`variant_payload()` and `settings_payload()` return the two groups of fields;
+`scientific_payload()`, which identifies the calculation in the provenance,
+holds both and the local weights' hash.
+
+Facts about a variant that the spec cannot generate, such as its training
+data and level of theory, come from an optional `variant_info` callable in the
+manifest that returns a `VariantInfo` for each variant.
+
+### Local weights
+
+A spec may declare `weights: LocalWeights | None = None`. Set, it replaces the
+variant's parameters with ones from a local file or directory, for example a
+model fine-tuned with the provider's own package; the variant fields then
+describe the base model.
+
+```python
+from atomforge_core.model.weights import LocalWeights
+
+spec = MACE(model="medium", weights=LocalWeights("runs/my-system/best.model"))
+spec.variant_id  # 'mace/medium+local:3fa2c1d0'
+```
+
+`LocalWeights` makes the path absolute and hashes the contents (SHA-256 of the
+file, or of a directory's relative paths and contents). The hash, not the
+path, identifies the weights: it is in `scientific_payload()` and the
+provenance, and the worker checks it before the model loads the file, so a
+file changed in between is an error rather than a silent change. `label` and
+`provider_version` are recorded as given.
 
 ## ModelExecutor
 
@@ -144,6 +223,7 @@ Models are discovered through manifests. A `ModelManifest` is the [registry](reg
 - `environment_factory_cls`: the factory that describes the model's runtime dependencies.
 - `metadata`: human-facing model metadata.
 - `resource_capabilities`: the accelerators and precisions the model supports (see [Resource Capabilities](#resource-capabilities)).
+- `variant_info`: optional; a callable that returns the `VariantInfo` of each variant (see [Variants and settings](#variants-and-settings)).
 - `task_overrides`: optional model-specific task executors.
 
 For a user, the manifest is usually invisible. For a model plugin author, it is the place where the model becomes discoverable by Atomforge.

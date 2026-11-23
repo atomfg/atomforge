@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
+from collections.abc import Callable
 from typing import Generic
 
 from atomforge_core.env.factory import EnvironmentFactory
 from atomforge_core.model.executor import ModelExecutor
-from atomforge_core.model.metadata import ModelMetadata
+from atomforge_core.model.metadata import ModelMetadata, VariantInfo
 from atomforge_core.property import Property
 from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.model.spec import ModelSpecT
@@ -30,6 +31,7 @@ class ModelRegistration(Generic[ModelSpecT]):
     environment_factory_path: SymbolPath
     resource_capabilities_path: SymbolPath
     probe_path: SymbolPath | None = None
+    variant_info_path: SymbolPath | None = None
     source: list[str] = field(default_factory=list)
     task_overrides: dict[str, SymbolPath] = field(default_factory=dict)
 
@@ -47,6 +49,7 @@ class ModelRegistration(Generic[ModelSpecT]):
         default=_UNSET, init=False, repr=False, compare=False
     )
     _probe: object = field(default=_UNSET, init=False, repr=False, compare=False)
+    _variant_info: object = field(default=_UNSET, init=False, repr=False, compare=False)
 
     _task_override_executors: object = field(
         default=_UNSET, init=False, repr=False, compare=False
@@ -145,6 +148,24 @@ class ModelRegistration(Generic[ModelSpecT]):
                 ),
             )
         return self._probe
+
+    def load_variant_info(self) -> Callable[[ModelSpecT], VariantInfo] | None:
+        """The manifest's ``variant_info`` callable, or None if it has none."""
+        if self.variant_info_path is None:
+            return None
+        if self._variant_info is _UNSET:
+            object.__setattr__(
+                self,
+                "_variant_info",
+                load_callable(
+                    self.variant_info_path,
+                    registration_label="Model registration",
+                    kind=self.kind,
+                    field_name="variant_info",
+                    reject_classes=True,
+                ),
+            )
+        return self._variant_info
 
     def check_task_override(self, task_kind: str) -> bool:
         return task_kind in self.task_overrides
