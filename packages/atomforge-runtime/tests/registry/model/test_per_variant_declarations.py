@@ -50,6 +50,25 @@ def test_a_function_returning_the_wrong_type_names_the_variant():
         registration.load_resource_capabilities(FakeFamily(model="large"))
 
 
+def test_a_function_that_raises_a_validation_error_keeps_its_message():
+    registration = build_family_registration(
+        resource_capabilities="runtime_fakes:fake_family_invalid_capabilities"
+    )
+
+    with pytest.raises(ValueError, match="(?s)fake-family/small.*precision keys"):
+        registration.load_resource_capabilities(FakeFamily())
+
+
+def test_the_kind_union_is_computed_once(monkeypatch):
+    registration = build_family_registration()
+    first = registration.load_resource_capabilities()
+    monkeypatch.setattr(
+        FakeFamily, "variants", classmethod(lambda cls: pytest.fail("recomputed"))
+    )
+
+    assert registration.load_resource_capabilities() == first
+
+
 def test_the_host_check_uses_the_variant(example_structure):
     registration = build_family_registration()
     task = FakeTask(structure=example_structure)  # requires energy and forces

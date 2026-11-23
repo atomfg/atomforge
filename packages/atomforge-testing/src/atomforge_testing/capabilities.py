@@ -21,6 +21,7 @@ import pytest
 from atomforge_core.model.declarations import (
     check_resource_capabilities,
     check_supported_properties,
+    is_per_variant,
     resolve_declaration,
     union_resource_capabilities,
     union_supported_properties,
@@ -54,6 +55,8 @@ def _selected_supported_properties(case, config) -> frozenset[Property]:
     """What some selected variant declares: a test whose variant does not
     declare its parameter skips (see ``_RuntimeContract``)."""
     declaration = case.manifest.supported_properties.load_symbol()
+    if not is_per_variant(declaration):
+        return check_supported_properties(declaration)
     return union_supported_properties(
         resolve_declaration(declaration, spec, check_supported_properties)
         for spec in selected_specs(case, config)
@@ -62,6 +65,8 @@ def _selected_supported_properties(case, config) -> frozenset[Property]:
 
 def _selected_resource_capabilities(case, config) -> ResourceCapabilities:
     declaration = case.manifest.resource_capabilities.load_symbol()
+    if not is_per_variant(declaration):
+        return check_resource_capabilities(declaration)
     return union_resource_capabilities(
         resolve_declaration(declaration, spec, check_resource_capabilities)
         for spec in selected_specs(case, config)

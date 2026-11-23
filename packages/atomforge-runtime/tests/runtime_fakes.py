@@ -275,6 +275,11 @@ def fake_family_capabilities(spec: FakeFamily) -> ResourceCapabilities:
     return ResourceCapabilities(accelerator=["cpu"], precision={"cpu": precisions})
 
 
+def fake_family_invalid_capabilities(spec: FakeFamily) -> ResourceCapabilities:
+    # Precision keys that are not the accelerators: a pydantic ValidationError.
+    return ResourceCapabilities(accelerator=["cpu"], precision={"cuda": ["f32"]})
+
+
 def fake_family_wrong_type(spec: FakeFamily) -> object:
     return {"cpu": ["f32"]}
 

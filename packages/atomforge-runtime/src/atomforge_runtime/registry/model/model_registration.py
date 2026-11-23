@@ -31,6 +31,13 @@ from atomforge_runtime.registry.loading import (
 _UNSET = object()  # Sentinel for unset values
 
 
+def _same_kind_of_error(exc: Exception, message: str) -> Exception:
+    """A TypeError or ValueError with ``message``. Not ``type(exc)``: a
+    subclass such as pydantic's ValidationError cannot be built from a
+    message."""
+    return TypeError(message) if isinstance(exc, TypeError) else ValueError(message)
+
+
 @dataclass(frozen=True)
 class ModelRegistration(Generic[ModelSpecT]):
     kind: str
@@ -59,6 +66,9 @@ class ModelRegistration(Generic[ModelSpecT]):
         default=_UNSET, init=False, repr=False, compare=False
     )
     _probe: object = field(default=_UNSET, init=False, repr=False, compare=False)
+    _kind_declarations: dict = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
     _variant_info: object = field(default=_UNSET, init=False, repr=False, compare=False)
 
     _task_override_executors: object = field(
@@ -103,23 +113,30 @@ class ModelRegistration(Generic[ModelSpecT]):
                 if not is_per_variant(declaration):
                     check(declaration)
             except (TypeError, ValueError) as exc:
-                raise type(exc)(
+                raise _same_kind_of_error(
+                    exc,
                     f"Model registration '{self.kind}' failed to load {field_name} "
-                    f"from '{path}': {exc}"
+                    f"from '{path}': {exc}",
                 ) from exc
             object.__setattr__(self, attr, declaration)
         return getattr(self, attr)
 
     def _declaration_for(self, declaration, spec, field_name: str, check, union):
         try:
-            if spec is None:
-                return kind_declaration(declaration, self.model_spec, check, union)
-            return resolve_declaration(declaration, spec, check)
+            if spec is not None:
+                return resolve_declaration(declaration, spec, check)
+            # The kind as a whole: the union over its variants, computed once.
+            if field_name not in self._kind_declarations:
+                self._kind_declarations[field_name] = kind_declaration(
+                    declaration, self.model_spec, check, union
+                )
+            return self._kind_declarations[field_name]
         except (TypeError, ValueError) as exc:
             target = "the kind" if spec is None else f"'{spec.variant_id}'"
-            raise type(exc)(
+            raise _same_kind_of_error(
+                exc,
                 f"Model registration '{self.kind}' failed to declare {field_name} "
-                f"for {target}: {exc}"
+                f"for {target}: {exc}",
             ) from exc
 
     def load_supported_properties(
