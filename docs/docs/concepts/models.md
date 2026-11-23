@@ -220,8 +220,12 @@ float32 only or one without a stress head, the manifest names a function of
 the spec instead of a value:
 
 ```python
+from atomforge_core.resources.resource_caps import Precision, ResourceCapabilities
+
+
 def resource_capabilities(spec: MySpec) -> ResourceCapabilities:
-    precisions = ["f32", "f64"] if has_fp64_build(spec.model) else ["f32"]
+    # Annotated, so a type checker reads the literals as precisions, not str.
+    precisions: list[Precision] = ["f32", "f64"] if has_fp64_build(spec.model) else ["f32"]
     return ResourceCapabilities(
         accelerator=["cpu", "cuda"],
         precision={"cpu": precisions, "cuda": precisions},
