@@ -122,7 +122,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     for argname, parametrization in PARAMETRIZATIONS.items():
         if argname in metafunc.fixturenames:
-            metafunc.parametrize(argname, parametrization(case))
+            metafunc.parametrize(argname, parametrization(case, metafunc.config))
 
 
 @pytest.fixture(scope="session")

@@ -46,8 +46,16 @@ class WeightedLike(ModelSpec):
     weights: LocalWeights | None = None
 
 
+def family_capabilities(spec: "WeightedLike"):
+    from atomforge_core.resources.resource_caps import ResourceCapabilities
+
+    precisions = ["f64"] if spec.model == "small" else ["f32"]
+    return ResourceCapabilities(precision=precisions)
+
+
 def registrations():
     """The ase-lj registration, and copies of it for the specs above."""
+    from atomforge_core.registry.symbol_path import SymbolPath
     from atomforge_runtime.registry.model.model_registry import ModelRegistry
 
     ase_lj = ModelRegistry.default().get("ase-lj")
@@ -55,6 +63,12 @@ def registrations():
         ase_lj,
         replace(ase_lj, kind="orb-like", model_spec=OrbLike),
         replace(ase_lj, kind="weighted-like", model_spec=WeightedLike),
+        replace(
+            ase_lj,
+            kind="family-like",
+            model_spec=WeightedLike,
+            resource_capabilities_path=SymbolPath("variant_specs:family_capabilities"),
+        ),
     ]
 
 

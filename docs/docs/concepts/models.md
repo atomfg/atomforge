@@ -212,6 +212,36 @@ resolved together:
   float64, and the result records a message.
 - With `strict=True`, a request that cannot be honoured raises instead.
 
+## Declarations that differ between variants
+
+Supported properties and resource capabilities are declared per kind. When
+the variants of a kind differ, for example a checkpoint that is published in
+float32 only or one without a stress head, the manifest names a function of
+the spec instead of a value:
+
+```python
+from atomforge_core.resources.resource_caps import Precision, ResourceCapabilities
+
+
+def resource_capabilities(spec: MySpec) -> ResourceCapabilities:
+    # Annotated, so a type checker reads the literals as precisions, not str.
+    precisions: list[Precision] = ["f32", "f64"] if has_fp64_build(spec.model) else ["f32"]
+    return ResourceCapabilities(
+        accelerator=["cpu", "cuda"],
+        precision={"cpu": precisions, "cuda": precisions},
+    )
+```
+
+The function is a declaration like the value it returns: deterministic in the
+spec and host-safe (it imports nothing heavy and does not inspect the
+machine). It should depend on the variant fields and the local weights, not on
+settings. Atomforge calls it with the spec being run: the backend checks a
+task's required properties against that variant, and the worker resolves
+resources against that variant's capabilities, so the default precision of a
+float32-only variant is `f32`. Listings such as `atomforge model list` show the
+union over the kind's variants, and `atomforge model variants <kind>` shows
+the declarations of each variant when they differ.
+
 ## Model Manifests
 
 Models are discovered through manifests. A `ModelManifest` is the [registry](registries.md) contract for a model kind. It points Atomforge to the pieces needed to use the model:
@@ -219,10 +249,10 @@ Models are discovered through manifests. A `ModelManifest` is the [registry](reg
 - `kind`: the unique model identifier, such as `"ase-lj"` or a plugin model kind.
 - `model_spec`: the `ModelSpec` class users instantiate.
 - `executor_cls`: the worker-side `ModelExecutor` class.
-- `supported_properties`: the set of properties the model can provide.
+- `supported_properties`: the set of properties the model can provide, or a function of the spec that returns it (see [Declarations that differ between variants](#declarations-that-differ-between-variants)).
 - `environment_factory_cls`: the factory that describes the model's runtime dependencies.
 - `metadata`: human-facing model metadata.
-- `resource_capabilities`: the accelerators and precisions the model supports (see [Resource Capabilities](#resource-capabilities)).
+- `resource_capabilities`: the accelerators and precisions the model supports (see [Resource Capabilities](#resource-capabilities)), or a function of the spec that returns them.
 - `variant_info`: optional; a callable that returns the `VariantInfo` of each variant (see [Variants and settings](#variants-and-settings)).
 - `task_overrides`: optional model-specific task executors.
 

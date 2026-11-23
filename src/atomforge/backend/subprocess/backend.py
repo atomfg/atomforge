@@ -210,7 +210,9 @@ class SubprocessBackend:
         model_registration = (
             self._model_registry.get(model.kind) if model is not None else None
         )
-        report = resolve_host_execution(task, task_registration, model_registration)
+        report = resolve_host_execution(
+            task, task_registration, model_registration, model
+        )
         if not report.ok:
             return attempt.partial_record(
                 status="incompatibility",

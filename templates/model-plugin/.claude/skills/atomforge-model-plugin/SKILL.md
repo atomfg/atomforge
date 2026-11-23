@@ -189,10 +189,13 @@ variants, name them in the case (`variants=(...)`), or run once with
 When variants differ in what the test class declares (for example direct and
 conservative forces need different `ModelPhysics`), add a test class per
 variant, each naming its variants; references are named
-`<kind>-<variant>-<structure>`, so the classes can share a module. When a
-declared property is missing for some variants (a checkpoint without a stress
-head), keep the declaration, raise a clear error for those variants, and
-record it in the model notes.
+`<kind>-<variant>-<structure>`, so the classes can share a module. When variants
+differ in their supported properties or resource capabilities (a checkpoint
+without a stress head, one published in fp32 only), make that declaration a
+function of the spec, `def resource_capabilities(spec) -> ResourceCapabilities`,
+and point the manifest at it; keep it deterministic and host-side, and
+depending on variant fields only. Do not split a kind for this. The contracts
+then skip, with the variant named, what a variant does not declare.
 
 **Local weights.** If the library loads parameters from a local file (step
 1), declare `weights: LocalWeights | None = None` in the spec and pass

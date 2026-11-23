@@ -8,7 +8,7 @@ from atomforge_core.env.factory import DependencySummary, EnvironmentFactory
 from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.model.metadata import ModelMetadata
 from atomforge_core.model.result import ModelResult
-from atomforge_core.model.spec import ModelSpec, Setting
+from atomforge_core.model.spec import ModelSpec, Setting, Variant
 from atomforge_core.property import Property
 from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.resources.resource_models import ResolvedResources
@@ -253,3 +253,49 @@ def build_broken_model_registration(**kwargs) -> ModelRegistration:
 
 def build_broken_task_registration(**kwargs) -> TaskRegistration:
     return replace(build_task_registration(), **kwargs)
+
+
+# A kind whose variants differ: "small" has f64 and forces, "large" has
+# neither.
+
+
+class FakeFamily(ModelSpec):
+    kind: Literal["fake-family"] = "fake-family"
+    model: Annotated[Literal["small", "large"], Variant] = "small"
+
+
+def fake_family_properties(spec: FakeFamily) -> frozenset[Property]:
+    if spec.model == "small":
+        return frozenset({Property.ENERGY, Property.FORCES})
+    return frozenset({Property.ENERGY})
+
+
+def fake_family_capabilities(spec: FakeFamily) -> ResourceCapabilities:
+    precisions = ["f32", "f64"] if spec.model == "small" else ["f32"]
+    return ResourceCapabilities(accelerator=["cpu"], precision={"cpu": precisions})
+
+
+def fake_family_invalid_capabilities(spec: FakeFamily) -> ResourceCapabilities:
+    # Precision keys that are not the accelerators: a pydantic ValidationError.
+    return ResourceCapabilities(accelerator=["cpu"], precision={"cuda": ["f32"]})
+
+
+def fake_family_wrong_type(spec: FakeFamily) -> object:
+    return {"cpu": ["f32"]}
+
+
+def build_family_registration(
+    supported_properties: str = "runtime_fakes:fake_family_properties",
+    resource_capabilities: str = "runtime_fakes:fake_family_capabilities",
+) -> ModelRegistration:
+    from atomforge_core.registry.symbol_path import SymbolPath
+
+    return ModelRegistration(
+        kind="fake-family",
+        model_spec=FakeFamily,
+        metadata_path=SymbolPath("runtime_fakes:FakeMetadata"),
+        executor_class_path=SymbolPath("runtime_fakes:FakeModelExecutor"),
+        supported_properties_path=SymbolPath(supported_properties),
+        environment_factory_path=SymbolPath("runtime_fakes:FakeEnvironmentFactory"),
+        resource_capabilities_path=SymbolPath(resource_capabilities),
+    )

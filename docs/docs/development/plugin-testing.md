@@ -127,6 +127,12 @@ marks through inheritance.
     the precisions declared for it). A capability left as `None` runs as
     `default`. `cuda` pairs need `--atomforge-cuda`, `rocm` pairs
     `--atomforge-rocm` and `mps` pairs `--atomforge-mps`.
+  - When the supported properties or resource capabilities are functions of
+    the spec and the case runs several variants, the parameters are the union
+    over those variants, and a test whose variant does not declare its
+    property or pair skips with the variant named
+    (`<kind>/<variant> does not declare cpu-f64`). The symbol contracts call
+    the function on the case's spec and on every generated variant.
 - `ModelResultTypesContract`: opt-in checks of what `compute` itself returns,
   before a task result converts it. Runs the `describe_model_result` task for
   each declared property on its own and for all of them together

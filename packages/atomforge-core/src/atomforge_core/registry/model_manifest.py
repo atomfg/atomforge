@@ -13,7 +13,11 @@ class ModelManifest(RegistryManifestBase):
         description="The model executor class, as a dotted path like 'my_package.my_module:MyModelExecutor'"
     )
     supported_properties: SymbolPath = Field(
-        description="The model supported properties object, as a dotted path like 'my_package.my_module:MySupportedProperties'"
+        description=(
+            "The model's supported properties, as a dotted path like "
+            "'my_package.my_module:MySupportedProperties': a frozenset of Property, "
+            "or a function of the spec returning one when variants differ."
+        )
     )
     environment_factory_cls: SymbolPath = Field(
         description="The environment factory class, as a dotted path like 'my_package.my_module:MyEnvironmentFactory'"
@@ -22,7 +26,11 @@ class ModelManifest(RegistryManifestBase):
         description="The model metadata object, as a dotted path like 'my_package.my_module:MyMetadata'"
     )
     resource_capabilities: SymbolPath = Field(
-        description="The model resource capabilities object, as a dotted path like 'my_package.my_module:MyResourceCapabilities'"
+        description=(
+            "The model's resource capabilities, as a dotted path like "
+            "'my_package.my_module:MyResourceCapabilities': a ResourceCapabilities, "
+            "or a function of the spec returning one when variants differ."
+        )
     )
     distribution: list[str] | str = Field(
         default_factory=list,

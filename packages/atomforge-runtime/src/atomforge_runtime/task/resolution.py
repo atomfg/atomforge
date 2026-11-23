@@ -7,6 +7,7 @@ from atomforge_core.task.executability import (
     RouteKind,
 )
 from atomforge_core.task.executor import TaskExecutionContext, TaskExecutor
+from atomforge_core.model.spec import ModelSpec
 from atomforge_core.task.spec import TaskSpec
 from atomforge_runtime.registry.model.model_registration import ModelRegistration
 from atomforge_runtime.registry.task.task_registration import TaskRegistration
@@ -18,8 +19,11 @@ def resolve_host_execution(
     task_spec: TaskSpec,
     task_registration: TaskRegistration,
     model_registration: ModelRegistration | None,
+    model_spec: ModelSpec | None = None,
 ) -> HostExecutabilityReport:
-    return check_host_executability(task_spec, task_registration, model_registration)
+    return check_host_executability(
+        task_spec, task_registration, model_registration, model_spec
+    )
 
 
 def load_executor_class_for_route(
@@ -53,8 +57,11 @@ def resolve_worker_execution(
     model_registration: ModelRegistration | None,
     context: TaskExecutionContext,
 ) -> tuple[ExecutionRoute, type[TaskExecutor], CompatibilityCheck]:
+    model_spec = (
+        context.model_executor.spec if context.model_executor is not None else None
+    )
     host_report = resolve_host_execution(
-        task_spec, task_registration, model_registration
+        task_spec, task_registration, model_registration, model_spec
     )
     if not host_report.ok:
         raise ValueError(host_report.reason or "Task is not executable")

@@ -238,7 +238,9 @@ class SubprocessWorker:
         else:
             probe_result = None
 
-        resource_capabilities = model_registration.load_resource_capabilities()
+        resource_capabilities = model_registration.load_resource_capabilities(
+            model_spec
+        )
         resolved_resources = resolve_resources(
             exec_resources=request.exec_resources,
             system_resources=self._system_resources,

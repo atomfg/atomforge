@@ -124,3 +124,28 @@ class VerifyingInProcessBackend(InProcessBackend):
         if model is not None and getattr(model, "weights", None) is not None:
             model.weights.verify()
         return super().execute(task, model, exec_resources, timeout)
+
+
+# Declarations that differ between the variants of ThreeVariantModel: "c"
+# has no stress and no f64.
+
+
+def per_variant_properties(spec):
+    from atomforge_core.property import Property
+
+    if spec.model == "c":
+        return frozenset({Property.ENERGY, Property.FORCES})
+    return frozenset({Property.ENERGY, Property.FORCES, Property.STRESS})
+
+
+def per_variant_capabilities(spec):
+    from atomforge_core.resources.resource_caps import ResourceCapabilities
+
+    precisions = ["f32"] if spec.model == "c" else ["f32", "f64"]
+    return ResourceCapabilities(accelerator=["cpu"], precision={"cpu": precisions})
+
+
+def broken_for_c_capabilities(spec):
+    if spec.model == "c":
+        return {"cpu": ["f32"]}
+    return per_variant_capabilities(spec)
