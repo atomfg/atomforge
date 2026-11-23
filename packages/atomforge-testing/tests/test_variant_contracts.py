@@ -50,10 +50,10 @@ CASE = ModelManifestCase(
         kind="fake-model",
         model_spec="{model_spec}",
         executor_cls="variant_fakes:VariantSpringExecutor",
-        supported_properties="testing_fakes:EnergyForcesStress",
+        supported_properties="{supported_properties}",
         environment_factory_cls="testing_fakes:FakeEnvironmentFactory",
         metadata="testing_fakes:FakeMetadata",
-        resource_capabilities="testing_fakes:F32F64Capabilities",
+        resource_capabilities="{resource_capabilities}",
         distribution="fake-plugin",
         variant_info={variant_info},
     ),
@@ -98,6 +98,8 @@ def write_project(
     variant_info=None,
     case_extra="",
     backend="VerifyingInProcessBackend",
+    supported_properties="testing_fakes:EnergyForcesStress",
+    resource_capabilities="testing_fakes:F32F64Capabilities",
 ):
     pytester.makefile(".toml", pyproject=PYPROJECT)
     pytester.makepyfile(
@@ -105,6 +107,8 @@ def write_project(
             model_spec=model_spec,
             variant_info="None" if variant_info is None else repr(variant_info),
             case_extra=case_extra,
+            supported_properties=supported_properties,
+            resource_capabilities=resource_capabilities,
         )
     )
     pytester.makeconftest(CONFTEST.format(backend=backend))

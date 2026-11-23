@@ -10,6 +10,11 @@ from pydantic import ValidationError
 
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.env.factory import EnvironmentFactory
+from atomforge_core.model.declarations import (
+    check_resource_capabilities,
+    check_supported_properties,
+    is_per_variant,
+)
 from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.model.metadata import ModelMetadata, VariantInfo
 from atomforge_core.model.spec import ModelSpec
@@ -27,6 +32,7 @@ from atomforge_runtime.registry.model.model_registry import ModelRegistry
 
 from atomforge_testing import physics
 from atomforge_testing.physics import ModelPhysics, ReferenceTolerances, Tolerances
+from atomforge_testing.variants import with_variant  # noqa: F401 - re-exported
 from atomforge_testing.capabilities import (  # noqa: F401 - re-exported
     PROPERTY_CHECKS,
     assert_energies_result,
@@ -106,24 +112,6 @@ def build_model_spec(case: ModelManifestCase, registration) -> ModelSpec:
     model_spec = case.model_spec_factory(registration.model_spec)
     assert isinstance(model_spec, registration.model_spec)
     return model_spec
-
-
-def with_variant(model_spec: ModelSpec, variant_name: str) -> ModelSpec:
-    """``model_spec`` with the variant fields of the named variant, keeping
-    its settings."""
-    if variant_name == model_spec.variant_name:
-        return model_spec
-    spec_cls = type(model_spec)
-    variants = spec_cls.variants()
-    for variant in variants:
-        if variant.variant_name == variant_name:
-            payload = {**model_spec.model_dump(), **variant.variant_payload()}
-            return spec_cls.model_validate(payload)
-    known = ", ".join(v.variant_name for v in variants)
-    raise AssertionError(
-        f"the case names variant '{variant_name}', which {model_spec.kind} does "
-        f"not generate (its variants: {known})"
-    )
 
 
 class _ManifestCaseContract:
@@ -221,11 +209,29 @@ class ModelManifestSymbolContract(_ManifestCaseContract):
         assert isinstance(executor_cls, type)
         assert issubclass(executor_cls, ModelExecutor)
 
-    def test_supported_properties_symbol_is_property_set(self):
-        supported_properties = self.case.manifest.supported_properties.load_symbol()
+    def _per_variant(self, path, check) -> None:
+        """A value is checked; a function of the spec is checked on the case's
+        spec and on every generated variant, and must give the same result
+        when called again."""
+        declaration = path.load_symbol()
+        try:
+            if not is_per_variant(declaration):
+                check(declaration)
+                return
+            spec_cls = self.case.manifest.model_spec.load_symbol()
+            specs = [self.case.model_spec_factory(spec_cls), *spec_cls.variants()]
+            for spec in specs:
+                value = check(declaration(spec))
+                assert check(declaration(spec)) == value, (
+                    f"{path} gave different results for {spec.variant_id}"
+                )
+        except TypeError as exc:
+            raise AssertionError(f"{path}: {exc}") from exc
 
-        assert isinstance(supported_properties, frozenset)
-        assert all(isinstance(prop, Property) for prop in supported_properties)
+    def test_supported_properties_symbol_is_property_set(self):
+        self._per_variant(
+            self.case.manifest.supported_properties, check_supported_properties
+        )
 
     def test_environment_factory_symbol_is_environment_factory_subclass(self):
         environment_factory_cls = (
@@ -241,9 +247,9 @@ class ModelManifestSymbolContract(_ManifestCaseContract):
         assert isinstance(metadata, ModelMetadata)
 
     def test_resource_capabilities_symbol_is_resource_capabilities(self):
-        resource_capabilities = self.case.manifest.resource_capabilities.load_symbol()
-
-        assert isinstance(resource_capabilities, ResourceCapabilities)
+        self._per_variant(
+            self.case.manifest.resource_capabilities, check_resource_capabilities
+        )
 
     def test_optional_probe_symbol_is_callable_when_present(self):
         probe_path = self.case.manifest.probe
@@ -534,14 +540,38 @@ class _RuntimeContract(_ManifestCaseContract):
     """
 
     def _supported_properties(self) -> frozenset[Property]:
+        """What the spec this test runs declares."""
         registration, _ = self._convert_manifest()
-        return registration.load_supported_properties()
+        return registration.load_supported_properties(self._build_model_spec())
+
+    def _resource_capabilities(self) -> ResourceCapabilities:
+        """The resources the spec this test runs declares."""
+        registration, _ = self._convert_manifest()
+        return registration.load_resource_capabilities(self._build_model_spec())
+
+    def _who(self) -> str:
+        """The kind, or the variant when the case runs several."""
+        if self._variant_name is None:
+            return self.case.manifest.kind
+        return self._build_model_spec().variant_id
 
     def _require(self, *properties: Property) -> None:
         missing = [p.value for p in properties if p not in self._supported_properties()]
         if missing:
+            pytest.skip(f"{self._who()} does not declare {', '.join(missing)}")
+
+    def _require_resources(self, resources: ExecutionResources) -> None:
+        """Skip a declared pair (a parameter from the union over the case's
+        variants) that the running variant does not declare."""
+        capabilities = self._resource_capabilities()
+        accelerator = (
+            None if resources.accelerator == "default" else resources.accelerator
+        )
+        precision = None if resources.precision == "default" else resources.precision
+        if (accelerator, precision) not in capabilities.pairs():
             pytest.skip(
-                f"{self.case.manifest.kind} does not declare {', '.join(missing)}"
+                f"{self._who()} does not declare {resources.accelerator}-"
+                f"{resources.precision}"
             )
 
     def _runtime_structure(self) -> StructureData:
@@ -603,6 +633,7 @@ class ModelSinglePointRuntimeContract(_RuntimeContract):
         atomforge_declared_property,
     ):
         prop = atomforge_declared_property
+        self._require(prop)
         structure = self._structure_for(prop)
 
         result = self._execute_single_point(
@@ -622,8 +653,8 @@ class ModelSinglePointRuntimeContract(_RuntimeContract):
         atomforge_environment_profile,
         atomforge_declared_resources,
     ):
-        registration, _ = self._convert_manifest()
-        supported = registration.load_supported_properties()
+        self._require_resources(atomforge_declared_resources)
+        supported = self._supported_properties()
         if Property.ENERGY in supported:
             prop = Property.ENERGY
         else:
@@ -696,6 +727,12 @@ class ModelResultTypesContract(_RuntimeContract):
         if self.case.runtime_skip_reason is not None:
             pytest.skip(self.case.runtime_skip_reason)
         properties = atomforge_result_request
+        declared = self._supported_properties()
+        if len(properties) == 1:
+            self._require(*properties)
+        else:
+            # "all": everything this variant declares.
+            properties = frozenset(properties & declared)
         key = (
             id(atomforge_backend),
             id(self.case),
@@ -860,7 +897,7 @@ class ModelPhysicsContract(_RuntimeContract):
 
     def _finite_difference_resources(self) -> ExecutionResources:
         resources = self._runtime_exec_resources()
-        capabilities = self.case.manifest.resource_capabilities.load_symbol()
+        capabilities = self._resource_capabilities()
         if capabilities.precision is None:
             return resources
         if capabilities.accelerator is None:
@@ -1155,7 +1192,7 @@ class ModelReferenceContract(_RuntimeContract):
             properties.add(Property.STRESS)
 
         if records and (regenerating or not path.is_file()):
-            capabilities = self.case.manifest.resource_capabilities.load_symbol()
+            capabilities = self._resource_capabilities()
             resources = reference.recording_resources(capabilities)
             profile = reference.RECORDING_PROFILE
         else:

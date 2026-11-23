@@ -64,3 +64,31 @@ def test_list_has_a_variants_column(runner, fake_registry):
         line for line in result.output.splitlines() if "orb-like" in line
     )
     assert "10" in orb_like_row
+
+
+def test_variants_show_declarations_that_differ_between_them(runner, fake_registry):
+    result = runner.invoke(variants_command, ["family-like"])
+
+    assert result.exit_code == 0, result.output
+    assert "Precision" in result.output
+    small = next(line for line in result.output.splitlines() if "/small" in line)
+    large = next(line for line in result.output.splitlines() if "/large" in line)
+    assert "f64" in small and "f32" not in small
+    assert "f32" in large and "f64" not in large
+
+
+def test_variants_hide_declarations_that_are_the_same(runner, fake_registry):
+    result = runner.invoke(variants_command, ["orb-like"])
+
+    assert "Precision" not in result.output
+    assert "Properties" not in result.output
+
+
+def test_list_shows_the_union_over_variants(runner, fake_registry):
+    from atomforge_runtime.registry.model.model_registry import ModelRegistry
+
+    capabilities = (
+        ModelRegistry.default().get("family-like").load_resource_capabilities()
+    )
+
+    assert capabilities.precision == ["f32", "f64"]

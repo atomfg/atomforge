@@ -11,11 +11,21 @@ from atomforge_core.model.spec import ModelSpecT
 from atomforge_core.resources.resource_probes import ResourceProbe
 from atomforge_core.registry.symbol_path import SymbolPath
 from atomforge_core.task.executor import TaskExecutor
+from atomforge_core.model.declarations import (
+    check_resource_capabilities,
+    check_supported_properties,
+    is_per_variant,
+    kind_declaration,
+    resolve_declaration,
+    union_resource_capabilities,
+    union_supported_properties,
+)
 from atomforge_runtime.registry.loading import (
     load_callable,
     load_environment_factory,
     load_instance,
     load_subclass,
+    load_symbol_path,
 )
 
 _UNSET = object()  # Sentinel for unset values
@@ -85,22 +95,51 @@ class ModelRegistration(Generic[ModelSpecT]):
             )
         return self._executor_class
 
-    def load_supported_properties(self) -> frozenset[Property]:
-        if self._supported_properties is _UNSET:
-            supported_properties = load_instance(
-                self.supported_properties_path,
-                frozenset,
-                registration_label="Model registration",
-                kind=self.kind,
-                field_name="supported_properties",
-            )
-            if not all(isinstance(prop, Property) for prop in supported_properties):
-                raise TypeError(
-                    f"Model registration '{self.kind}' failed to load supported_properties from "
-                    f"'{self.supported_properties_path}': supported_properties must contain only Property values"
-                )
-            object.__setattr__(self, "_supported_properties", supported_properties)
-        return self._supported_properties
+    def _load_declaration(self, attr: str, path: SymbolPath, field_name: str, check):
+        """The manifest's value or function of the spec, loaded once."""
+        if getattr(self, attr) is _UNSET:
+            try:
+                declaration = load_symbol_path(path)
+                if not is_per_variant(declaration):
+                    check(declaration)
+            except (TypeError, ValueError) as exc:
+                raise type(exc)(
+                    f"Model registration '{self.kind}' failed to load {field_name} "
+                    f"from '{path}': {exc}"
+                ) from exc
+            object.__setattr__(self, attr, declaration)
+        return getattr(self, attr)
+
+    def _declaration_for(self, declaration, spec, field_name: str, check, union):
+        try:
+            if spec is None:
+                return kind_declaration(declaration, self.model_spec, check, union)
+            return resolve_declaration(declaration, spec, check)
+        except (TypeError, ValueError) as exc:
+            target = "the kind" if spec is None else f"'{spec.variant_id}'"
+            raise type(exc)(
+                f"Model registration '{self.kind}' failed to declare {field_name} "
+                f"for {target}: {exc}"
+            ) from exc
+
+    def load_supported_properties(
+        self, spec: ModelSpecT | None = None
+    ) -> frozenset[Property]:
+        """The properties ``spec`` supports or, without a spec, those that
+        some variant of the kind supports."""
+        declaration = self._load_declaration(
+            "_supported_properties",
+            self.supported_properties_path,
+            "supported_properties",
+            check_supported_properties,
+        )
+        return self._declaration_for(
+            declaration,
+            spec,
+            "supported_properties",
+            check_supported_properties,
+            union_supported_properties,
+        )
 
     def load_environment_factory(self) -> EnvironmentFactory[ModelSpecT]:
         if self._environment_factory is _UNSET:
@@ -117,20 +156,24 @@ class ModelRegistration(Generic[ModelSpecT]):
             )
         return self._environment_factory
 
-    def load_resource_capabilities(self) -> ResourceCapabilities:
-        if self._resource_capabilities is _UNSET:
-            object.__setattr__(
-                self,
-                "_resource_capabilities",
-                load_instance(
-                    self.resource_capabilities_path,
-                    ResourceCapabilities,
-                    registration_label="Model registration",
-                    kind=self.kind,
-                    field_name="resource_capabilities",
-                ),
-            )
-        return self._resource_capabilities
+    def load_resource_capabilities(
+        self, spec: ModelSpecT | None = None
+    ) -> ResourceCapabilities:
+        """The resources ``spec`` supports or, without a spec, the union over
+        the variants of the kind."""
+        declaration = self._load_declaration(
+            "_resource_capabilities",
+            self.resource_capabilities_path,
+            "resource_capabilities",
+            check_resource_capabilities,
+        )
+        return self._declaration_for(
+            declaration,
+            spec,
+            "resource_capabilities",
+            check_resource_capabilities,
+            union_resource_capabilities,
+        )
 
     def load_probe(self) -> ResourceProbe | None:
         if self.probe_path is None:

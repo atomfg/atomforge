@@ -3,7 +3,8 @@ result has the declared properties in the right shape.
 
 The pytest plugin parametrizes contract tests with these: a test that takes
 ``atomforge_declared_property`` runs once per declared property, and so on.
-Parameters are built at collection from the case's manifest. If a manifest
+Parameters are built at collection from the case's manifest, over the
+variants the case runs: when their declarations differ, the union. If a manifest
 symbol cannot be loaded, the parametrized tests are skipped with the error as
 the reason; the symbol contracts report the failure itself.
 """
@@ -17,9 +18,18 @@ from typing import Literal, get_args, get_origin
 
 import pytest
 
+from atomforge_core.model.declarations import (
+    check_resource_capabilities,
+    check_supported_properties,
+    resolve_declaration,
+    union_resource_capabilities,
+    union_supported_properties,
+)
 from atomforge_core.property import Property
+from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.resources.resource_models import ExecutionResources
 from atomforge_core.structure import StructureData
+from atomforge_testing.variants import selected_specs
 
 # Accelerators that need hardware a test machine may not have, and the
 # marker (enabled by the matching option) that gates them.
@@ -40,17 +50,35 @@ def _unloadable(what: str, exc: Exception):
     ]
 
 
-def declared_property_params(case) -> list:
+def _selected_supported_properties(case, config) -> frozenset[Property]:
+    """What some selected variant declares: a test whose variant does not
+    declare its parameter skips (see ``_RuntimeContract``)."""
+    declaration = case.manifest.supported_properties.load_symbol()
+    return union_supported_properties(
+        resolve_declaration(declaration, spec, check_supported_properties)
+        for spec in selected_specs(case, config)
+    )
+
+
+def _selected_resource_capabilities(case, config) -> ResourceCapabilities:
+    declaration = case.manifest.resource_capabilities.load_symbol()
+    return union_resource_capabilities(
+        resolve_declaration(declaration, spec, check_resource_capabilities)
+        for spec in selected_specs(case, config)
+    )
+
+
+def declared_property_params(case, config) -> list:
     try:
-        supported = case.manifest.supported_properties.load_symbol()
+        supported = _selected_supported_properties(case, config)
     except Exception as exc:  # noqa: BLE001 - reported by the symbol contract
         return _unloadable("supported properties", exc)
     return [pytest.param(prop, id=prop.value) for prop in Property if prop in supported]
 
 
-def declared_resources_params(case) -> list:
+def declared_resources_params(case, config) -> list:
     try:
-        capabilities = case.manifest.resource_capabilities.load_symbol()
+        capabilities = _selected_resource_capabilities(case, config)
     except Exception as exc:  # noqa: BLE001 - reported by the symbol contract
         return _unloadable("resource capabilities", exc)
     # Only the declared pairs: a model may support a precision on some
@@ -81,7 +109,7 @@ def environment_profiles(spec_cls) -> tuple[str, ...]:
     return ("tested",)
 
 
-def environment_profile_params(case) -> list:
+def environment_profile_params(case, config) -> list:
     try:
         spec_cls = case.manifest.model_spec.load_symbol()
     except Exception as exc:  # noqa: BLE001 - reported by the symbol contract
@@ -91,12 +119,12 @@ def environment_profile_params(case) -> list:
     ]
 
 
-def result_request_params(case) -> list:
+def result_request_params(case, config) -> list:
     """Each declared property on its own and all declared properties
     together (id ``all``), since executors can branch on what is
-    requested."""
+    requested. ``all`` is narrowed to what the running variant declares."""
     try:
-        supported = case.manifest.supported_properties.load_symbol()
+        supported = _selected_supported_properties(case, config)
     except Exception as exc:  # noqa: BLE001 - reported by the symbol contract
         return _unloadable("supported properties", exc)
     declared = [prop for prop in Property if prop in supported]

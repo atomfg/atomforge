@@ -182,7 +182,7 @@ def _check_model_compatibility(model: ModelSpec) -> None:
     )
     task_registration = TaskRegistry.default().get(probe.kind)
     model_registration = ModelRegistry.default().get(model.kind)
-    report = resolve_host_execution(probe, task_registration, model_registration)
+    report = resolve_host_execution(probe, task_registration, model_registration, model)
     if not report.ok:
         raise ValueError(
             f"Model '{model.kind}' cannot be used with AtomforgeCalculator: "

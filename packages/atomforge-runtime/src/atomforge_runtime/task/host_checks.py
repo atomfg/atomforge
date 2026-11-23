@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from atomforge_core.task.executability import HostExecutabilityReport
 from atomforge_core.task.execution_policy import ExecutionPolicy
+from atomforge_core.model.spec import ModelSpec
 from atomforge_core.task.spec import TaskSpec
 from atomforge_runtime.registry.model.model_registration import ModelRegistration
 from atomforge_runtime.registry.task.task_registration import TaskRegistration
@@ -11,7 +12,10 @@ from atomforge_runtime.task.routing import resolve_candidate_routes
 def check_required_properties(
     task_spec: TaskSpec,
     model_registration: ModelRegistration | None,
+    model_spec: ModelSpec | None = None,
 ) -> HostExecutabilityReport:
+    """With ``model_spec``, the properties that variant supports; without,
+    those that some variant of the kind supports."""
     if not task_spec.requires_model:
         if task_spec.required_model_properties():
             return HostExecutabilityReport.failure(
@@ -34,12 +38,19 @@ def check_required_properties(
             reason=f"Task of kind {task_spec.kind} requires a model, but none was provided"
         )
 
-    model_supported_properties = model_registration.load_supported_properties()
+    model_supported_properties = model_registration.load_supported_properties(
+        model_spec
+    )
     task_required_properties = task_spec.required_model_properties()
     if not task_required_properties.issubset(model_supported_properties):
+        model = (
+            model_spec.variant_id
+            if model_spec is not None
+            else f"kind {model_registration.kind}"
+        )
         return HostExecutabilityReport.failure(
             reason=(
-                f"Model of kind {model_registration.kind} does not support task of "
+                f"Model {model} does not support task of "
                 f"kind {task_spec.kind}: required properties {task_required_properties} "
                 f"are not a subset of supported properties {model_supported_properties}"
             )
@@ -51,8 +62,11 @@ def check_host_executability(
     task_spec: TaskSpec,
     task_registration: TaskRegistration,
     model_registration: ModelRegistration | None,
+    model_spec: ModelSpec | None = None,
 ) -> HostExecutabilityReport:
-    property_report = check_required_properties(task_spec, model_registration)
+    property_report = check_required_properties(
+        task_spec, model_registration, model_spec
+    )
     if not property_report.ok:
         return property_report
 
