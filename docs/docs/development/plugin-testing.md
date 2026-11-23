@@ -127,6 +127,28 @@ marks through inheritance.
     the precisions declared for it). A capability left as `None` runs as
     `default`. `cuda` pairs need `--atomforge-cuda`, `rocm` pairs
     `--atomforge-rocm` and `mps` pairs `--atomforge-mps`.
+- `ModelResultTypesContract`: opt-in checks of what `compute` itself returns,
+  before a task result converts it. Runs the `describe_model_result` task for
+  each declared property on its own and for all of them together
+  (`[<profile>-<property>]`, `[<profile>-all]`):
+  - `test_requested_properties_are_described`: no requested property comes
+    back as `None`.
+  - `test_energy_is_a_float`: an instance of `float` (`np.float64` qualifies,
+    `np.float32` does not).
+  - `test_forces_are_a_float64_array_of_shape_n_by_3`,
+    `test_stress_is_a_float64_array_of_shape_3_by_3`,
+    `test_energies_are_a_float64_array_of_shape_n`,
+    `test_magmoms_are_a_float64_array_of_shape_n`: float64 `numpy.ndarray`s,
+    whatever precision the model ran in.
+  - `test_<property>_is_finite` / `test_<property>_are_finite`: no NaN or
+    infinity.
+  - `test_result_is_not_changed_by_a_later_compute`: computing again on a
+    moved copy of the structure does not change the first result, so the
+    result does not share memory with state the model reuses.
+
+  See [How the plugin tests work](plugin-tests.md#how-the-result-types-are-checked)
+  for why this is separate from the single-point checks, and how to fix a
+  failure.
 - `ModelPhysicsContract`: opt-in model-independent physics checks, run on the
   physics structures (below) with the case's `runtime_exec_resources`:
   - `test_energy_is_invariant_under_translation[<profile>-<structure>]`
