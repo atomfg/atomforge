@@ -46,9 +46,12 @@ def build_model_provenance(
 
     model_registration = model_registry.get(model.kind)
     distributions = tuple(model_registration.source)
+    weights = getattr(model, "weights", None)
     return ModelProvenance(
         kind=model.kind,
         payload_hash=payload_hash(model.scientific_payload()),
+        variant_id=model.variant_id,
+        weights_sha256=None if weights is None else weights.sha256,
         distributions=distributions,
         versions=distribution_versions(list(distributions)),
     )

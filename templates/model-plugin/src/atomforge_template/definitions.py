@@ -1,4 +1,4 @@
-from atomforge_core.model.metadata import ModelMetadata, Reference
+from atomforge_core.model.metadata import ModelMetadata, Reference, VariantInfo
 from atomforge_core.property import Property
 from atomforge_core.resources.resource_caps import ResourceCapabilities
 
@@ -31,3 +31,14 @@ TorchLJMetadata = ModelMetadata(
         ),
     ),
 )
+
+
+def torch_lj_variant_info(spec) -> VariantInfo:
+    """Declared facts about each variant (each spec in TorchLJ.variants()):
+    training data, level of theory, checkpoint name with its revision. Listed
+    by `atomforge model variants torch-lj`. A plugin with checkpoints would
+    look them up by the spec's variant fields; give each variant its own
+    checkpoint, which the contracts check."""
+    return VariantInfo(
+        description="Lennard-Jones with the spec's epsilon and sigma.",
+    )

@@ -228,6 +228,9 @@ class SubprocessWorker:
     ) -> tuple[ModelExecutor, ResolvedResources]:
         model_registration = self._model_registry.get(request.model_kind)
         model_spec = model_registration.model_spec.model_validate(request.model_payload)
+        weights = getattr(model_spec, "weights", None)
+        if weights is not None:
+            weights.verify()
 
         probe = model_registration.load_probe()
         if probe is not None:

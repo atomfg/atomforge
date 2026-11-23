@@ -23,6 +23,7 @@ from testing_fakes import InProcessBackend, spring_result
 
 class ThreeVariantModel(ModelSpec):
     kind: Literal["fake-model"] = "fake-model"
+    environment_profile: Literal["tested"] = "tested"
     model: Annotated[Literal["a", "b", "c"], Variant] = "a"
     scale: Annotated[float, Setting] = 1.0
 

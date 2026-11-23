@@ -11,7 +11,7 @@ from atomforge_core.env.factory import DependencySummary, EnvironmentFactory
 from atomforge_core.model.executor import ModelExecutor
 from atomforge_core.model.metadata import ModelMetadata
 from atomforge_core.model.result import ModelResult
-from atomforge_core.model.spec import ModelSpec
+from atomforge_core.model.spec import ModelSpec, Setting, Variant
 from atomforge_core.property import Property
 from atomforge_core.resources.resource_caps import ResourceCapabilities
 from atomforge_core.resources.resource_probes import ProbeResult
@@ -25,7 +25,7 @@ class FakeModel(ModelSpec):
 
 class RequiredFakeModel(ModelSpec):
     kind: Literal["fake-model"] = "fake-model"
-    variant: str
+    variant: Annotated[str, Setting]
 
 
 class JsonLossyFakeModel(ModelSpec):
@@ -34,6 +34,7 @@ class JsonLossyFakeModel(ModelSpec):
     kind: Literal["fake-model"] = "fake-model"
     variant: Annotated[
         Literal["small"],
+        Variant,
         PlainSerializer(lambda value: value.upper(), when_used="json"),
     ] = "small"
 

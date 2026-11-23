@@ -10,6 +10,7 @@ class TableColumn(Enum):
     KIND = "k"
     SUPPORTED_PROPERTIES = "s"
     FAMILY = "f"
+    VARIANTS = "v"
     ACCELERATOR = "a"
     DEPENDENCIES = "d"
     PLUGIN_SOURCE = "p"
@@ -25,6 +26,7 @@ class TableWriter:
         column_converter = {
             TableColumn.SUPPORTED_PROPERTIES.value: "supported_properties",
             TableColumn.FAMILY.value: "family",
+            TableColumn.VARIANTS.value: "variants",
             TableColumn.ACCELERATOR.value: "accelerator",
             TableColumn.DEPENDENCIES.value: "dependencies",
             TableColumn.PLUGIN_SOURCE.value: "plugin_source",
@@ -58,6 +60,8 @@ class TableWriter:
             table.add_column("Supported Properties", style="magenta")
         if TableColumn.FAMILY.value in self.columns:
             table.add_column("Family", style="green")
+        if TableColumn.VARIANTS.value in self.columns:
+            table.add_column("Variants", style="cyan", justify="right")
         if TableColumn.ACCELERATOR.value in self.columns:
             table.add_column("Accelerator", style="yellow")
         if TableColumn.DEPENDENCIES.value in self.columns:
@@ -80,6 +84,9 @@ class TableWriter:
     def _family_to_str(self, model_registration):
         method_family = model_registration.load_metadata().method_family
         return method_family if method_family else "N/A"
+
+    def _variants_to_str(self, model_registration):
+        return str(len(model_registration.model_spec.variants()))
 
     def _accelerator_to_str(self, model_registration):
         accelerators = model_registration.load_resource_capabilities().accelerator
@@ -138,6 +145,8 @@ class TableWriter:
                         )
                         continue
                     row.append(self._family_to_str(model_registration))
+                case TableColumn.VARIANTS.value:
+                    row.append(self._variants_to_str(model_registration))
                 case TableColumn.ACCELERATOR.value:
                     if strict_failed:
                         row.append(
@@ -170,7 +179,7 @@ class TableWriter:
     type=str,
     required=False,
     default="all",
-    help="Columns to display (k=kind, s=supported properties, f=family, a=accelerator, d=dependencies, p=plugin source). Use 'all' to display all columns.",
+    help="Columns to display (k=kind, s=supported properties, f=family, v=variants, a=accelerator, d=dependencies, p=plugin source). Use 'all' to display all columns.",
 )
 @click.option(
     "--family", "-f", type=str, required=False, help="Filter models by method family."

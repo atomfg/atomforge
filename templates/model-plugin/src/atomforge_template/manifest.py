@@ -15,4 +15,6 @@ torch_lj_manifest = ModelManifest(
     distribution=["atomforge_template"],
     # Runs in the worker to report which accelerators are actually available.
     probe="atomforge_runtime.probes.torch_probe:torch_probe",
+    # Optional: the declared facts about each variant.
+    variant_info="atomforge_template.definitions:torch_lj_variant_info",
 )

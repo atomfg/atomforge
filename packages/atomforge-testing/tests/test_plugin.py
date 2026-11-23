@@ -19,6 +19,7 @@ from atomforge_testing import (
     ModelManifestContract,
     ModelManifestSymbolContract,
     ModelPhysicsContract,
+    ModelLocalWeightsContract,
     ModelReferenceContract,
     ModelRegistryContract,
     ModelResultTypesContract,
@@ -361,6 +362,7 @@ CONTRACTS = (
     ModelResultTypesContract,
     ModelPhysicsContract,
     ModelReferenceContract,
+    ModelLocalWeightsContract,
 )
 
 
@@ -383,6 +385,9 @@ def test_bundle_collects_every_contract_test(plugin_project):
     from atomforge_testing import ModelPluginContract
 
     expected = set().union(*(contract_test_names(c) for c in CONTRACTS))
+    # FakeModel declares no weights, so the local weights contract is not
+    # collected.
+    local_weights = contract_test_names(ModelLocalWeightsContract)
     plugin_project.makepyfile(
         test_bundle="""
         from fake_case import CASE
@@ -400,7 +405,7 @@ def test_bundle_collects_every_contract_test(plugin_project):
         line.split("::")[-1].split("[")[0] for line in result.outlines if "::" in line
     }
     assert contract_test_names(ModelPluginContract) == expected
-    assert collected == expected
+    assert collected == expected - local_weights
 
 
 def test_bundle_marks_only_gated_tests(plugin_project):

@@ -1,6 +1,7 @@
 from atomforge_testing.model_manifest import (
     ModelEnvironmentContract,
     ModelEnvironmentResolutionContract,
+    ModelLocalWeightsContract,
     ModelManifestCase,
     ModelManifestContract,
     ModelRegistryContract,
@@ -17,6 +18,7 @@ from atomforge_testing.physics import ModelPhysics
 __all__ = [
     "ModelEnvironmentContract",
     "ModelEnvironmentResolutionContract",
+    "ModelLocalWeightsContract",
     "ModelManifestCase",
     "ModelManifestContract",
     "ModelManifestSymbolContract",

@@ -9,8 +9,10 @@ The runtime run also compares the model's results with the references in
 tests/test_contracts/; a missing one is recorded on the first run.
 """
 
+import json
 from pathlib import Path
 
+from atomforge_core.model.weights import LocalWeights
 from atomforge_core.resources.resource_models import ExecutionResources
 from atomforge_testing import ModelManifestCase, ModelPluginContract, structures
 
@@ -26,6 +28,17 @@ def torch_lj_spec_factory(model_cls):
     return model_cls(epsilon=1.0, sigma=0.8)
 
 
+def torch_lj_local_weights(spec, directory: Path) -> LocalWeights:
+    # Writes the variant's own parameters as local weights, for the contract
+    # that checks they give the same results as the spec itself. A real plugin
+    # writes its checkpoint format (this runs in the test process, so the
+    # provider package may be needed in the test dependencies), for example
+    # by saving the pretrained model it downloads.
+    path = directory / "torch-lj.json"
+    path.write_text(json.dumps({"epsilon": spec.epsilon, "sigma": spec.sigma}))
+    return LocalWeights(path)
+
+
 class TestTorchLJ(ModelPluginContract):
     manifest_case = ModelManifestCase(
         manifest=torch_lj_manifest,
@@ -39,4 +52,5 @@ class TestTorchLJ(ModelPluginContract):
         # The model accepts only non-periodic structures, so the physics
         # checks run on the molecule alone.
         physics_structures={"molecule": structures.ethanol()},
+        local_weights_factory=torch_lj_local_weights,
     )
