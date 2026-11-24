@@ -1,0 +1,6 @@
+# Applies to builds with containers/Dockerfile, whatever the context.
+**/.venv
+**/__pycache__
+**/.git
+**/.pytest_cache
+**/.ruff_cache

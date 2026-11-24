@@ -5,6 +5,7 @@ A worker environment is the model's environment plus the task's, so preload
 takes the tasks to build for (`--task`, repeatable, default `single_point`).
 `uv` is replaced by a fake; the image test builds real environments."""
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -193,3 +194,19 @@ def test_list_shows_preloaded_and_installed_environments(
         [line] = [line for line in lines if key in line]
         assert str(root / "uv" / key) in line
         assert ("read-only" in line) == (where == "preloaded")
+
+
+def test_preload_does_not_warn_about_building(
+    tmp_path, install, monkeypatch, fake_uv, caplog
+):
+    # Found while implementing: a preload is a deliberate build, so the
+    # run-time warning must not fire even when other search paths exist.
+    other = tmp_path / "other"
+    other.mkdir()
+    monkeypatch.setenv("ATOMFORGE_ENV_SEARCH_PATHS", str(other))
+
+    with caplog.at_level(logging.WARNING, logger="atomforge"):
+        result = invoke("env", "preload", "ase-lj")
+
+    assert result.exit_code == 0, result.output
+    assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []

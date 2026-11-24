@@ -47,11 +47,11 @@ dependencies = [
 package = false
 
 [tool.uv.sources]
-atomforge = { path = "atomforge" }
-atomforge-core = { path = "atomforge/packages/atomforge-core" }
-atomforge-runtime = { path = "atomforge/packages/atomforge-runtime" }
-atomforge-builtins = { path = "atomforge/packages/atomforge-builtins" }
-atomforge-template = { path = "atomforge/templates/model-plugin" }
+atomforge = { path = "atomforge", editable = true }
+atomforge-core = { path = "atomforge/packages/atomforge-core", editable = true }
+atomforge-runtime = { path = "atomforge/packages/atomforge-runtime", editable = true }
+atomforge-builtins = { path = "atomforge/packages/atomforge-builtins", editable = true }
+atomforge-template = { path = "atomforge/templates/model-plugin", editable = true }
 """
 
 

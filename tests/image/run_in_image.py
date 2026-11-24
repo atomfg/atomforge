@@ -11,15 +11,13 @@ import sys
 from pathlib import Path
 
 # Preloaded environments must be used without running uv.
-uv = shutil.which("uv")
-if uv is not None:
-    uv_dir = Path(uv).resolve().parent
+while (uv := shutil.which("uv")) is not None:
+    uv_dir = Path(uv).parent.resolve()
     os.environ["PATH"] = os.pathsep.join(
         p
         for p in os.environ["PATH"].split(os.pathsep)
         if p and Path(p).resolve() != uv_dir
     )
-assert shutil.which("uv") is None
 
 from atomforge.backend.subprocess.backend import SubprocessBackend  # noqa: E402
 from atomforge_builtins.model.ase_lj.spec import LennardJones  # noqa: E402
@@ -40,13 +38,13 @@ handler = Collect(level=logging.WARNING)
 logging.getLogger("atomforge").addHandler(handler)
 
 structure = StructureData(
-    positions=[[0, 0, 0], [1.1, 0, 0], [0, 1.2, 0]],
+    positions=[[0, 0, 0], [3.8, 0, 0], [0, 3.9, 0]],
     numbers=[18, 18, 18],
     cell=[[10, 0, 0], [0, 10, 0], [0, 0, 10]],
     pbc=[False, False, False],
 )
 models = {
-    "ase-lj": LennardJones(),
+    "ase-lj": LennardJones(sigma=3.4, epsilon=0.0104),
     "torch-lj": TorchLJ(weights=LocalWeights(sys.argv[1])),
 }
 results = {}
