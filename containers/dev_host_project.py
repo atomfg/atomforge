@@ -2,10 +2,13 @@
 working tree, so that the image contains the code as it is now (committed or
 not), together with the model plugin template.
 
-    python containers/dev_host_project.py <directory>
+    python containers/dev_host_project.py <directory> [--no-template]
 
 The directory gets a copy of the working tree (tracked and untracked files
 that git does not ignore) under atomforge/, a pyproject.toml and a uv.lock.
+With --no-template the project installs atomforge and its built-in models
+only.
+
 An existing uv.lock is kept and updated, so repeated builds resolve the same
 versions. Used by `just build-image-dev` and the image test."""
 
@@ -16,29 +19,32 @@ from pathlib import Path
 
 ATOMFORGE = Path(__file__).resolve().parents[1]
 
-PYPROJECT = """\
-[project]
-name = "atomforge-dev-image"
-version = "0"
-requires-python = ">=3.12"
-dependencies = [
-    "atomforge",
-    "atomforge-core",
-    "atomforge-runtime",
-    "atomforge-builtins",
-    "atomforge-template",
-]
+SOURCES = {
+    "atomforge": "atomforge",
+    "atomforge-core": "atomforge/packages/atomforge-core",
+    "atomforge-runtime": "atomforge/packages/atomforge-runtime",
+    "atomforge-builtins": "atomforge/packages/atomforge-builtins",
+}
+TEMPLATE = {"atomforge-template": "atomforge/templates/model-plugin"}
 
-[tool.uv]
-package = false
 
-[tool.uv.sources]
-atomforge = { path = "atomforge", editable = true }
-atomforge-core = { path = "atomforge/packages/atomforge-core", editable = true }
-atomforge-runtime = { path = "atomforge/packages/atomforge-runtime", editable = true }
-atomforge-builtins = { path = "atomforge/packages/atomforge-builtins", editable = true }
-atomforge-template = { path = "atomforge/templates/model-plugin", editable = true }
-"""
+def pyproject(template: bool) -> str:
+    sources = {**SOURCES, **(TEMPLATE if template else {})}
+    dependencies = "".join(f'    "{name}",\n' for name in sources)
+    paths = "".join(
+        f'{name} = {{ path = "{path}", editable = true }}\n'
+        for name, path in sources.items()
+    )
+    return (
+        "[project]\n"
+        'name = "atomforge-dev-image"\n'
+        'version = "0"\n'
+        'requires-python = ">=3.12"\n'
+        f"dependencies = [\n{dependencies}]\n\n"
+        "[tool.uv]\n"
+        "package = false\n\n"
+        f"[tool.uv.sources]\n{paths}"
+    )
 
 
 def working_tree_files() -> list[str]:
@@ -54,7 +60,7 @@ def working_tree_files() -> list[str]:
     ]
 
 
-def write_host_project(directory: Path) -> Path:
+def write_host_project(directory: Path, *, template: bool = True) -> Path:
     directory = Path(directory).resolve()
     if directory == ATOMFORGE or directory in ATOMFORGE.parents:
         raise ValueError(f"refusing to write a host project into {directory}")
@@ -66,12 +72,15 @@ def write_host_project(directory: Path) -> Path:
         target = copy / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ATOMFORGE / name, target)
-    (directory / "pyproject.toml").write_text(PYPROJECT)
+    (directory / "pyproject.toml").write_text(pyproject(template))
     subprocess.run(["uv", "lock", "--quiet"], cwd=directory, check=True)
     return directory
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    arguments = sys.argv[1:]
+    template = "--no-template" not in arguments
+    arguments = [a for a in arguments if a != "--no-template"]
+    if len(arguments) != 1:
         sys.exit(__doc__)
-    print(write_host_project(Path(sys.argv[1])))
+    print(write_host_project(Path(arguments[0]), template=template))

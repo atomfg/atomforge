@@ -52,9 +52,11 @@ test-template-export:
 
 # Builds the container image from the working tree (committed or not) and the
 # model plugin template, into atomforge:dev. The host project is written to
-# .image-dev/host, which is kept so that rebuilds reuse its uv.lock.
-build-image-dev platform="linux/amd64" preload="ase-lj torch-lj":
-    uv run python containers/dev_host_project.py .image-dev/host
+# .image-dev/host, which is kept so that rebuilds reuse its uv.lock. Extra
+# arguments go to containers/dev_host_project.py, e.g. --no-template:
+#   just build-image-dev linux/amd64 ase-lj --no-template
+build-image-dev platform="linux/amd64" preload="ase-lj torch-lj" *host_args:
+    uv run python containers/dev_host_project.py .image-dev/host {{host_args}}
     docker buildx build --platform {{platform}} \
         --file containers/Dockerfile \
         --build-arg "PRELOAD={{preload}}" \

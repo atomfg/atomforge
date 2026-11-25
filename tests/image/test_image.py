@@ -4,8 +4,9 @@ preloaded environments.
 
 The image is built from a host project made by containers/dev_host_project.py:
 the atomforge working tree (so the test checks the current code) and the
-model plugin template, a torch
-plugin that downloads nothing. The container runs with a read-only root
+model plugin template, a torch plugin that downloads nothing. The models are
+ase-lj and torch-lj; ATOMFORGE_IMAGE_MODELS can choose a subset (CI builds
+`ase-lj` alone, without the template). The container runs with a read-only root
 filesystem, no network, a writable `/cache`, the local weights bound at the
 same absolute path, and uv off PATH (see run_in_image.py). Each energy must
 equal the same calculation run outside the image.
@@ -29,7 +30,13 @@ pytestmark = pytest.mark.image
 ATOMFORGE = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 PLATFORM = os.environ.get("ATOMFORGE_IMAGE_PLATFORM", "linux/amd64")
-PRELOAD = "ase-lj torch-lj"
+KNOWN_MODELS = ("ase-lj", "torch-lj")
+MODELS = os.environ.get("ATOMFORGE_IMAGE_MODELS", " ".join(KNOWN_MODELS)).split()
+if not MODELS or set(MODELS) - set(KNOWN_MODELS):
+    raise ValueError(
+        f"ATOMFORGE_IMAGE_MODELS must name some of {KNOWN_MODELS}, got {MODELS}"
+    )
+PRELOAD = " ".join(MODELS)
 
 
 @pytest.fixture(scope="module")
@@ -57,6 +64,7 @@ def host_project(tmp_path_factory) -> Path:
             "python",
             str(ATOMFORGE / "containers" / "dev_host_project.py"),
             str(project),
+            *([] if "torch-lj" in MODELS else ["--no-template"]),
         ],
         cwd=ATOMFORGE,
     )
@@ -123,6 +131,7 @@ def in_image(image, weights, mounted):
             "python",
             "/test/run_in_image.py",
             str(weights),
+            *MODELS,
         ],
         capture_output=True,
     )
@@ -146,14 +155,19 @@ def outside_image(host_project, weights, tmp_path_factory):
         "ATOMFORGE_ENV_INSTALL_PATH": str(tmp_path_factory.mktemp("install")),
     }
     completed = run(
-        [str(bin_dir / "python"), str(HERE / "run_in_image.py"), str(weights)],
+        [
+            str(bin_dir / "python"),
+            str(HERE / "run_in_image.py"),
+            str(weights),
+            *MODELS,
+        ],
         env=env,
         capture_output=True,
     )
     return json.loads(completed.stdout.strip().splitlines()[-1])
 
 
-@pytest.mark.parametrize("model", PRELOAD.split())
+@pytest.mark.parametrize("model", MODELS)
 def test_energy_in_image_equals_energy_outside(in_image, outside_image, model):
     output, _ = in_image
 
@@ -162,7 +176,7 @@ def test_energy_in_image_equals_energy_outside(in_image, outside_image, model):
     )
 
 
-@pytest.mark.parametrize("model", PRELOAD.split())
+@pytest.mark.parametrize("model", MODELS)
 def test_preloaded_environment_is_used(in_image, model):
     output, _ = in_image
 
