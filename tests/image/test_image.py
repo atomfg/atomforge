@@ -2,8 +2,9 @@
 built from `containers/Dockerfile` runs single points offline from its
 preloaded environments.
 
-The image is built from a host project made here: the atomforge working tree
-(so the test checks the current code) and the model plugin template, a torch
+The image is built from a host project made by containers/dev_host_project.py:
+the atomforge working tree (so the test checks the current code) and the
+model plugin template, a torch
 plugin that downloads nothing. The container runs with a read-only root
 filesystem, no network, a writable `/cache`, the local weights bound at the
 same absolute path, and uv off PATH (see run_in_image.py). Each energy must
@@ -30,55 +31,24 @@ HERE = Path(__file__).resolve().parent
 PLATFORM = os.environ.get("ATOMFORGE_IMAGE_PLATFORM", "linux/amd64")
 PRELOAD = "ase-lj torch-lj"
 
-HOST_PYPROJECT = """\
-[project]
-name = "atomforge-image-test"
-version = "0"
-requires-python = ">=3.12"
-dependencies = [
-    "atomforge",
-    "atomforge-core",
-    "atomforge-runtime",
-    "atomforge-builtins",
-    "atomforge-template",
-]
-
-[tool.uv]
-package = false
-
-[tool.uv.sources]
-atomforge = { path = "atomforge", editable = true }
-atomforge-core = { path = "atomforge/packages/atomforge-core", editable = true }
-atomforge-runtime = { path = "atomforge/packages/atomforge-runtime", editable = true }
-atomforge-builtins = { path = "atomforge/packages/atomforge-builtins", editable = true }
-atomforge-template = { path = "atomforge/templates/model-plugin", editable = true }
-"""
-
 
 def run(command, **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(command, check=True, text=True, **kwargs)
 
 
-def working_tree_files() -> list[str]:
-    listed = run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-        cwd=ATOMFORGE,
-        capture_output=True,
-    ).stdout
-    return [
-        name for name in listed.split("\0") if name and (ATOMFORGE / name).is_file()
-    ]
-
-
 @pytest.fixture(scope="module")
 def host_project(tmp_path_factory) -> Path:
     project = tmp_path_factory.mktemp("host")
-    for name in working_tree_files():
-        target = project / "atomforge" / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ATOMFORGE / name, target)
-    (project / "pyproject.toml").write_text(HOST_PYPROJECT)
-    run(["uv", "lock"], cwd=project)
+    run(
+        [
+            "uv",
+            "run",
+            "python",
+            str(ATOMFORGE / "containers" / "dev_host_project.py"),
+            str(project),
+        ],
+        cwd=ATOMFORGE,
+    )
     return project
 
 

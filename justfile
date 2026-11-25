@@ -50,6 +50,16 @@ test-template:
 test-template-export:
     uv run pytest scripts/template/tests --run-exported-tests
 
+# Builds the container image from the working tree (committed or not) and the
+# model plugin template, into atomforge:dev. The host project is written to
+# .image-dev/host, which is kept so that rebuilds reuse its uv.lock.
+build-image-dev platform="linux/amd64" preload="ase-lj torch-lj":
+    uv run python containers/dev_host_project.py .image-dev/host
+    docker buildx build --platform {{platform}} \
+        --file containers/Dockerfile \
+        --build-arg "PRELOAD={{preload}}" \
+        --tag atomforge:dev --load .image-dev/host
+
 # Builds the container image (containers/Dockerfile) from the working tree and
 # runs single points in it. Slow, needs docker; not part of test-all.
 test-image:
