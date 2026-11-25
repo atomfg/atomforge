@@ -32,6 +32,17 @@ PLATFORM = os.environ.get("ATOMFORGE_IMAGE_PLATFORM", "linux/amd64")
 PRELOAD = "ase-lj torch-lj"
 
 
+@pytest.fixture(scope="module")
+def mounted() -> Path:
+    """A directory for what the container binds (weights, /cache), under the
+    repository: Docker VMs such as colima share only the user's home, so a
+    bind from the system temporary directory arrives empty."""
+    path = ATOMFORGE / ".image-dev" / "test-run"
+    shutil.rmtree(path, ignore_errors=True)
+    path.mkdir(parents=True)
+    return path
+
+
 def run(command, **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(command, check=True, text=True, **kwargs)
 
@@ -79,15 +90,17 @@ def image(host_project):
 
 
 @pytest.fixture(scope="module")
-def weights(tmp_path_factory) -> Path:
-    path = tmp_path_factory.mktemp("weights") / "torch-lj.json"
+def weights(mounted) -> Path:
+    (mounted / "weights").mkdir()
+    path = mounted / "weights" / "torch-lj.json"
     path.write_text(json.dumps({"epsilon": 0.0104, "sigma": 3.4}))
     return path
 
 
 @pytest.fixture(scope="module")
-def in_image(image, weights, tmp_path_factory):
-    cache = tmp_path_factory.mktemp("cache")
+def in_image(image, weights, mounted):
+    cache = mounted / "cache"
+    cache.mkdir()
     completed = run(
         [
             "docker",
