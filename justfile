@@ -62,6 +62,18 @@ build-image-dev platform="linux/amd64" preload="ase-lj torch-lj" *host_args:
         --build-arg "PRELOAD={{preload}}" \
         --tag atomforge:dev --load .image-dev/host
 
+# Converts a Docker image to a SIF with Apptainer running in a container, so no
+# cluster or local Apptainer is needed. Saves the image to a tar first unless
+# one is there; everything lands in .image-dev/.
+#   just build-sif                 # atomforge:dev -> .image-dev/atomforge-dev.sif
+build-sif image="atomforge:dev" name="atomforge-dev":
+    test -f .image-dev/{{name}}.tar || docker save {{image}} --output .image-dev/{{name}}.tar
+    docker buildx build --file containers/apptainer.Dockerfile \
+        --tag atomforge-apptainer --load containers
+    docker run --rm --volume "$PWD/.image-dev:/work" --workdir /work \
+        atomforge-apptainer \
+        sh -c 'apptainer --version && apptainer build --arch amd64 --force {{name}}.sif docker-archive://{{name}}.tar'
+
 # Builds the container image (containers/Dockerfile) from the working tree and
 # runs single points in it. Slow, needs docker; not part of test-all.
 test-image:
