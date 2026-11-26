@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import hashlib
 import json
+import os
 
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.provenance import EnvironmentProvenance
@@ -49,6 +50,19 @@ class EnvironmentMarker:
             return None
 
 
+class InstallPathNotWritable(RuntimeError):
+    """An environment must be built, but the install path cannot be
+    written."""
+
+    def __init__(self, path: Path, reason: str):
+        self.path = path
+        super().__init__(
+            f"Cannot build environments in the install path {path}: {reason}. "
+            "Set ATOMFORGE_ENV_INSTALL_PATH to a writable directory (in the "
+            "atomforge image, bind a writable directory to /cache)."
+        )
+
+
 @dataclass(frozen=True)
 class ListedEnvironment:
     key: str
@@ -68,14 +82,27 @@ class EnvironmentProvider(ABC):
         # Warn when an environment is built while preloaded search paths are
         # configured. Off for deliberate builds (`atomforge env preload`).
         self.warn_when_building = warn_when_building
+        # Created when the first environment is built (prepare_install_path),
+        # so that reading works where it cannot be written.
         self.install_path = (
             Path(install_path) if install_path else Path.home() / ".atomforge" / "envs"
         )
-        self.install_path.mkdir(parents=True, exist_ok=True)
 
         self.search_paths = tuple(Path(p) for p in search_path if Path(p).exists())
         if not any(self.is_install_path(p) for p in self.search_paths):
             self.search_paths = (self.install_path,) + self.search_paths
+
+    def prepare_install_path(self) -> None:
+        """Create the install path, or raise InstallPathNotWritable if
+        environments cannot be built in it."""
+        try:
+            self.install_path.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            raise InstallPathNotWritable(
+                self.install_path, error.strerror or str(error)
+            ) from error
+        if not os.access(self.install_path, os.W_OK):
+            raise InstallPathNotWritable(self.install_path, "not writable")
 
     def is_install_path(self, path: Path) -> bool:
         return Path(path).resolve() == self.install_path.resolve()

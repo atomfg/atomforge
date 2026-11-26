@@ -3,6 +3,7 @@ from pydantic import ValidationError
 from rich.console import Console
 
 from atomforge.cli.env._provider import provider_from_settings
+from atomforge.env.base.provider import InstallPathNotWritable
 from atomforge.cli.env.main import env_cli
 
 
@@ -84,7 +85,10 @@ def preload_command(models: tuple[str, ...], tasks: tuple[str, ...]):
                 continue
             done.add(key)
             existed = any(e.key == key for e in provider.list_environments())
-            handle = provider.ensure_environment(env_spec)
+            try:
+                handle = provider.ensure_environment(env_spec)
+            except InstallPathNotWritable as error:
+                raise click.ClickException(str(error)) from None
             status = "present" if existed else "built"
             console.print(
                 f"{status:8} {env_spec.name}  {key}  {handle.path}",

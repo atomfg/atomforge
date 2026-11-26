@@ -67,6 +67,7 @@ class UVEnvironmentProvider(EnvironmentProvider):
         if handle:
             return handle
 
+        self.prepare_install_path()
         # Write the pyproject.toml for the environment:
         project_path = self.install_path / self.provider_name / env_key
         project_path.mkdir(parents=True, exist_ok=True)
@@ -105,6 +106,7 @@ class UVEnvironmentProvider(EnvironmentProvider):
 
     def resolve_environment(self, spec: EnvironmentSpec) -> EnvironmentResolutionResult:
         command = ("uv", "sync", "--dry-run", "--no-progress")
+        self.prepare_install_path()
         project_path = Path(
             tempfile.mkdtemp(prefix="atomforge-env-resolve-", dir=self.install_path)
         )
