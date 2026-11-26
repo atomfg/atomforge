@@ -1,4 +1,5 @@
 import json
+import logging
 import shutil
 import subprocess
 import tempfile
@@ -8,18 +9,32 @@ from atomforge_core.env.env import EnvironmentSpec
 
 from atomforge.env.base.handle import EnvironmentHandle
 from atomforge.env.base.info import EnvironmentInfo
-from atomforge.env.base.provider import EnvironmentProvider, file_sha256
+from atomforge.env.base.provider import (
+    EnvironmentMarker,
+    EnvironmentProvider,
+    file_sha256,
+)
 from atomforge.env.base.resolution import EnvironmentResolutionResult
 from atomforge.env.uv.uv_pyproject_writer import UVPyprojectWriter
 from atomforge.env.base.dependency import ResolvedDependency
 import hashlib
 
+logger = logging.getLogger(__name__)
+
 
 class UVEnvironmentProvider(EnvironmentProvider):
     provider_name = "uv"
 
-    def __init__(self, search_path: tuple[Path, ...], install_path: Path):
-        super().__init__(search_path, install_path)
+    def __init__(
+        self,
+        search_path: tuple[Path, ...],
+        install_path: Path,
+        *,
+        warn_when_building: bool = True,
+    ):
+        super().__init__(
+            search_path, install_path, warn_when_building=warn_when_building
+        )
         self._core_resolved = ResolvedDependency(
             requirement="atomforge-core", exact=True
         )
@@ -52,6 +67,7 @@ class UVEnvironmentProvider(EnvironmentProvider):
         if handle:
             return handle
 
+        self.prepare_install_path()
         # Write the pyproject.toml for the environment:
         project_path = self.install_path / self.provider_name / env_key
         project_path.mkdir(parents=True, exist_ok=True)
@@ -63,10 +79,26 @@ class UVEnvironmentProvider(EnvironmentProvider):
             "-q",
             "sync",
         ]
+        if self.warn_when_building and self.preloaded_paths:
+            logger.warning(
+                "Environment %s (key %s) is not in the preloaded search paths "
+                "(%s); building it at run time in %s",
+                spec.name,
+                env_key,
+                ", ".join(str(p) for p in self.preloaded_paths),
+                project_path,
+            )
         result = subprocess.run(command, check=True, cwd=project_path)
 
         if result.returncode != 0:
             raise RuntimeError(f"Failed to create environment: {result}")
+
+        EnvironmentMarker(
+            key=env_key,
+            name=spec.name,
+            spec_hash=spec.hash(),
+            lockfile_hash=file_sha256(project_path / "uv.lock"),
+        ).write(project_path)
 
         return EnvironmentHandle(
             path=project_path, name=spec.name, provider=self.provider_name
@@ -74,6 +106,7 @@ class UVEnvironmentProvider(EnvironmentProvider):
 
     def resolve_environment(self, spec: EnvironmentSpec) -> EnvironmentResolutionResult:
         command = ("uv", "sync", "--dry-run", "--no-progress")
+        self.prepare_install_path()
         project_path = Path(
             tempfile.mkdtemp(prefix="atomforge-env-resolve-", dir=self.install_path)
         )
@@ -170,13 +203,23 @@ class UVEnvironmentProvider(EnvironmentProvider):
     def _search_for_environment(self, env_key: str) -> EnvironmentHandle | None:
         for path in self.search_paths:
             candidate = path / self.provider_name / env_key
-            if candidate.exists():
-                handle = EnvironmentHandle(
-                    path=candidate, name=env_key, provider=self.provider_name
-                )
-                if self._check_environment(handle):
+            if not candidate.exists():
+                continue
+            handle = EnvironmentHandle(
+                path=candidate, name=env_key, provider=self.provider_name
+            )
+            if not self.is_install_path(path):
+                # Preloaded: trusted by its marker, never checked or removed.
+                marker = EnvironmentMarker.read(candidate)
+                python = self.inspect_environment(handle).python_executable
+                if marker is not None and marker.key == env_key and python:
                     return handle
-                else:
-                    # If the environment is invalid, remove it:
-                    self.remove_environment(handle)
+                logger.debug(
+                    "Skipping %s: not a complete preloaded environment", candidate
+                )
+                continue
+            if self._check_environment(handle):
+                return handle
+            # An invalid environment in the install path is removed and rebuilt.
+            self.remove_environment(handle)
         return None

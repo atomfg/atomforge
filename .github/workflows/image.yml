@@ -1,0 +1,69 @@
+name: Container image
+
+# Builds containers/Dockerfile natively on linux/amd64 from the chosen ref, and
+# runs the image test against it. The models are chosen when dispatching:
+# ase-lj (atomforge's built-in models only) and/or torch-lj (the model plugin
+# template, with CUDA torch). The build is a separate step, so its time and the
+# image's layer sizes can be read from the log; the test's own build then hits
+# Docker's cache.
+
+on:
+  # Manual only: building the image is slow once plugins are in it.
+  workflow_dispatch:
+    inputs:
+      models:
+        description: "Models to preload and test (ase-lj, torch-lj)"
+        required: true
+        default: "ase-lj"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    name: build and test image (${{ inputs.models }})
+    env:
+      ATOMFORGE_IMAGE_PLATFORM: linux/amd64
+      ATOMFORGE_IMAGE_MODELS: ${{ inputs.models }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Runner resources
+        run: |
+          nproc
+          free -h
+          df -h /
+          docker version --format 'docker {{.Server.Version}}'
+          docker buildx version
+
+      - name: Build image (cold)
+        run: |
+          host_args=""
+          case " $ATOMFORGE_IMAGE_MODELS " in
+            *" torch-lj "*) ;;
+            *) host_args="--no-template" ;;
+          esac
+          just build-image-dev linux/amd64 "$ATOMFORGE_IMAGE_MODELS" $host_args
+
+      - name: Image size
+        run: |
+          docker images atomforge:dev
+          docker history atomforge:dev --format '{{.Size}}\t{{.CreatedBy}}' | cut -c1-120
+          docker run --rm atomforge:dev atomforge env list
+          df -h /
+
+      - name: Image test
+        run: uv run pytest tests/image --image -rfE --durations=10

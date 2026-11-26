@@ -29,3 +29,6 @@ docs/site/
 
 # macOS
 .DS_Store
+
+# Host project for `just build-image-dev`
+.image-dev/

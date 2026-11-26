@@ -50,6 +50,35 @@ test-template:
 test-template-export:
     uv run pytest scripts/template/tests --run-exported-tests
 
+# Builds the container image from the working tree (committed or not) and the
+# model plugin template, into atomforge:dev. The host project is written to
+# .image-dev/host, which is kept so that rebuilds reuse its uv.lock. Extra
+# arguments go to containers/dev_host_project.py, e.g. --no-template:
+#   just build-image-dev linux/amd64 ase-lj --no-template
+build-image-dev platform="linux/amd64" preload="ase-lj torch-lj" *host_args:
+    uv run python containers/dev_host_project.py .image-dev/host {{host_args}}
+    docker buildx build --platform {{platform}} \
+        --file containers/Dockerfile \
+        --build-arg "PRELOAD={{preload}}" \
+        --tag atomforge:dev --load .image-dev/host
+
+# Converts a Docker image to a SIF with Apptainer running in a container, so no
+# cluster or local Apptainer is needed. Saves the image to a tar first unless
+# one is there; everything lands in .image-dev/.
+#   just build-sif                 # atomforge:dev -> .image-dev/atomforge-dev.sif
+build-sif image="atomforge:dev" name="atomforge-dev":
+    test -f .image-dev/{{name}}.tar || docker save {{image}} --output .image-dev/{{name}}.tar
+    docker buildx build --file containers/apptainer.Dockerfile \
+        --tag atomforge-apptainer --load containers
+    docker run --rm --volume "$PWD/.image-dev:/work" --workdir /work \
+        atomforge-apptainer \
+        sh -c 'apptainer --version && apptainer build --arch amd64 --force {{name}}.sif docker-archive://{{name}}.tar'
+
+# Builds the container image (containers/Dockerfile) from the working tree and
+# runs single points in it. Slow, needs docker; not part of test-all.
+test-image:
+    uv run pytest tests/image --image -rfE
+
 test-all:
     just test-core
     just test-runtime

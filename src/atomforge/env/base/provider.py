@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 import hashlib
+import json
+import os
 
 from atomforge_core.env.env import EnvironmentSpec
 from atomforge_core.provenance import EnvironmentProvenance
@@ -21,16 +24,118 @@ def file_sha256(path: Path) -> str | None:
     return hasher.hexdigest()
 
 
+MARKER_FILE = "atomforge-env.json"
+"""Written into an environment's directory once it has been built. Only an
+environment with a marker is used from a preloaded (read-only) search path."""
+
+
+@dataclass(frozen=True)
+class EnvironmentMarker:
+    key: str
+    name: str
+    spec_hash: str
+    lockfile_hash: str | None = None
+
+    def write(self, directory: Path) -> None:
+        (directory / MARKER_FILE).write_text(
+            json.dumps(self.__dict__, indent=2, sort_keys=True) + "\n"
+        )
+
+    @classmethod
+    def read(cls, directory: Path) -> "EnvironmentMarker | None":
+        try:
+            data = json.loads((directory / MARKER_FILE).read_text())
+            return cls(**data)
+        except (OSError, ValueError, TypeError):
+            return None
+
+
+class InstallPathNotWritable(RuntimeError):
+    """An environment must be built, but the install path cannot be
+    written."""
+
+    def __init__(self, path: Path, reason: str):
+        self.path = path
+        super().__init__(
+            f"Cannot build environments in the install path {path}: {reason}. "
+            "Set ATOMFORGE_ENV_INSTALL_PATH to a writable directory (in the "
+            "atomforge image, bind a writable directory to /cache)."
+        )
+
+
+@dataclass(frozen=True)
+class ListedEnvironment:
+    key: str
+    name: str | None
+    path: Path
+    read_only: bool
+
+
 class EnvironmentProvider(ABC):
-    def __init__(self, search_path: tuple[Path, ...], install_path: Path):
+    def __init__(
+        self,
+        search_path: tuple[Path, ...],
+        install_path: Path,
+        *,
+        warn_when_building: bool = True,
+    ):
+        # Warn when an environment is built while preloaded search paths are
+        # configured. Off for deliberate builds (`atomforge env preload`).
+        self.warn_when_building = warn_when_building
+        # Created when the first environment is built (prepare_install_path),
+        # so that reading works where it cannot be written.
         self.install_path = (
             Path(install_path) if install_path else Path.home() / ".atomforge" / "envs"
         )
-        self.install_path.mkdir(parents=True, exist_ok=True)
 
         self.search_paths = tuple(Path(p) for p in search_path if Path(p).exists())
-        if self.install_path not in self.search_paths:
+        if not any(self.is_install_path(p) for p in self.search_paths):
             self.search_paths = (self.install_path,) + self.search_paths
+
+    def prepare_install_path(self) -> None:
+        """Create the install path, or raise InstallPathNotWritable if
+        environments cannot be built in it."""
+        try:
+            self.install_path.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            raise InstallPathNotWritable(
+                self.install_path, error.strerror or str(error)
+            ) from error
+        if not os.access(self.install_path, os.W_OK):
+            raise InstallPathNotWritable(self.install_path, "not writable")
+
+    def is_install_path(self, path: Path) -> bool:
+        return Path(path).resolve() == self.install_path.resolve()
+
+    @property
+    def preloaded_paths(self) -> tuple[Path, ...]:
+        """The search paths other than the install path. Environments there
+        are read-only: used as they are, never checked or removed."""
+        return tuple(p for p in self.search_paths if not self.is_install_path(p))
+
+    def list_environments(self) -> list[ListedEnvironment]:
+        """The environments in the search paths, in search order."""
+        listed = []
+        for root in self.search_paths:
+            provider_dir = root / self.provider_name
+            if not provider_dir.is_dir():
+                continue
+            read_only = not self.is_install_path(root)
+            for directory in sorted(provider_dir.iterdir()):
+                if not directory.is_dir():
+                    continue
+                marker = EnvironmentMarker.read(directory)
+                if marker is None and read_only:
+                    continue
+                listed.append(
+                    ListedEnvironment(
+                        key=directory.name,
+                        name=marker.name if marker else None,
+                        path=directory,
+                        read_only=read_only,
+                    )
+                )
+        return listed
 
     @property
     @abstractmethod

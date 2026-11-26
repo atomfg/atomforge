@@ -1,4 +1,5 @@
 import rich_click as click
+from atomforge.cli.env import env_cli
 from atomforge.cli.model import model_cli
 from atomforge.cli.plugin import plugin_cli
 from atomforge.cli.task import task_cli
@@ -12,3 +13,4 @@ def main():
 main.add_command(model_cli)
 main.add_command(task_cli)
 main.add_command(plugin_cli)
+main.add_command(env_cli)
