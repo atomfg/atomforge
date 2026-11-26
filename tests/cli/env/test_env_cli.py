@@ -32,7 +32,9 @@ def fake_uv(monkeypatch):
 def install(tmp_path, monkeypatch) -> Path:
     path = tmp_path / "install"
     monkeypatch.setenv("ATOMFORGE_ENV_INSTALL_PATH", str(path))
-    monkeypatch.delenv("ATOMFORGE_ENV_SEARCH_PATHS", raising=False)
+    # The install path only: unset, the search paths default to
+    # ~/.atomforge/envs, which may already hold the environments.
+    monkeypatch.setenv("ATOMFORGE_ENV_SEARCH_PATHS", str(path))
     return path
 
 
@@ -167,10 +169,12 @@ def test_list_shows_preloaded_and_installed_environments(
 ):
     preloaded = tmp_path / "preloaded"
     install = tmp_path / "install"
-    monkeypatch.setenv("ATOMFORGE_ENV_INSTALL_PATH", str(preloaded))
-    assert invoke("env", "preload", "ase-lj").exit_code == 0
-    monkeypatch.setenv("ATOMFORGE_ENV_INSTALL_PATH", str(install))
-    assert invoke("env", "preload", "ase-lj:latest").exit_code == 0
+    # Each preload searches only its own install path, not the default
+    # ~/.atomforge/envs.
+    for root, model in ((preloaded, "ase-lj"), (install, "ase-lj:latest")):
+        monkeypatch.setenv("ATOMFORGE_ENV_INSTALL_PATH", str(root))
+        monkeypatch.setenv("ATOMFORGE_ENV_SEARCH_PATHS", str(root))
+        assert invoke("env", "preload", model).exit_code == 0
     monkeypatch.setenv("ATOMFORGE_ENV_SEARCH_PATHS", str(preloaded))
 
     result = invoke("env", "list")
